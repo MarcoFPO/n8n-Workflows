@@ -27,10 +27,10 @@ Transformation von chaotischer Multi-Service-Architektur zu eleganter Event-driv
 │ 🧠 Core     │ │ 📡 Broker   │ │ 🎨 Frontend │ │ 🔍 Monitor  │ │ 🚌 Event   │
 │ Intelligence│ │ Gateway     │ │ Service     │ │ Service     │ │ Bus Service │
 │             │ │             │ │             │ │             │ │             │
-│ •Analysis   │ │ •Bitpanda   │ │ •React+WS   │ │ •Analytics  │ │ •Redis      │
-│ •Performance│ │ •Trading    │ │ •Real-time  │ │ •Health     │ │ •Pub/Sub    │
-│ •Intelligence│ │ •Orders    │ │ •Dashboard  │ │ •Business   │ │ •Queues     │
-│ •Views      │ │ •Market     │ │ •Events     │ │ •Intel      │ │ •Routing    │
+│ •Analysis   │ │ •Bitpanda   │ │ •Sidebar    │ │ •Analytics  │ │ •Redis      │
+│ •Performance│ │ •Trading    │ │ •Navigation │ │ •Health     │ │ •Pub/Sub    │
+│ •Intelligence│ │ •Orders    │ │ •Bootstrap5 │ │ •Business   │ │ •Queues     │
+│ •Views      │ │ •Market     │ │ •Content-API│ │ •Intel      │ │ •Routing    │
 └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
@@ -125,7 +125,7 @@ sudo apt update && sudo apt install -y postgresql redis-server rabbitmq-server p
 sudo systemctl enable --now postgresql redis-server rabbitmq-server
 sudo systemctl start aktienanalyse.target
 
-# Access Dashboard
+# Access Enhanced GUI (Sidebar Navigation)
 open https://localhost:443
 ```
 
@@ -147,8 +147,8 @@ lxc exec aktienanalyse-lxc -- bash
 sudo systemctl enable aktienanalyse.target
 sudo systemctl start aktienanalyse.target
 
-# Monitoring Dashboard (Port 443 HTTPS)
-open https://10.1.1.120:443
+# Enhanced GUI mit Sidebar-Navigation (Port 443 HTTPS)
+open https://10.1.1.174:443
 ```
 
 ## 📊 **Performance Benchmarks**
@@ -196,6 +196,13 @@ open https://10.1.1.120:443
 - Real-time Market Data Processing
 - Intelligent Auto-Import (0 balance watchlist)
 
+### **🖥️ Enhanced Frontend (GUI v2.0):**
+- **Sidebar-Navigation**: 5-Bereich-Layout (Dashboard, Events, Monitoring, API, Admin)
+- **Dynamic Content Loading**: SPA-Architektur mit `/api/content/{section}` 
+- **Bootstrap 5 + FontAwesome**: Modernes responsive Design
+- **Live-Metriken**: Real-time System-Status in der GUI
+- **Mobile-First**: Optimiert für alle Bildschirmgrößen
+
 ### **🔄 Cross-System Intelligence:**
 - Real-time Performance Correlation across all systems
 - Automatic Stock Import based on Multi-System comparison
@@ -214,6 +221,15 @@ GET  /events/history/{entity}        # Event-History with Replay
 GET  /health/comprehensive           # Unified Health-Check
 POST /config/update/{domain}         # Configuration Updates
 GET  /analytics/dashboard            # Business Intelligence
+```
+
+### **Frontend Content APIs (GUI v2.0):**
+```python
+GET  /api/content/dashboard          # Dashboard-Bereich mit Live-Metriken
+GET  /api/content/events             # Event-Bus Status und Dokumentation
+GET  /api/content/monitoring         # System-Monitoring Live-Daten
+GET  /api/content/api                # API-Dokumentation aller Services
+GET  /api/content/admin              # Administration und Konfiguration
 ```
 
 ### **Event-Stream Integration:**

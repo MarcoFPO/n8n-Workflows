@@ -51,20 +51,21 @@ Authentifizierung:
 - **Logout-Funktion**: Session-Invalidierung
 - **KEINE**: SSO, Multi-User, Role-Management, JWT
 
-#### **Navigation (Vereinfacht)**
-- **Haupt-Navigation**: 4 Bereiche (Aktienanalyse, Analytics, Trading, Konfiguration)
-- **Breadcrumb-Navigation**: Aktuelle Position anzeigen
-- **Sidebar-Navigation**: Collapsible Sidebar für Untermenüs
-- **KEINE**: Multi-Project-Switching, Role-based Navigation
+#### **Navigation (Enhanced GUI v2.0)**
+- **Sidebar-Navigation**: 5 Bereiche (Dashboard, Events, Monitoring, API, Admin)
+- **Dynamic Content Loading**: SPA mit `/api/content/{section}` ohne Page-Reload
+- **Bootstrap 5 Design**: Responsive Layout mit FontAwesome Icons
+- **Active-State-Management**: Visual Feedback für aktuelle Sektion
+- **Mobile-First**: Collapsible Sidebar für alle Bildschirmgrößen
 
-### **Modul 18: 📈 aktienanalyse-ui (Stock Analysis)**
+### **Modul 18: 📈 aktienanalyse-ui (Enhanced Dashboard v2.0)**
 
-#### **Stock Analysis Dashboard**
-- **Stock-Liste**: Sortierbare Tabelle mit Top-Aktien
-- **Scoring-Anzeige**: Technical Analysis Scores (Gauge/Ampel-System)
-- **Chart-Integration**: Real-time Charts mit TradingView Lightweight Charts
-- **Signal-Dashboard**: Trading-Signale in Card-Layout
-- **Filter/Search**: Einfache Filterung nach Symbol, Sektor, Score
+#### **Dashboard-Bereich (Neue Hauptseite)**
+- **System-Übersicht**: Live-Metriken für CPU, Memory, Services in Status-Cards
+- **Service-Status**: Real-time Health-Check für alle Backend-Services
+- **Quick-Links**: Direkte Navigation zu Service-Dokumentationen
+- **Performance-Anzeige**: Visuelle Progress-Bars für System-Ressourcen
+- **Refresh-Funktionen**: Manuelle und automatische Datenaktualisierung
 
 #### **Configuration Interface**
 - **API-Konfiguration**: Formular für Alpha Vantage, Yahoo Finance API-Keys

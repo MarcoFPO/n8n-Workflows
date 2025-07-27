@@ -47,24 +47,24 @@ services:
       - "/replay"
     
   monitoring_service:
-    port: 8004
+    port: 8083
     base_path: "/api/v1"
-    description: "System-Monitoring und Metrics"
+    description: "System-Monitoring und Health-Checks"
     endpoints:
-      - "/metrics"
       - "/health"
+      - "/metrics"
       - "/alerts"
       - "/dashboards"
     
   frontend_service:
-    port: 8443
+    port: 8084
     base_path: "/api/v1"
-    description: "Frontend-API und WebSocket-Gateway"
+    description: "Enhanced Frontend mit Sidebar-Navigation (GUI v2.0)"
     endpoints:
-      - "/auth"
-      - "/proxy"
-      - "/websocket"
-      - "/configuration"
+      - "/content/{section}"
+      - "/proxy/{service}"
+      - "/health"
+      - "/static"
 
 # Inter-Service Communication Matrix
 inter_service_communication:
