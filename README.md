@@ -197,11 +197,12 @@ open https://10.1.1.174:443
 - Intelligent Auto-Import (0 balance watchlist)
 
 ### **🖥️ Enhanced Frontend (GUI v2.0):**
-- **Sidebar-Navigation**: 5-Bereich-Layout (Dashboard, Events, Monitoring, API, Admin)
+- **Sidebar-Navigation**: 6-Bereich-Layout (Dashboard, Events, Monitoring, API, Gewinn-Vorhersage, Admin)
 - **Dynamic Content Loading**: SPA-Architektur mit `/api/content/{section}` 
 - **Bootstrap 5 + FontAwesome**: Modernes responsive Design
 - **Live-Metriken**: Real-time System-Status in der GUI
 - **Mobile-First**: Optimiert für alle Bildschirmgrößen
+- **ML-basierte Gewinn-Vorhersage**: Interaktive Charts und Tabellen mit 5 Zeiträumen (7D, 1M, 3M, 6M, 1Y)
 
 ### **🔄 Cross-System Intelligence:**
 - Real-time Performance Correlation across all systems
@@ -229,6 +230,7 @@ GET  /api/content/dashboard          # Dashboard-Bereich mit Live-Metriken
 GET  /api/content/events             # Event-Bus Status und Dokumentation
 GET  /api/content/monitoring         # System-Monitoring Live-Daten
 GET  /api/content/api                # API-Dokumentation aller Services
+GET  /api/content/predictions        # ML-Gewinn-Vorhersage mit interaktiven Charts
 GET  /api/content/admin              # Administration und Konfiguration
 ```
 

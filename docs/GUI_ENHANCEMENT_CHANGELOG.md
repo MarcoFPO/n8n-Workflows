@@ -1,11 +1,34 @@
-# 🎨 GUI Enhancement Changelog - Issue #5
+# 🎨 GUI Enhancement Changelog - Issues #4 & #5
+
+## Version 2.1 - 7-Tage Vorhersage Integration (2025-07-28)
+
+### ✨ **Neue Features - Issue #5**
+
+#### 📊 **7-Tage Vorhersage-Erweiterung**
+- **Erweiterte Zeiträume**: 5 Optionen verfügbar (7D, 1M, 3M, 6M, 1Y)
+- **Dynamische Datenaktualisierung**: Interaktive Zeitraum-Auswahl mit Live-Updates
+- **JavaScript-Integration**: `updatePredictionTimeframe()` Funktion für nahtlose UI-Updates
+- **Kurzfristige Trading-Signale**: 7-Tage Prognosen für schnelle Marktreaktionen
+
+#### 🔄 **Interaktive Benutzeroberfläche**
+- **Dropdown-Selector**: Responsive Zeitraum-Auswahl im Control Panel
+- **KPI-Cards**: Dynamische Updates der Top-Gewinn-Prognose je Zeitraum
+- **Tabellen-Integration**: Automatische Header-Aktualisierung basierend auf Auswahl
+- **Error-Handling**: Robuste Fehlerbehandlung bei UI-Interaktionen
+
+#### 📈 **Zeitraum-spezifische Daten**
+- **7 Tage**: 4.2% AAPL - Kurzfristige Momentum-Trades
+- **1 Monat**: 8.7% MSFT - Monatliche Portfolio-Optimierung 
+- **3 Monate**: 18.5% NVDA - Standard-Quartalsanalyse
+- **6 Monate**: 24.1% GOOGL - Mittelfristige Positionierung
+- **1 Jahr**: 35.3% TSLA - Langfristige Buy-and-Hold-Strategien
 
 ## Version 2.0 - Sidebar Navigation (2025-07-27)
 
 ### ✨ **Neue Features - GUI Enhancement**
 
 #### 🏗️ **Sidebar-Navigation Architektur**
-- **5-Bereich-Layout**: Dashboard, Events, Monitoring, API, Administration
+- **6-Bereich-Layout**: Dashboard, Events, Monitoring, API, Gewinn-Vorhersage, Administration
 - **Persistente Navigation**: Sidebar bleibt bei Seitenwechsel sichtbar
 - **Visual Feedback**: Active-State-Indicator für aktuelle Sektion
 - **Mobile-Responsive**: Collapsible Navigation für kleinere Bildschirme
