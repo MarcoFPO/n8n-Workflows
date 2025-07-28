@@ -1301,6 +1301,64 @@ class EnhancedFrontendService:
             });
         }
 
+        // Technical Analysis Chart
+        function initTechnicalChart() {
+            const ctx = document.getElementById('technical-chart');
+            if (!ctx) return;
+            
+            // Destroy existing chart if it exists
+            if (window.technicalChart && typeof window.technicalChart.destroy === 'function') {
+                window.technicalChart.destroy();
+            }
+            
+            window.technicalChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['RSI', 'MACD', 'SMA', 'EMA', 'Bollinger', 'Stochastic'],
+                    datasets: [{
+                        label: 'Signal Stärke',
+                        data: [78, 85, 72, 68, 82, 75],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 205, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 205, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // *** Content-spezifische Event-Handler für Predictions ***
         
         // Zeitraum-spezifische Datenstrukturen (gehören zum Predictions-Content)
@@ -1441,6 +1499,15 @@ class EnhancedFrontendService:
         
         // Event-Listener für Timeframe-Changes registrieren
         document.addEventListener('timeframeChanged', handleTimeframeChange);
+        
+        // Chart-Initialisierung nach DOM-Load
+        setTimeout(() => {
+            console.log('[CONTENT] Initialisiere Charts...');
+            initPerformanceChart();
+            initRiskChart();
+            initTechnicalChart();
+            console.log('[CONTENT] Alle Charts initialisiert');
+        }, 500); // 500ms Delay für DOM-Bereitschaft
         
         console.log('[CONTENT] Predictions Content Event-Handler registriert');
         </script>
