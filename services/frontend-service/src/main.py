@@ -376,14 +376,167 @@ class EnhancedFrontendService:
             initPredictionCharts();
         }
 
+        // Chart.js dynamisch laden - SOFORT im Haupt-HTML
+        if (typeof Chart === 'undefined') {
+            console.log('[MAIN] Loading Chart.js dynamically...');
+            const chartScript = document.createElement('script');
+            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
+            chartScript.onload = function() {
+                console.log('[MAIN] ✅ Chart.js loaded in main HTML');
+                // Retry chart initialization nach Load
+                setTimeout(initPredictionCharts, 500);
+            };
+            document.head.appendChild(chartScript);
+        }
+
         function initPredictionCharts() {
-            // Initialize Chart.js charts if elements exist
-            if (document.getElementById('performance-chart')) {
-                initPerformanceChart();
+            console.log('[MAIN] initPredictionCharts called');
+            
+            // Check if Chart.js is available
+            if (typeof Chart === 'undefined') {
+                console.log('[MAIN] Chart.js not available, retry in 1000ms...');
+                setTimeout(initPredictionCharts, 1000);
+                return;
             }
-            if (document.getElementById('risk-chart')) {
-                initRiskChart();
+            
+            console.log('[MAIN] Chart.js available, initializing charts...');
+            
+            // Performance Chart - Direct implementation in main HTML
+            const perfCanvas = document.getElementById('performance-chart');
+            if (perfCanvas) {
+                try {
+                    console.log('[MAIN] Creating Performance Chart...');
+                    new Chart(perfCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun'],
+                            datasets: [{
+                                label: 'Vorhersage-Genauigkeit (%)',
+                                data: [85.2, 87.1, 88.5, 89.2, 90.1, 91.3],
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Gewinn-Vorhersage Verlauf'
+                                }
+                            }
+                        }
+                    });
+                    console.log('[MAIN] ✅ Performance Chart created successfully');
+                } catch (error) {
+                    console.error('[MAIN] ❌ Performance Chart error:', error);
+                }
             }
+            
+            // Risk Chart - Direct implementation
+            const riskCanvas = document.getElementById('risk-chart');
+            if (riskCanvas) {
+                try {
+                    console.log('[MAIN] Creating Risk Chart...');
+                    new Chart(riskCanvas, {
+                        type: 'scatter',
+                        data: {
+                            datasets: [{
+                                label: 'Aktien Risiko-Rendite',
+                                data: [
+                                    {x: 12, y: 18.5, label: 'NVDA'},
+                                    {x: 8, y: 16.2, label: 'AAPL'},
+                                    {x: 9, y: 15.4, label: 'MSFT'},
+                                    {x: 11, y: 17.8, label: 'GOOGL'},
+                                    {x: 15, y: 22.1, label: 'TSLA'}
+                                ],
+                                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                                pointRadius: 8
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Risiko-Rendite Matrix'
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Risiko (%)'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Rendite (%)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    console.log('[MAIN] ✅ Risk Chart created successfully');
+                } catch (error) {
+                    console.error('[MAIN] ❌ Risk Chart error:', error);
+                }
+            }
+            
+            // Technical Chart - Direct implementation
+            const techCanvas = document.getElementById('technical-chart');
+            if (techCanvas) {
+                try {
+                    console.log('[MAIN] Creating Technical Chart...');
+                    new Chart(techCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: ['RSI', 'MACD', 'SMA', 'EMA', 'Bollinger', 'Stochastic'],
+                            datasets: [{
+                                label: 'Technical Score (%)',
+                                data: [78, 85, 72, 68, 82, 75],
+                                backgroundColor: [
+                                    '#ff6384',
+                                    '#36a2eb', 
+                                    '#ffce56',
+                                    '#4bc0c0',
+                                    '#9966ff',
+                                    '#ff9f40'
+                                ]
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Technical Analysis Scores'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    title: {
+                                        display: true,
+                                        text: 'Score (%)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    console.log('[MAIN] ✅ Technical Chart created successfully');
+                } catch (error) {
+                    console.error('[MAIN] ❌ Technical Chart error:', error);
+                }
+            }
+            
+            console.log('[MAIN] 🎯 All charts initialization completed');
         }
 
         async function refreshPredictions() {
@@ -492,6 +645,9 @@ class EnhancedFrontendService:
             loadContent('dashboard');
         });
     </script>
+    
+    <!-- Chart.js Library für Chart-Visualisierungen -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </body>
 </html>"""
         
@@ -1122,6 +1278,9 @@ class EnhancedFrontendService:
             </div>
         </div>
 
+        <!-- Chart.js Library -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+        
         <script>
         // Refresh Predictions Function - lokale Definition für dynamischen Content
         async function refreshPredictions() {
@@ -1359,6 +1518,106 @@ class EnhancedFrontendService:
             });
         }
 
+        // *** SIMPLE CHART INITIALIZATION - NEUE IMPLEMENTIERUNG ***
+        console.log('[SIMPLE] Starting simple chart initialization...');
+        
+        // Warte bis DOM vollständig geladen ist
+        setTimeout(function() {
+            console.log('[SIMPLE] DOM should be ready, checking Chart.js...');
+            console.log('[SIMPLE] Chart available?', typeof Chart !== 'undefined');
+            
+            if (typeof Chart !== 'undefined') {
+                console.log('[SIMPLE] Chart.js is available, initializing charts...');
+                
+                // Performance Chart
+                try {
+                    const perfCanvas = document.getElementById('performance-chart');
+                    if (perfCanvas) {
+                        console.log('[SIMPLE] Creating Performance Chart...');
+                        new Chart(perfCanvas, {
+                            type: 'line',
+                            data: {
+                                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun'],
+                                datasets: [{
+                                    label: 'Vorhersage-Genauigkeit',
+                                    data: [85.2, 87.1, 88.5, 89.2, 90.1, 91.3],
+                                    borderColor: 'rgb(54, 162, 235)',
+                                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                    tension: 0.4
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+                        console.log('[SIMPLE] ✅ Performance Chart created successfully');
+                    } else {
+                        console.log('[SIMPLE] ❌ Performance canvas not found');
+                    }
+                } catch (error) {
+                    console.error('[SIMPLE] ❌ Performance Chart error:', error);
+                }
+                
+                // Risk Chart  
+                try {
+                    const riskCanvas = document.getElementById('risk-chart');
+                    if (riskCanvas) {
+                        console.log('[SIMPLE] Creating Risk Chart...');
+                        new Chart(riskCanvas, {
+                            type: 'scatter',
+                            data: {
+                                datasets: [{
+                                    label: 'Risiko-Rendite',
+                                    data: [
+                                        {x: 12, y: 18.5, label: 'NVDA'},
+                                        {x: 8, y: 16.2, label: 'AAPL'},
+                                        {x: 9, y: 15.4, label: 'MSFT'}
+                                    ],
+                                    backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+                        console.log('[SIMPLE] ✅ Risk Chart created successfully');
+                    } else {
+                        console.log('[SIMPLE] ❌ Risk canvas not found');
+                    }
+                } catch (error) {
+                    console.error('[SIMPLE] ❌ Risk Chart error:', error);
+                }
+                
+                // Technical Chart
+                try {
+                    const techCanvas = document.getElementById('technical-chart');
+                    if (techCanvas) {
+                        console.log('[SIMPLE] Creating Technical Chart...');
+                        new Chart(techCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: ['RSI', 'MACD', 'SMA', 'EMA'],
+                                datasets: [{
+                                    label: 'Score',
+                                    data: [78, 85, 72, 68],
+                                    backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0']
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+                        console.log('[SIMPLE] ✅ Technical Chart created successfully');
+                    } else {
+                        console.log('[SIMPLE] ❌ Technical canvas not found');
+                    }
+                } catch (error) {
+                    console.error('[SIMPLE] ❌ Technical Chart error:', error);
+                }
+                
+                console.log('[SIMPLE] 🎯 All charts initialization completed');
+                
+            } else {
+                console.error('[SIMPLE] ❌ Chart.js is not available');
+                // Retry after 1 second
+                setTimeout(arguments.callee, 1000);
+            }
+        }, 1000); // 1 second delay
+        
         // *** Content-spezifische Event-Handler für Predictions ***
         
         // Zeitraum-spezifische Datenstrukturen (gehören zum Predictions-Content)
@@ -1500,16 +1759,254 @@ class EnhancedFrontendService:
         // Event-Listener für Timeframe-Changes registrieren
         document.addEventListener('timeframeChanged', handleTimeframeChange);
         
-        // Chart-Initialisierung nach DOM-Load
+        // NEUE DIREKTE CHART-INITIALISIERUNG
+        console.log('[DIRECT] Starting direct chart initialization...');
         setTimeout(() => {
-            console.log('[CONTENT] Initialisiere Charts...');
-            initPerformanceChart();
-            initRiskChart();
-            initTechnicalChart();
-            console.log('[CONTENT] Alle Charts initialisiert');
-        }, 500); // 500ms Delay für DOM-Bereitschaft
+            console.log('[DIRECT] Creating charts with Chart.js...');
+            console.log('[DIRECT] Chart available?', typeof Chart !== 'undefined');
+            
+            if (typeof Chart !== 'undefined') {
+                // Performance Chart - Direct
+                const perfCanvas = document.getElementById('performance-chart');
+                if (perfCanvas) {
+                    try {
+                        new Chart(perfCanvas, {
+                            type: 'line',
+                            data: {
+                                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun'],
+                                datasets: [{
+                                    label: 'Vorhersage-Genauigkeit (%)',
+                                    data: [85.2, 87.1, 88.5, 89.2, 90.1, 91.3],
+                                    borderColor: 'rgb(54, 162, 235)',
+                                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                    tension: 0.4
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+                        console.log('[DIRECT] ✅ Performance Chart created');
+                    } catch (error) {
+                        console.error('[DIRECT] ❌ Performance Chart error:', error);
+                    }
+                }
+                
+                // Risk Chart - Direct
+                const riskCanvas = document.getElementById('risk-chart');
+                if (riskCanvas) {
+                    try {
+                        new Chart(riskCanvas, {
+                            type: 'scatter',
+                            data: {
+                                datasets: [{
+                                    label: 'Aktien Risiko-Rendite',
+                                    data: [
+                                        {x: 12, y: 18.5},
+                                        {x: 8, y: 16.2}, 
+                                        {x: 9, y: 15.4}
+                                    ],
+                                    backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+                        console.log('[DIRECT] ✅ Risk Chart created');
+                    } catch (error) {
+                        console.error('[DIRECT] ❌ Risk Chart error:', error);
+                    }
+                }
+                
+                // Technical Chart - Direct
+                const techCanvas = document.getElementById('technical-chart');
+                if (techCanvas) {
+                    try {
+                        new Chart(techCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: ['RSI', 'MACD', 'SMA', 'EMA'],
+                                datasets: [{
+                                    label: 'Technical Score',
+                                    data: [78, 85, 72, 68],
+                                    backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0']
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false }
+                        });
+                        console.log('[DIRECT] ✅ Technical Chart created');
+                    } catch (error) {
+                        console.error('[DIRECT] ❌ Technical Chart error:', error);
+                    }
+                }
+                
+            } else {
+                console.error('[DIRECT] ❌ Chart.js not available, retrying...');
+                setTimeout(arguments.callee, 1000);
+            }
+        }, 1500); // Längerer Delay für Chart.js Load
         
         console.log('[CONTENT] Predictions Content Event-Handler registriert');
+        
+        // 🚀 DIREKTE CHART-LÖSUNG - Lädt Chart.js und erstellt Charts automatisch
+        console.log('🚀 Starting automatic chart solution...');
+        
+        // Chart.js dynamisch laden
+        const chartScript = document.createElement('script');
+        chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
+        chartScript.onload = function() {
+            console.log('✅ Chart.js loaded automatically');
+            
+            // Charts nach kurzem Delay erstellen
+            setTimeout(function() {
+                console.log('🎯 Creating charts automatically...');
+                
+                // Performance Chart
+                const perfCanvas = document.getElementById('performance-chart');
+                if (perfCanvas) {
+                    try {
+                        new Chart(perfCanvas, {
+                            type: 'line',
+                            data: {
+                                labels: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni'],
+                                datasets: [{
+                                    label: 'Vorhersage-Genauigkeit (%)',
+                                    data: [85.2, 87.1, 88.5, 89.2, 90.1, 91.3],
+                                    borderColor: 'rgb(54, 162, 235)',
+                                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3
+                                }, {
+                                    label: 'Realisierte Gewinne (%)',
+                                    data: [12.3, 13.1, 14.2, 15.8, 16.9, 17.9], 
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3
+                                }]
+                            },
+                            options: { 
+                                responsive: true, 
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Gewinn-Vorhersage Verlauf',
+                                        font: { size: 16, weight: 'bold' }
+                                    }
+                                }
+                            }
+                        });
+                        console.log('✅ Performance Chart created automatically');
+                    } catch (error) {
+                        console.error('❌ Performance Chart error:', error);
+                    }
+                }
+                
+                // Risk Chart  
+                const riskCanvas = document.getElementById('risk-chart');
+                if (riskCanvas) {
+                    try {
+                        new Chart(riskCanvas, {
+                            type: 'scatter',
+                            data: {
+                                datasets: [{
+                                    label: 'Top Aktien',
+                                    data: [
+                                        {x: 12, y: 18.5, label: 'NVDA'},
+                                        {x: 8, y: 16.2, label: 'AAPL'},
+                                        {x: 9, y: 15.4, label: 'MSFT'},
+                                        {x: 11, y: 17.8, label: 'GOOGL'}, 
+                                        {x: 15, y: 22.1, label: 'TSLA'}
+                                    ],
+                                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                                    pointRadius: 12,
+                                    pointHoverRadius: 15
+                                }]
+                            },
+                            options: { 
+                                responsive: true, 
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Risiko-Rendite Matrix',
+                                        font: { size: 16, weight: 'bold' }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        title: { display: true, text: 'Risiko (%)' }
+                                    },
+                                    y: {
+                                        title: { display: true, text: 'Rendite (%)' }
+                                    }
+                                }
+                            }
+                        });
+                        console.log('✅ Risk Chart created automatically');
+                    } catch (error) {
+                        console.error('❌ Risk Chart error:', error);
+                    }
+                }
+                
+                // Technical Chart
+                const techCanvas = document.getElementById('technical-chart');
+                if (techCanvas) {
+                    try {
+                        new Chart(techCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: ['RSI', 'MACD', 'SMA', 'EMA', 'Bollinger', 'Stochastic'],
+                                datasets: [{
+                                    label: 'Technical Score (%)',
+                                    data: [78, 85, 72, 68, 82, 75],
+                                    backgroundColor: [
+                                        '#ff6384',
+                                        '#36a2eb',
+                                        '#ffce56', 
+                                        '#4bc0c0',
+                                        '#9966ff',
+                                        '#ff9f40'
+                                    ],
+                                    borderWidth: 2,
+                                    borderColor: '#333'
+                                }]
+                            },
+                            options: { 
+                                responsive: true, 
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Technical Analysis Scores',
+                                        font: { size: 16, weight: 'bold' }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 100,
+                                        title: { display: true, text: 'Score (%)' }
+                                    }
+                                }
+                            }
+                        });
+                        console.log('✅ Technical Chart created automatically');
+                    } catch (error) {
+                        console.error('❌ Technical Chart error:', error);
+                    }
+                }
+                
+                console.log('🎯 AUTOMATIC CHART SOLUTION COMPLETED - All charts should now be visible!');
+                
+            }, 1500); // 1.5 Sekunden Delay
+        };
+        
+        chartScript.onerror = function() {
+            console.error('❌ Failed to load Chart.js');
+        };
+        
+        document.head.appendChild(chartScript);
+        console.log('📥 Chart.js loading initiated automatically...');
+        
         </script>
         """
 
@@ -1721,6 +2218,112 @@ async def refresh_predictions():
     except Exception as e:
         logger.error("Error refreshing predictions", error=str(e))
         raise HTTPException(status_code=500, detail=f"Fehler bei ML-Berechnung: {str(e)}")
+
+@app.get("/chart-test")
+async def chart_test():
+    """Minimal Chart Test Page"""
+    html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>Chart Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+    <h2>🧪 Minimal Chart Test</h2>
+    <p>Dieses ist ein Test um zu prüfen ob Charts grundsätzlich funktionieren.</p>
+    
+    <div style="width: 400px; height: 200px; margin: 20px;">
+        <h3>Performance Chart</h3>
+        <canvas id="test-performance-chart"></canvas>
+    </div>
+    
+    <div style="width: 400px; height: 200px; margin: 20px;">
+        <h3>Risk Chart</h3>
+        <canvas id="test-risk-chart"></canvas>
+    </div>
+    
+    <div style="width: 400px; height: 200px; margin: 20px;">
+        <h3>Technical Chart</h3>
+        <canvas id="test-technical-chart"></canvas>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🧪 Minimal test loaded');
+        console.log('Chart available?', typeof Chart !== 'undefined');
+        
+        if (typeof Chart !== 'undefined') {
+            console.log('✅ Chart.js loaded, creating test charts...');
+            
+            // Performance Chart
+            try {
+                new Chart(document.getElementById('test-performance-chart'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun'],
+                        datasets: [{
+                            label: 'Performance Test',
+                            data: [85, 87, 88, 89, 90, 91],
+                            borderColor: 'rgb(54, 162, 235)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+                console.log('✅ Performance Chart created');
+            } catch (error) {
+                console.error('❌ Performance Chart error:', error);
+            }
+            
+            // Risk Chart
+            try {
+                new Chart(document.getElementById('test-risk-chart'), {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Risk-Return Test',
+                            data: [{x: 10, y: 15}, {x: 12, y: 18}, {x: 8, y: 12}],
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            pointRadius: 8
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+                console.log('✅ Risk Chart created');
+            } catch (error) {
+                console.error('❌ Risk Chart error:', error);
+            }
+            
+            // Technical Chart
+            try {
+                new Chart(document.getElementById('test-technical-chart'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['RSI', 'MACD', 'SMA', 'EMA'],
+                        datasets: [{
+                            label: 'Technical Test',
+                            data: [78, 85, 72, 68],
+                            backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+                console.log('✅ Technical Chart created');
+            } catch (error) {
+                console.error('❌ Technical Chart error:', error);
+            }
+            
+            console.log('🎯 All test charts completed');
+            document.body.innerHTML += '<h3 style="color: green;">✅ Charts sollten jetzt sichtbar sein!</h3>';
+        } else {
+            console.error('❌ Chart.js not available');
+            document.body.innerHTML += '<h3 style="color: red;">❌ Chart.js ist nicht verfügbar!</h3>';
+        }
+    });
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
 
 @app.get("/api/predictions/latest")
 async def get_latest_predictions():

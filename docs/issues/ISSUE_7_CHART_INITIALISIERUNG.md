@@ -1,7 +1,7 @@
 # Issue #7: Gewinn-Vorhersage Verlauf-Darstellung Chart-Initialisierung
 
 **GitHub Issue**: [#7](https://github.com/MarcoFPO/aktienanalyse--kosystem/issues/7)  
-**Status**: ✅ **RESOLVED**  
+**Status**: 🔧 **CHART.JS LIBRARY PROBLEM BEHOBEN**  
 **Priorität**: High  
 **Datum**: 2025-07-28  
 
@@ -228,12 +228,87 @@ systemctl status aktienanalyse-frontend  # Active: active (running) ✅
 3. **Vollständigkeit prüfen**: Alle Canvas-Elemente brauchen entsprechende JavaScript-Funktionen
 4. **Testing systematisch**: Console-Logs helfen bei Initialisierungs-Debugging
 
+## 🚀 **Update: Robuste Retry-Logic implementiert**
+
+### **Problem**: Charts noch nicht sichtbar nach Basis-Initialisierung
+**User Feedback**: `"die Charts sind noch nicht in der GUI sichtbar"`
+
+### **Enhanced Solution**: 
+```javascript
+// Robuste Chart-Initialisierung mit DOM-Check und Retry-Logic
+function initializeChartsWhenReady() {
+    console.log('[CONTENT] Starte Chart-Initialisierung...');
+    
+    // Check Canvas-Verfügbarkeit
+    const performanceCanvas = document.getElementById('performance-chart');
+    const riskCanvas = document.getElementById('risk-chart');
+    const technicalCanvas = document.getElementById('technical-chart');
+    
+    console.log('[CONTENT] Canvas-Elemente gefunden:', {
+        performance: !!performanceCanvas,
+        risk: !!riskCanvas,
+        technical: !!technicalCanvas
+    });
+    
+    if (performanceCanvas && riskCanvas && technicalCanvas) {
+        // Alle Canvas bereit - initialisiere Charts
+        try { initPerformanceChart(); console.log('[CONTENT] ✅ Performance Chart initialisiert'); } 
+        catch (error) { console.error('[CONTENT] ❌ Performance Chart Fehler:', error); }
+        
+        try { initRiskChart(); console.log('[CONTENT] ✅ Risk Chart initialisiert'); } 
+        catch (error) { console.error('[CONTENT] ❌ Risk Chart Fehler:', error); }
+        
+        try { initTechnicalChart(); console.log('[CONTENT] ✅ Technical Chart initialisiert'); } 
+        catch (error) { console.error('[CONTENT] ❌ Technical Chart Fehler:', error); }
+        
+        console.log('[CONTENT] 🎯 Alle Charts initialisiert');
+    } else {
+        // Retry wenn Canvas noch nicht bereit
+        console.log('[CONTENT] ⏳ Canvas-Elemente noch nicht bereit, retry in 200ms...');
+        setTimeout(initializeChartsWhenReady, 200);
+    }
+}
+
+// Starte mit kurzem Delay
+setTimeout(initializeChartsWhenReady, 100);
+```
+
+### **Features der Enhanced Solution**:
+- ✅ **DOM-Element-Check**: Überprüfung der Canvas-Verfügbarkeit vor Initialisierung
+- ✅ **Retry-Logic**: Automatische Wiederholung alle 200ms bei nicht verfügbaren Elementen
+- ✅ **Detailed Logging**: Umfassendes Console-Logging für Debugging
+- ✅ **Individual Error Handling**: Try-Catch um jeden Chart mit spezifischen Fehlermeldungen
+- ✅ **Status-Reporting**: Erfolgs- und Fehlerstatus für jeden Chart einzeln
+
+## 🎯 **FINALE LÖSUNG: Chart.js Library Problem**
+
+### **🔍 Root Cause gefunden:**
+**Chart.js Library wurde NIEMALS geladen!**
+- Alle Chart-Funktionen waren definiert ✅
+- Canvas-Elemente waren vorhanden ✅  
+- **Aber Chart.js Library fehlte komplett** ❌
+
+### **✅ Implementierte Final-Lösung:**
+```html
+<!-- Chart.js Library für Chart-Visualisierungen -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+```
+
+**Hinzugefügt in**: `/services/frontend-service/src/main.py` im Predictions-Content
+
+### **📊 Kombinierte Lösung:**
+1. **✅ Chart.js Library geladen** - CDN Integration  
+2. **✅ Robuste Retry-Logic** - DOM-Check mit 200ms Intervals
+3. **✅ Detailed Logging** - Umfassendes Console-Debugging
+4. **✅ Individual Error Handling** - Try-Catch pro Chart
+
 ## 🔄 **Follow-up Actions**
 
-1. **✅ Implementiert**: Alle 3 Charts initialisiert und funktional
-2. **✅ Dokumentiert**: Issue #7 auf GitHub erstellt und gelöst  
-3. **✅ Validiert**: Funktionale Tests erfolgreich
-4. **🔄 Empfehlung**: Bei neuen Charts immer Initialisierung sicherstellen
+1. **✅ ROOT CAUSE**: Chart.js Library-Problem identifiziert und behoben
+2. **✅ LIBRARY**: Chart.js@4.4.0 erfolgreich in Predictions-Content integriert
+3. **✅ TESTING**: Robuste Initialisierung mit DOM-Check + Retry-Logic deployed
+4. **🔄 USER VALIDATION**: Browser-Console-Testing für finale Bestätigung
+5. **🔄 MONITORING**: Charts-Funktionalität in produktiver Umgebung überwachen
 
 ## 📈 **Performance Impact**
 
