@@ -1858,28 +1858,54 @@ class EnhancedFrontendService:
             setTimeout(function() {
                 console.log('🎯 Creating charts automatically...');
                 
-                // Performance Chart
+                // Performance Chart - Zeitlicher Verlauf als Liniendiagramm
                 const perfCanvas = document.getElementById('performance-chart');
                 if (perfCanvas) {
                     try {
                         new Chart(perfCanvas, {
                             type: 'line',
                             data: {
-                                labels: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni'],
+                                labels: [
+                                    '01.02.2025', '08.02.2025', '15.02.2025', '22.02.2025', 
+                                    '01.03.2025', '08.03.2025', '15.03.2025', '22.03.2025', '29.03.2025',
+                                    '05.04.2025', '12.04.2025', '19.04.2025', '26.04.2025',
+                                    '03.05.2025', '10.05.2025', '17.05.2025', '24.05.2025', '31.05.2025',
+                                    '07.06.2025', '14.06.2025', '21.06.2025', '28.06.2025',
+                                    '05.07.2025', '12.07.2025', '19.07.2025', '26.07.2025'
+                                ],
                                 datasets: [{
-                                    label: 'Vorhersage-Genauigkeit (%)',
-                                    data: [85.2, 87.1, 88.5, 89.2, 90.1, 91.3],
-                                    borderColor: 'rgb(54, 162, 235)',
-                                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                    label: 'NVDA Kursverlauf ($)',
+                                    data: [875.32, 892.10, 901.85, 918.45, 935.20, 952.80, 971.30, 988.15, 1005.90, 
+                                           1021.45, 1035.70, 1048.20, 1059.85, 1068.90, 1075.45, 1081.20, 1085.60, 1088.75,
+                                           1090.20, 1089.85, 1087.90, 1084.45, 1079.20, 1072.85, 1065.40, 1037.50],
+                                    borderColor: '#10B981',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
                                     tension: 0.4,
-                                    borderWidth: 3
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6
                                 }, {
-                                    label: 'Realisierte Gewinne (%)',
-                                    data: [12.3, 13.1, 14.2, 15.8, 16.9, 17.9], 
-                                    borderColor: 'rgb(75, 192, 192)',
-                                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                    label: 'AAPL Kursverlauf ($)',
+                                    data: [193.42, 196.80, 201.15, 205.90, 209.45, 212.80, 215.65, 217.90, 219.45,
+                                           220.85, 221.90, 222.60, 223.15, 223.45, 223.60, 223.85, 224.20, 224.45,
+                                           224.65, 224.75, 224.80, 224.75, 224.65, 224.50, 224.30, 224.80],
+                                    borderColor: '#3B82F6',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                     tension: 0.4,
-                                    borderWidth: 3
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6
+                                }, {
+                                    label: 'MSFT Kursverlauf ($)',
+                                    data: [421.18, 428.90, 436.45, 444.80, 452.30, 459.85, 466.90, 473.45, 479.20,
+                                           484.15, 488.30, 491.85, 494.70, 496.90, 498.45, 499.30, 499.85, 500.10,
+                                           500.05, 499.70, 499.15, 498.30, 497.20, 495.85, 494.25, 485.90],
+                                    borderColor: '#F59E0B',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6
                                 }]
                             },
                             options: { 
@@ -1888,9 +1914,34 @@ class EnhancedFrontendService:
                                 plugins: {
                                     title: {
                                         display: true,
-                                        text: 'Gewinn-Vorhersage Verlauf',
+                                        text: 'Aktienkurs-Verlauf und Vorhersagen (6 Monate)',
                                         font: { size: 16, weight: 'bold' }
+                                    },
+                                    legend: {
+                                        position: 'top'
                                     }
+                                },
+                                scales: {
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Zeitraum (Wöchentlich)'
+                                        },
+                                        ticks: {
+                                            maxTicksLimit: 8
+                                        }
+                                    },
+                                    y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Aktienkurs ($)'
+                                        },
+                                        beginAtZero: false
+                                    }
+                                },
+                                interaction: {
+                                    intersect: false,
+                                    mode: 'index'
                                 }
                             }
                         });
@@ -1900,25 +1951,66 @@ class EnhancedFrontendService:
                     }
                 }
                 
-                // Risk Chart  
+                // Risk Chart - Risiko-Entwicklung als zeitlicher Verlauf
                 const riskCanvas = document.getElementById('risk-chart');
                 if (riskCanvas) {
                     try {
                         new Chart(riskCanvas, {
-                            type: 'scatter',
+                            type: 'line',
                             data: {
+                                labels: [
+                                    '01.02.2025', '08.02.2025', '15.02.2025', '22.02.2025', 
+                                    '01.03.2025', '08.03.2025', '15.03.2025', '22.03.2025', '29.03.2025',
+                                    '05.04.2025', '12.04.2025', '19.04.2025', '26.04.2025',
+                                    '03.05.2025', '10.05.2025', '17.05.2025', '24.05.2025', '31.05.2025',
+                                    '07.06.2025', '14.06.2025', '21.06.2025', '28.06.2025',
+                                    '05.07.2025', '12.07.2025', '19.07.2025', '26.07.2025'
+                                ],
                                 datasets: [{
-                                    label: 'Top Aktien',
-                                    data: [
-                                        {x: 12, y: 18.5, label: 'NVDA'},
-                                        {x: 8, y: 16.2, label: 'AAPL'},
-                                        {x: 9, y: 15.4, label: 'MSFT'},
-                                        {x: 11, y: 17.8, label: 'GOOGL'}, 
-                                        {x: 15, y: 22.1, label: 'TSLA'}
-                                    ],
-                                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                                    pointRadius: 12,
-                                    pointHoverRadius: 15
+                                    label: 'NVDA Volatilität (%)',
+                                    data: [12.3, 13.8, 15.2, 14.9, 16.1, 17.3, 18.5, 19.2, 20.8, 
+                                           21.4, 22.1, 21.8, 20.9, 19.6, 18.3, 17.1, 16.8, 17.4,
+                                           18.2, 19.1, 19.8, 20.3, 21.2, 22.5, 23.1, 22.8],
+                                    borderColor: '#EF4444',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'AAPL Volatilität (%)',
+                                    data: [8.2, 8.8, 9.1, 8.9, 9.4, 9.8, 10.2, 10.6, 11.1,
+                                           11.4, 11.8, 12.1, 11.9, 11.5, 11.2, 10.8, 10.5, 10.9,
+                                           11.3, 11.7, 12.0, 12.2, 12.5, 12.8, 13.1, 12.6],
+                                    borderColor: '#3B82F6',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'MSFT Volatilität (%)',
+                                    data: [9.1, 9.5, 9.8, 10.1, 10.4, 10.8, 11.2, 11.5, 11.9,
+                                           12.2, 12.5, 12.8, 13.1, 12.9, 12.6, 12.3, 12.0, 12.4,
+                                           12.8, 13.2, 13.5, 13.8, 14.1, 14.4, 14.7, 14.2],
+                                    borderColor: '#F59E0B',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'Portfolio Gesamt-Risiko (%)',
+                                    data: [7.8, 8.1, 8.4, 8.2, 8.6, 9.0, 9.3, 9.7, 10.1,
+                                           10.4, 10.8, 11.0, 10.8, 10.5, 10.2, 9.9, 9.6, 10.0,
+                                           10.4, 10.7, 11.1, 11.3, 11.6, 11.9, 12.2, 11.8],
+                                    borderColor: '#8B5CF6',
+                                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 4,
+                                    borderDash: [5, 5],
+                                    pointRadius: 5,
+                                    fill: false
                                 }]
                             },
                             options: { 
@@ -1927,17 +2019,35 @@ class EnhancedFrontendService:
                                 plugins: {
                                     title: {
                                         display: true,
-                                        text: 'Risiko-Rendite Matrix',
+                                        text: 'Risiko-Verlauf und Volatilitäts-Entwicklung (6 Monate)',
                                         font: { size: 16, weight: 'bold' }
+                                    },
+                                    legend: {
+                                        position: 'top'
                                     }
                                 },
                                 scales: {
                                     x: {
-                                        title: { display: true, text: 'Risiko (%)' }
+                                        title: {
+                                            display: true,
+                                            text: 'Zeitraum (Wöchentlich)'
+                                        },
+                                        ticks: {
+                                            maxTicksLimit: 8
+                                        }
                                     },
                                     y: {
-                                        title: { display: true, text: 'Rendite (%)' }
+                                        title: {
+                                            display: true,
+                                            text: 'Volatilität/Risiko (%)'
+                                        },
+                                        beginAtZero: true,
+                                        max: 25
                                     }
+                                },
+                                interaction: {
+                                    intersect: false,
+                                    mode: 'index'
                                 }
                             }
                         });
@@ -1947,27 +2057,76 @@ class EnhancedFrontendService:
                     }
                 }
                 
-                // Technical Chart
+                // Technical Chart - Technical Indicators als zeitlicher Verlauf
                 const techCanvas = document.getElementById('technical-chart');
                 if (techCanvas) {
                     try {
                         new Chart(techCanvas, {
-                            type: 'bar',
+                            type: 'line',
                             data: {
-                                labels: ['RSI', 'MACD', 'SMA', 'EMA', 'Bollinger', 'Stochastic'],
+                                labels: [
+                                    '01.02.2025', '08.02.2025', '15.02.2025', '22.02.2025', 
+                                    '01.03.2025', '08.03.2025', '15.03.2025', '22.03.2025', '29.03.2025',
+                                    '05.04.2025', '12.04.2025', '19.04.2025', '26.04.2025',
+                                    '03.05.2025', '10.05.2025', '17.05.2025', '24.05.2025', '31.05.2025',
+                                    '07.06.2025', '14.06.2025', '21.06.2025', '28.06.2025',
+                                    '05.07.2025', '12.07.2025', '19.07.2025', '26.07.2025'
+                                ],
                                 datasets: [{
-                                    label: 'Technical Score (%)',
-                                    data: [78, 85, 72, 68, 82, 75],
-                                    backgroundColor: [
-                                        '#ff6384',
-                                        '#36a2eb',
-                                        '#ffce56', 
-                                        '#4bc0c0',
-                                        '#9966ff',
-                                        '#ff9f40'
-                                    ],
-                                    borderWidth: 2,
-                                    borderColor: '#333'
+                                    label: 'RSI (Relative Strength Index)',
+                                    data: [45, 52, 58, 64, 68, 72, 78, 82, 85, 
+                                           87, 84, 79, 75, 71, 68, 65, 63, 66,
+                                           69, 73, 76, 79, 82, 85, 88, 84],
+                                    borderColor: '#FF6384',
+                                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'MACD Signal',
+                                    data: [68, 71, 75, 78, 82, 85, 88, 91, 94,
+                                           92, 89, 86, 83, 80, 77, 74, 72, 75,
+                                           78, 81, 84, 87, 90, 93, 96, 91],
+                                    borderColor: '#36A2EB',
+                                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'SMA (Simple Moving Average)',
+                                    data: [58, 61, 64, 67, 70, 72, 75, 77, 79,
+                                           81, 83, 84, 82, 80, 78, 76, 74, 76,
+                                           78, 80, 82, 84, 86, 88, 90, 87],
+                                    borderColor: '#FFCE56',
+                                    backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'Bollinger Bands Signal',
+                                    data: [62, 65, 68, 71, 74, 77, 80, 82, 85,
+                                           87, 89, 86, 83, 80, 77, 74, 72, 75,
+                                           78, 81, 84, 87, 90, 92, 94, 89],
+                                    borderColor: '#4BC0C0',
+                                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
+                                }, {
+                                    label: 'Stochastic Oscillator',
+                                    data: [52, 56, 60, 64, 68, 72, 75, 78, 82,
+                                           85, 82, 78, 74, 70, 67, 64, 62, 65,
+                                           68, 72, 75, 78, 81, 84, 87, 83],
+                                    borderColor: '#9966FF',
+                                    backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                                    tension: 0.4,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    fill: false
                                 }]
                             },
                             options: { 
@@ -1976,16 +2135,35 @@ class EnhancedFrontendService:
                                 plugins: {
                                     title: {
                                         display: true,
-                                        text: 'Technical Analysis Scores',
+                                        text: 'Technical Analysis Indicators - Zeitlicher Verlauf (6 Monate)',
                                         font: { size: 16, weight: 'bold' }
+                                    },
+                                    legend: {
+                                        position: 'top'
                                     }
                                 },
                                 scales: {
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Zeitraum (Wöchentlich)'
+                                        },
+                                        ticks: {
+                                            maxTicksLimit: 8
+                                        }
+                                    },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Indikator-Wert (%)'
+                                        },
                                         beginAtZero: true,
-                                        max: 100,
-                                        title: { display: true, text: 'Score (%)' }
+                                        max: 100
                                     }
+                                },
+                                interaction: {
+                                    intersect: false,
+                                    mode: 'index'
                                 }
                             }
                         });
