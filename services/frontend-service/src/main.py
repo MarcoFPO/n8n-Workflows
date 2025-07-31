@@ -233,12 +233,27 @@ class EnhancedFrontendService:
                     logger.info(f"✅ Loaded {self.global_stock_data['total_stocks_analyzed']} global stocks via Bus System")
                 else:
                     logger.warning("⚠️ Bus System nicht vollständig verfügbar - verwende Fallback-Daten")
-                    self.global_stock_data = await self.market_data_service.get_global_stock_data(limit=15)
+                    try:
+                        self.global_stock_data = await self.market_data_service.get_global_stock_data(limit=15)
+                        if self.global_stock_data:
+                            logger.info(f"✅ Fallback-Daten geladen: {self.global_stock_data['total_stocks_analyzed']} Aktien")
+                        else:
+                            logger.error("❌ Fallback-Daten sind None")
+                    except Exception as fallback_error:
+                        logger.error(f"❌ Fallback-Daten Fehler: {fallback_error}")
+                        self.global_stock_data = None
                     
             except Exception as e:
                 logger.error(f"⚠️ Market Data Bus Service initialization failed: {e}")
+                logger.error(f"⚠️ Exception details: {type(e).__name__}: {str(e)}")
                 # Vollständiger Fallback auf statische Daten
                 self.global_stock_data = None
+                
+            # Debug: Check final state
+            if self.global_stock_data:
+                logger.info(f"✅ Final check: Global stock data loaded with {len(self.global_stock_data.get('top_performers', []))} stocks")
+            else:
+                logger.warning("⚠️ Final check: Global stock data is None - will use static fallback in predictions")
             await self.create_enhanced_static_files()
             logger.info("Enhanced Frontend Service initialized")
         except Exception as e:
@@ -841,6 +856,8 @@ class EnhancedFrontendService:
         
         with open(self.static_path / "index.html", "w", encoding="utf-8") as f:
             f.write(html)
+        
+        return html
 
     async def get_dashboard_content(self):
         """Dashboard content with system overview"""
@@ -1229,14 +1246,23 @@ class EnhancedFrontendService:
     
     async def _generate_dynamic_predictions_content(self):
         """Dynamische Vorhersage-Inhalte mit echten globalen Marktdaten"""
-        stocks = self.global_stock_data['top_performers'][:15]  # Top 15
-        total_analyzed = self.global_stock_data['total_stocks_analyzed']
-        global_coverage = self.global_stock_data['global_coverage']
+        try:
+            # Überprüfe ob globale Marktdaten verfügbar sind
+            if not self.global_stock_data or not isinstance(self.global_stock_data, dict):
+                raise ValueError("Keine globalen Marktdaten verfügbar")
+                
+            stocks = self.global_stock_data.get('top_performers', [])[:15]  # Top 15
+            total_analyzed = self.global_stock_data.get('total_stocks_analyzed', 0)
+            global_coverage = self.global_stock_data.get('global_coverage', {})
+        except Exception as e:
+            self.logger.error(f"❌ Failed to load global stock data: {e}")
+            # Fallback zu statischem Inhalt
+            return await self._get_static_predictions_content()
         
         # KPI-Berechnungen
-        if stocks:
-            top_prediction = stocks[0]['predicted_return']
-            top_symbol = stocks[0]['symbol']
+        if stocks and len(stocks) > 0:
+            top_prediction = stocks[0].get('predicted_return', '+0.0%')
+            top_symbol = stocks[0].get('symbol', 'N/A')
             avg_sharpe = sum(float(stock.get('sharpe_ratio', 0)) for stock in stocks[:10]) / min(len(stocks), 10)
             avg_ml_score = sum(float(stock.get('ml_score', 0)) for stock in stocks[:10]) / min(len(stocks), 10)
         else:
@@ -1248,15 +1274,27 @@ class EnhancedFrontendService:
         # Tabellen-Zeilen generieren
         table_rows = ""
         for i, stock in enumerate(stocks, 1):
+            # Sichere Datenextraktion mit Fallbacks
+            risk_level = stock.get('risk_level', 'Unbekannt')
+            predicted_return = stock.get('predicted_return', '+0.0%')
+            ml_score_val = stock.get('ml_score', 0)
+            
             # Risiko-Badge-Farbe
-            risk_color = "success" if stock['risk_level'] == "Niedrig" else "warning" if stock['risk_level'] == "Mittel" else "danger"
+            risk_color = "success" if risk_level == "Niedrig" else "warning" if risk_level == "Mittel" else "danger"
             
             # Gewinn-Badge-Farbe
-            predicted_return_num = float(stock['predicted_return'].replace("%", "").replace("+", ""))
+            try:
+                predicted_return_clean = str(predicted_return).replace("%", "").replace("+", "")
+                predicted_return_num = float(predicted_return_clean) if predicted_return_clean else 0.0
+            except (ValueError, AttributeError):
+                predicted_return_num = 0.0
             return_color = "success" if predicted_return_num > 0 else "danger"
             
             # ML-Score Badge-Farbe
-            ml_score = float(stock['ml_score'])
+            try:
+                ml_score = float(ml_score_val) if ml_score_val is not None else 0.0
+            except (ValueError, TypeError):
+                ml_score = 0.0
             ml_color = "primary" if ml_score >= 80 else "info" if ml_score >= 60 else "warning"
             
             # Rang-Badge
@@ -1265,18 +1303,28 @@ class EnhancedFrontendService:
             table_rows += f"""
                                     <tr class="{'table-success' if i == 1 else ''}">
                                         <td><span class="badge bg-{rank_color}">{i}</span></td>
-                                        <td><strong>{stock['symbol']}</strong></td>
-                                        <td>{stock['name']}</td>
-                                        <td>{stock['current_price']}</td>
-                                        <td>{stock['predicted_price']}</td>
-                                        <td><span class="badge bg-{return_color}">{stock['predicted_return']}</span></td>
-                                        <td>{stock['sharpe_ratio']}</td>
-                                        <td><span class="badge bg-{ml_color}">{stock['ml_score']}</span></td>
-                                        <td><span class="badge bg-{risk_color}">{stock['risk_level']}</span></td>
+                                        <td><strong>{stock.get('symbol', 'N/A')}</strong></td>
+                                        <td>{stock.get('name', 'Unbekannt')}</td>
+                                        <td>{stock.get('current_price', '$0.00')}</td>
+                                        <td>{stock.get('predicted_price', '$0.00')}</td>
+                                        <td><span class="badge bg-{return_color}">{predicted_return}</span></td>
+                                        <td>{stock.get('sharpe_ratio', '0.00')}</td>
+                                        <td><span class="badge bg-{ml_color}">{ml_score:.0f}</span></td>
+                                        <td><span class="badge bg-{risk_color}">{risk_level}</span></td>
                                         <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
                                     </tr>"""
         
-        # Generate dynamic content with format method to avoid f-string issues
+        # Generate dynamic content with string formatting to avoid f-string issues
+        regions_data = global_coverage.get('regions', [])
+        exchanges_data = global_coverage.get('exchanges', [])
+        
+        # Sichere len() Aufrufe
+        regions = len(regions_data) if isinstance(regions_data, (list, tuple)) else 0
+        exchanges = len(exchanges_data) if isinstance(exchanges_data, (list, tuple)) else 0
+        
+        # JavaScript empty object literal
+        js_empty_object = "{}"
+        
         content = """
         <!-- Chart.js für Grafiken -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1310,9 +1358,9 @@ class EnhancedFrontendService:
                 <div class="card status-card text-center">
                     <div class="card-body">
                         <i class="fas fa-trophy fa-2x mb-2"></i>
-                        <h3 id="top-prediction">{top_prediction}</h3>
+                        <h3 id="top-prediction">{}</h3>
                         <p class="mb-0">Top Gewinn-Prognose</p>
-                        <small id="top-prediction-timeframe">{top_symbol} (3M)</small>
+                        <small id="top-prediction-timeframe">{} (3M)</small>
                     </div>
                 </div>
             </div>
@@ -1320,7 +1368,7 @@ class EnhancedFrontendService:
                 <div class="card status-card text-center">
                     <div class="card-body">
                         <i class="fas fa-robot fa-2x mb-2"></i>
-                        <h3>{avg_ml_score:.1f}%</h3>
+                        <h3>{}%</h3>
                         <p class="mb-0">ML-Genauigkeit</p>
                         <small>Ensemble-Modell</small>
                     </div>
@@ -1330,7 +1378,7 @@ class EnhancedFrontendService:
                 <div class="card status-card text-center">
                     <div class="card-body">
                         <i class="fas fa-chart-area fa-2x mb-2"></i>
-                        <h3>{avg_sharpe:.2f}</h3>
+                        <h3>{}</h3>
                         <p class="mb-0">Avg. Sharpe Ratio</p>
                         <small>Top 10 Aktien</small>
                     </div>
@@ -1354,7 +1402,7 @@ class EnhancedFrontendService:
                 <div class="card service-card">
                     <div class="card-header">
                         <h5><i class="fas fa-table me-2"></i>Top 15 Gewinn-Vorhersagen</h5>
-                        <small class="text-muted">Globale Analyse: {total_analyzed} Aktien aus {regions} Regionen, {exchanges} Börsen</small>
+                        <small class="text-muted">Globale Analyse: {} Aktien aus {} Regionen, {} Börsen</small>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -1374,7 +1422,7 @@ class EnhancedFrontendService:
                                     </tr>
                                 </thead>
                                 <tbody id="predictions-tbody">
-                                    {table_rows}
+                                    {}
                                 </tbody>
                             </table>
                         </div>
@@ -1471,260 +1519,14 @@ class EnhancedFrontendService:
             </div>
         </div>
 
-        <!-- Chart Library - Nur Chart.js für Stabilität -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+        <!-- Charts werden später hinzugefügt -->
+        """
         
-        <script>
-        // 🎯 SAUBERE CHART-IMPLEMENTIERUNG - VERSION 2.0
-        console.log('[CHARTS] Initialisiere saubere Chart-Implementierung...');
-        
-        // Globale Chart-Instanzen für Cleanup
-        window.predictionCharts = window.predictionCharts || {};
-        
-        function initChartsClean() {
-            console.log('[CHARTS] Starte Chart-Initialisierung...');
-            
-            // Cleanup existierende Charts
-            Object.values(window.predictionCharts).forEach(chart => {
-                if (chart && typeof chart.destroy === 'function') {
-                    try {
-                        chart.destroy();
-                    } catch (e) {
-                        console.warn('[CHARTS] Chart cleanup error:', e);
-                    }
-                }
-            });
-            window.predictionCharts = {};
-            
-            // Warte auf Chart.js
-            if (typeof Chart === 'undefined') {
-                console.log('[CHARTS] Warte auf Chart.js...');
-                setTimeout(initChartsClean, 500);
-                return;
-            }
-            
-            console.log('[CHARTS] Chart.js verfügbar, erstelle Charts...');
-            createAllCharts();
-        }
-        
-        function createAllCharts() {
-            const perfCanvas = document.getElementById('performance-chart');
-            const riskCanvas = document.getElementById('risk-chart');
-            const techCanvas = document.getElementById('technical-chart');
-            
-            console.log('[CHARTS] Canvas Status:', {
-                performance: !!perfCanvas,
-                risk: !!riskCanvas, 
-                technical: !!techCanvas
-            });
-            
-            if (!perfCanvas || !riskCanvas || !techCanvas) {
-                console.log('[CHARTS] Canvas-Elemente nicht bereit, retry in 200ms...');
-                setTimeout(createAllCharts, 200);
-                return;
-            }
-            
-            // Performance Chart
-            try {
-                console.log('[CHARTS] Erstelle Performance Chart...');
-                window.predictionCharts.performance = new Chart(perfCanvas, {
-                    type: 'line',
-                    data: {
-                        labels: ['01.02', '08.02', '15.02', '22.02', '01.03', '08.03', '15.03', '22.03', '29.03', 
-                                '05.04', '12.04', '19.04', '26.04', '03.05', '10.05', '17.05', '24.05', '31.05',
-                                '07.06', '14.06', '21.06', '28.06', '05.07', '12.07', '19.07', '26.07'],
-                        datasets: [{
-                            label: 'NVDA Kursverlauf ($)',
-                            data: [875.32, 892.10, 901.85, 918.45, 935.20, 952.80, 971.30, 988.15, 1005.90, 
-                                  1021.45, 1035.70, 1048.20, 1059.85, 1068.90, 1075.45, 1081.20, 1085.60, 1088.75,
-                                  1090.20, 1089.85, 1087.90, 1084.45, 1079.20, 1072.85, 1065.40, 1037.50],
-                            borderColor: '#10B981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.4,
-                            borderWidth: 3,
-                            pointRadius: 3
-                        }, {
-                            label: 'AAPL Kursverlauf ($)',
-                            data: [193.42, 196.80, 201.15, 205.90, 209.45, 212.80, 215.65, 217.90, 219.45,
-                                  220.85, 221.90, 222.60, 223.15, 223.45, 223.60, 223.85, 224.20, 224.45,
-                                  224.65, 224.75, 224.80, 224.75, 224.65, 224.50, 224.30, 224.80],
-                            borderColor: '#3B82F6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            borderWidth: 3,
-                            pointRadius: 3
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                title: {
-                                    display: true,
-                                    text: 'Kurswert ($)'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Datum (2025)'
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Gewinn-Vorhersage Verlauf - NVDA & AAPL (26 Wochen)'
-                            },
-                            legend: {
-                                display: true
-                            }
-                        }
-                    }
-                });
-                console.log('[CHARTS] ✅ Performance Chart erstellt');
-            } catch (error) {
-                console.error('[CHARTS] ❌ Performance Chart Fehler:', error);
-            }
-            
-            // Risk Chart
-            try {
-                console.log('[CHARTS] Erstelle Risk Chart...');
-                window.predictionCharts.risk = new Chart(riskCanvas, {
-                    type: 'scatter',
-                    data: {
-                        datasets: [{
-                            label: 'Tech Aktien',
-                            data: [
-                                {x: 8.5, y: 18.2}, {x: 12.3, y: 15.7}, {x: 6.8, y: 22.1}, 
-                                {x: 15.2, y: 12.9}, {x: 9.7, y: 19.8}, {x: 11.1, y: 16.4},
-                                {x: 14.8, y: 20.3}, {x: 7.2, y: 14.6}
-                            ],
-                            backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                            borderColor: '#10B981',
-                            pointRadius: 8,
-                            pointHoverRadius: 10
-                        }, {
-                            label: 'Finanz Aktien', 
-                            data: [
-                                {x: 5.2, y: 8.7}, {x: 7.1, y: 11.2}, {x: 4.8, y: 6.9}, 
-                                {x: 8.9, y: 13.4}, {x: 6.3, y: 9.8}, {x: 9.4, y: 12.1}
-                            ],
-                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                            borderColor: '#3B82F6',
-                            pointRadius: 8,
-                            pointHoverRadius: 10
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Risiko (Volatilität %)'
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Erwartete Rendite (%)'
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Risiko-Rendite Matrix'
-                            }
-                        }
-                    }
-                });
-                console.log('[CHARTS] ✅ Risk Chart erstellt');
-            } catch (error) {
-                console.error('[CHARTS] ❌ Risk Chart Fehler:', error);
-            }
-            
-            // Technical Chart
-            try {
-                console.log('[CHARTS] Erstelle Technical Chart...');
-                window.predictionCharts.technical = new Chart(techCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: ['RSI', 'MACD', 'Bollinger', 'Stochastic', 'Williams %R', 'CCI'],
-                        datasets: [{
-                            label: 'Technical Score',
-                            data: [78, 82, 75, 88, 71, 85],
-                            backgroundColor: [
-                                'rgba(16, 185, 129, 0.8)', // Grün
-                                'rgba(59, 130, 246, 0.8)', // Blau
-                                'rgba(168, 85, 247, 0.8)', // Lila
-                                'rgba(245, 101, 101, 0.8)', // Rot
-                                'rgba(251, 191, 36, 0.8)', // Gelb
-                                'rgba(34, 197, 94, 0.8)'   // Dunkelgrün
-                            ],
-                            borderColor: [
-                                '#10B981', '#3B82F6', '#A855F7', '#F56565', '#FBCB24', '#22C55E'
-                            ],
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                title: {
-                                    display: true,
-                                    text: 'Score (0-100)'
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Technical Analysis Scores'
-                            },
-                            legend: {
-                                display: false
-                            }
-                        }
-                    }
-                });
-                console.log('[CHARTS] ✅ Technical Chart erstellt');
-            } catch (error) {
-                console.error('[CHARTS] ❌ Technical Chart Fehler:', error);
-            }
-            
-            console.log('[CHARTS] 🎉 Alle Charts erfolgreich initialisiert!');
-        }
-        
-        // Starte Initialisierung
-        setTimeout(initChartsClean, 100);
-        </script>
-        
-        <!-- SAUBERES ENDE DER CHART-IMPLEMENTIERUNG -->
-        """.format(
-            top_prediction=top_prediction,
-            top_symbol=top_symbol,
-            avg_ml_score=avg_ml_score,
-            avg_sharpe=avg_sharpe,
-            total_analyzed=total_analyzed,
-            regions=global_coverage['regions'],
-            exchanges=global_coverage['exchanges'],
-            table_rows=table_rows
+        # Format the content with values (format numbers beforehand)
+        return content.format(
+            top_prediction, top_symbol, f"{avg_ml_score:.1f}", f"{avg_sharpe:.2f}",
+            total_analyzed, regions, exchanges, table_rows
         )
-        
-        return content
 
     async def get_broker_integration_content(self):
         """Broker-Integration content"""
