@@ -5,6 +5,7 @@ Enhanced Aktienanalyse Frontend Service mit Menü-Navigation
 """
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 import aiohttp
@@ -15,6 +16,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 import uvicorn
+
+# Market Data Integration - Temporarily disabled due to import issues
+# TODO: Fix import issues with hyphenated directory names
+# from frontend_integration import MarketDataFrontendService
+MarketDataFrontendService = None  # Fallback
 
 # Logging Setup
 structlog.configure(
@@ -45,9 +51,31 @@ class EnhancedFrontendService:
         }
         self.static_path = Path("/opt/aktienanalyse-ökosystem/services/frontend-service/static")
         
+        # Market Data Service Integration - Fallback
+        self.market_data_service = MarketDataFrontendService() if MarketDataFrontendService else None
+        self.global_stock_data = None
+        
     async def initialize(self):
         try:
             postgres_url = "postgresql://aktienanalyse:secure_password@localhost:5432/aktienanalyse_events?sslmode=disable"
+            
+            # Market Data Service initialisieren
+            if self.market_data_service:
+                try:
+                    await self.market_data_service.initialize()
+                    logger.info("✅ Market Data Service initialized successfully")
+                    
+                    # Globale Aktienanalyse laden (Top 15 für Performance)
+                    self.global_stock_data = await self.market_data_service.get_global_stock_data(limit=15)
+                    logger.info(f"✅ Loaded {self.global_stock_data['total_stocks_analyzed']} global stocks for analysis")
+                    
+                except Exception as e:
+                    logger.error(f"⚠️ Market Data Service initialization failed: {e}")
+                    # Fallback auf statische Daten
+                    self.global_stock_data = None
+            else:
+                logger.warning("⚠️ Market Data Service not available - using static fallback data")
+                self.global_stock_data = None
             self.db_pool = await asyncpg.create_pool(postgres_url, min_size=1, max_size=5)
             self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
             self.static_path.mkdir(exist_ok=True)
@@ -1026,7 +1054,70 @@ class EnhancedFrontendService:
 
     async def get_predictions_content(self):
         """Gewinn-Vorhersage content mit tabellarischen und grafischen Darstellungen"""
-        return """
+        
+        # Statische Fallback-Daten bei Marktdaten-Service-Fehlern
+        if not self.global_stock_data:
+            logger.warning("⚠️ Using fallback static data - Market Data Service unavailable")
+            return await self._get_static_predictions_content()
+        
+        # Dynamische Daten aus globalem Marktdaten-Service generieren
+        try:
+            return await self._generate_dynamic_predictions_content()
+        except Exception as e:
+            logger.error(f"❌ Failed to generate dynamic predictions content: {e}")
+            return await self._get_static_predictions_content()
+    
+    async def _generate_dynamic_predictions_content(self):
+        """Dynamische Vorhersage-Inhalte mit echten globalen Marktdaten"""
+        stocks = self.global_stock_data['top_performers'][:15]  # Top 15
+        total_analyzed = self.global_stock_data['total_stocks_analyzed']
+        global_coverage = self.global_stock_data['global_coverage']
+        
+        # KPI-Berechnungen
+        if stocks:
+            top_prediction = stocks[0]['predicted_return']
+            top_symbol = stocks[0]['symbol']
+            avg_sharpe = sum(float(stock.get('sharpe_ratio', 0)) for stock in stocks[:10]) / min(len(stocks), 10)
+            avg_ml_score = sum(float(stock.get('ml_score', 0)) for stock in stocks[:10]) / min(len(stocks), 10)
+        else:
+            top_prediction = "+0.0%"
+            top_symbol = "N/A"
+            avg_sharpe = 0.0
+            avg_ml_score = 0.0
+        
+        # Tabellen-Zeilen generieren
+        table_rows = ""
+        for i, stock in enumerate(stocks, 1):
+            # Risiko-Badge-Farbe
+            risk_color = "success" if stock['risk_level'] == "Niedrig" else "warning" if stock['risk_level'] == "Mittel" else "danger"
+            
+            # Gewinn-Badge-Farbe
+            predicted_return_num = float(stock['predicted_return'].replace("%", "").replace("+", ""))
+            return_color = "success" if predicted_return_num > 0 else "danger"
+            
+            # ML-Score Badge-Farbe
+            ml_score = float(stock['ml_score'])
+            ml_color = "primary" if ml_score >= 80 else "info" if ml_score >= 60 else "warning"
+            
+            # Rang-Badge
+            rank_color = "warning" if i == 1 else "success" if i <= 3 else "secondary"
+            
+            table_rows += f"""
+                                    <tr class="{'table-success' if i == 1 else ''}">
+                                        <td><span class="badge bg-{rank_color}">{i}</span></td>
+                                        <td><strong>{stock['symbol']}</strong></td>
+                                        <td>{stock['name']}</td>
+                                        <td>{stock['current_price']}</td>
+                                        <td>{stock['predicted_price']}</td>
+                                        <td><span class="badge bg-{return_color}">{stock['predicted_return']}</span></td>
+                                        <td>{stock['sharpe_ratio']}</td>
+                                        <td><span class="badge bg-{ml_color}">{stock['ml_score']}</span></td>
+                                        <td><span class="badge bg-{risk_color}">{stock['risk_level']}</span></td>
+                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
+                                    </tr>"""
+        
+        # Generate dynamic content with format method to avoid f-string issues
+        content = """
         <!-- Chart.js für Grafiken -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         
@@ -1059,9 +1150,9 @@ class EnhancedFrontendService:
                 <div class="card status-card text-center">
                     <div class="card-body">
                         <i class="fas fa-trophy fa-2x mb-2"></i>
-                        <h3 id="top-prediction">18.5%</h3>
+                        <h3 id="top-prediction">{top_prediction}</h3>
                         <p class="mb-0">Top Gewinn-Prognose</p>
-                        <small id="top-prediction-timeframe">NVDA (3M)</small>
+                        <small id="top-prediction-timeframe">{top_symbol} (3M)</small>
                     </div>
                 </div>
             </div>
@@ -1069,7 +1160,7 @@ class EnhancedFrontendService:
                 <div class="card status-card text-center">
                     <div class="card-body">
                         <i class="fas fa-robot fa-2x mb-2"></i>
-                        <h3>87.3%</h3>
+                        <h3>{avg_ml_score:.1f}%</h3>
                         <p class="mb-0">ML-Genauigkeit</p>
                         <small>Ensemble-Modell</small>
                     </div>
@@ -1079,7 +1170,7 @@ class EnhancedFrontendService:
                 <div class="card status-card text-center">
                     <div class="card-body">
                         <i class="fas fa-chart-area fa-2x mb-2"></i>
-                        <h3>1.42</h3>
+                        <h3>{avg_sharpe:.2f}</h3>
                         <p class="mb-0">Avg. Sharpe Ratio</p>
                         <small>Top 10 Aktien</small>
                     </div>
@@ -1103,6 +1194,7 @@ class EnhancedFrontendService:
                 <div class="card service-card">
                     <div class="card-header">
                         <h5><i class="fas fa-table me-2"></i>Top 15 Gewinn-Vorhersagen</h5>
+                        <small class="text-muted">Globale Analyse: {total_analyzed} Aktien aus {regions} Regionen, {exchanges} Börsen</small>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -1122,66 +1214,7 @@ class EnhancedFrontendService:
                                     </tr>
                                 </thead>
                                 <tbody id="predictions-tbody">
-                                    <tr class="table-success">
-                                        <td><span class="badge bg-warning">1</span></td>
-                                        <td><strong>NVDA</strong></td>
-                                        <td>NVIDIA Corp</td>
-                                        <td>$875.32</td>
-                                        <td>$1,037.50</td>
-                                        <td><span class="badge bg-success">+18.5%</span></td>
-                                        <td>1.87</td>
-                                        <td><span class="badge bg-primary">92.3</span></td>
-                                        <td><span class="badge bg-warning">Mittel</span></td>
-                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-secondary">2</span></td>
-                                        <td><strong>AAPL</strong></td>
-                                        <td>Apple Inc</td>
-                                        <td>$193.42</td>
-                                        <td>$224.80</td>
-                                        <td><span class="badge bg-success">+16.2%</span></td>
-                                        <td>1.65</td>
-                                        <td><span class="badge bg-primary">89.7</span></td>
-                                        <td><span class="badge bg-success">Niedrig</span></td>
-                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-secondary">3</span></td>
-                                        <td><strong>MSFT</strong></td>
-                                        <td>Microsoft Corp</td>
-                                        <td>$421.18</td>
-                                        <td>$485.90</td>
-                                        <td><span class="badge bg-success">+15.4%</span></td>
-                                        <td>1.52</td>
-                                        <td><span class="badge bg-primary">88.1</span></td>
-                                        <td><span class="badge bg-success">Niedrig</span></td>
-                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-secondary">4</span></td>
-                                        <td><strong>GOOGL</strong></td>
-                                        <td>Alphabet Inc</td>
-                                        <td>$168.24</td>
-                                        <td>$192.10</td>
-                                        <td><span class="badge bg-success">+14.2%</span></td>
-                                        <td>1.38</td>
-                                        <td><span class="badge bg-primary">85.9</span></td>
-                                        <td><span class="badge bg-warning">Mittel</span></td>
-                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-secondary">5</span></td>
-                                        <td><strong>TSLA</strong></td>
-                                        <td>Tesla Inc</td>
-                                        <td>$248.95</td>
-                                        <td>$282.70</td>
-                                        <td><span class="badge bg-success">+13.5%</span></td>
-                                        <td>1.21</td>
-                                        <td><span class="badge bg-primary">83.4</span></td>
-                                        <td><span class="badge bg-danger">Hoch</span></td>
-                                        <td><button class="btn btn-sm btn-warning"><i class="fas fa-exclamation-triangle me-1"></i>Vorsicht</button></td>
-                                    </tr>
+                                    {table_rows}
                                 </tbody>
                             </table>
                         </div>
@@ -1278,30 +1311,264 @@ class EnhancedFrontendService:
             </div>
         </div>
 
-        <!-- Robuste Chart-Bibliotheken mit Fallback -->
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.44.0/dist/apexcharts.min.js"></script>
+        <!-- Chart Library - Nur Chart.js für Stabilität -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
         
         <script>
-        // Robuste Chart-Library-Erkennung mit doppeltem Fallback
-        let chartLibrary = 'none';
+        // 🎯 SAUBERE CHART-IMPLEMENTIERUNG - VERSION 2.0
+        console.log('[CHARTS] Initialisiere saubere Chart-Implementierung...');
         
-        if (typeof ApexCharts !== 'undefined') {
-            chartLibrary = 'apex';
-            console.log('[PREDICTIONS] ✅ ApexCharts available - using preferred library');
-            setTimeout(initializeChartsWhenReady, 100);
-        } else if (typeof Chart !== 'undefined') {
-            chartLibrary = 'chartjs';
-            console.log('[PREDICTIONS] ✅ Chart.js available - using fallback library');
-            setTimeout(initializeChartsWhenReady, 100);
-        } else {
-            console.log('[PREDICTIONS] ⏳ Loading chart libraries dynamically...');
-            loadChartLibrariesDynamically();
+        // Globale Chart-Instanzen für Cleanup
+        window.predictionCharts = window.predictionCharts || {};
+        
+        function initChartsClean() {
+            console.log('[CHARTS] Starte Chart-Initialisierung...');
+            
+            // Cleanup existierende Charts
+            Object.values(window.predictionCharts).forEach(chart => {
+                if (chart && typeof chart.destroy === 'function') {
+                    try {
+                        chart.destroy();
+                    } catch (e) {
+                        console.warn('[CHARTS] Chart cleanup error:', e);
+                    }
+                }
+            });
+            window.predictionCharts = {};
+            
+            // Warte auf Chart.js
+            if (typeof Chart === 'undefined') {
+                console.log('[CHARTS] Warte auf Chart.js...');
+                setTimeout(initChartsClean, 500);
+                return;
+            }
+            
+            console.log('[CHARTS] Chart.js verfügbar, erstelle Charts...');
+            createAllCharts();
         }
         
-        // Dynamisches Laden der Chart-Libraries
-        function loadChartLibrariesDynamically() {
-            // Erst ApexCharts versuchen
+        function createAllCharts() {
+            const perfCanvas = document.getElementById('performance-chart');
+            const riskCanvas = document.getElementById('risk-chart');
+            const techCanvas = document.getElementById('technical-chart');
+            
+            console.log('[CHARTS] Canvas Status:', {
+                performance: !!perfCanvas,
+                risk: !!riskCanvas, 
+                technical: !!techCanvas
+            });
+            
+            if (!perfCanvas || !riskCanvas || !techCanvas) {
+                console.log('[CHARTS] Canvas-Elemente nicht bereit, retry in 200ms...');
+                setTimeout(createAllCharts, 200);
+                return;
+            }
+            
+            // Performance Chart
+            try {
+                console.log('[CHARTS] Erstelle Performance Chart...');
+                window.predictionCharts.performance = new Chart(perfCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: ['01.02', '08.02', '15.02', '22.02', '01.03', '08.03', '15.03', '22.03', '29.03', 
+                                '05.04', '12.04', '19.04', '26.04', '03.05', '10.05', '17.05', '24.05', '31.05',
+                                '07.06', '14.06', '21.06', '28.06', '05.07', '12.07', '19.07', '26.07'],
+                        datasets: [{
+                            label: 'NVDA Kursverlauf ($)',
+                            data: [875.32, 892.10, 901.85, 918.45, 935.20, 952.80, 971.30, 988.15, 1005.90, 
+                                  1021.45, 1035.70, 1048.20, 1059.85, 1068.90, 1075.45, 1081.20, 1085.60, 1088.75,
+                                  1090.20, 1089.85, 1087.90, 1084.45, 1079.20, 1072.85, 1065.40, 1037.50],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 3
+                        }, {
+                            label: 'AAPL Kursverlauf ($)',
+                            data: [193.42, 196.80, 201.15, 205.90, 209.45, 212.80, 215.65, 217.90, 219.45,
+                                  220.85, 221.90, 222.60, 223.15, 223.45, 223.60, 223.85, 224.20, 224.45,
+                                  224.65, 224.75, 224.80, 224.75, 224.65, 224.50, 224.30, 224.80],
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Kurswert ($)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Datum (2025)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Gewinn-Vorhersage Verlauf - NVDA & AAPL (26 Wochen)'
+                            },
+                            legend: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+                console.log('[CHARTS] ✅ Performance Chart erstellt');
+            } catch (error) {
+                console.error('[CHARTS] ❌ Performance Chart Fehler:', error);
+            }
+            
+            // Risk Chart
+            try {
+                console.log('[CHARTS] Erstelle Risk Chart...');
+                window.predictionCharts.risk = new Chart(riskCanvas, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Tech Aktien',
+                            data: [
+                                {x: 8.5, y: 18.2}, {x: 12.3, y: 15.7}, {x: 6.8, y: 22.1}, 
+                                {x: 15.2, y: 12.9}, {x: 9.7, y: 19.8}, {x: 11.1, y: 16.4},
+                                {x: 14.8, y: 20.3}, {x: 7.2, y: 14.6}
+                            ],
+                            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                            borderColor: '#10B981',
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        }, {
+                            label: 'Finanz Aktien', 
+                            data: [
+                                {x: 5.2, y: 8.7}, {x: 7.1, y: 11.2}, {x: 4.8, y: 6.9}, 
+                                {x: 8.9, y: 13.4}, {x: 6.3, y: 9.8}, {x: 9.4, y: 12.1}
+                            ],
+                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                            borderColor: '#3B82F6',
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Risiko (Volatilität %)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Erwartete Rendite (%)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Risiko-Rendite Matrix'
+                            }
+                        }
+                    }
+                });
+                console.log('[CHARTS] ✅ Risk Chart erstellt');
+            } catch (error) {
+                console.error('[CHARTS] ❌ Risk Chart Fehler:', error);
+            }
+            
+            // Technical Chart
+            try {
+                console.log('[CHARTS] Erstelle Technical Chart...');
+                window.predictionCharts.technical = new Chart(techCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['RSI', 'MACD', 'Bollinger', 'Stochastic', 'Williams %R', 'CCI'],
+                        datasets: [{
+                            label: 'Technical Score',
+                            data: [78, 82, 75, 88, 71, 85],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.8)', // Grün
+                                'rgba(59, 130, 246, 0.8)', // Blau
+                                'rgba(168, 85, 247, 0.8)', // Lila
+                                'rgba(245, 101, 101, 0.8)', // Rot
+                                'rgba(251, 191, 36, 0.8)', // Gelb
+                                'rgba(34, 197, 94, 0.8)'   // Dunkelgrün
+                            ],
+                            borderColor: [
+                                '#10B981', '#3B82F6', '#A855F7', '#F56565', '#FBCB24', '#22C55E'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Score (0-100)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Technical Analysis Scores'
+                            },
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                console.log('[CHARTS] ✅ Technical Chart erstellt');
+            } catch (error) {
+                console.error('[CHARTS] ❌ Technical Chart Fehler:', error);
+            }
+            
+            console.log('[CHARTS] 🎉 Alle Charts erfolgreich initialisiert!');
+        }
+        
+        // Starte Initialisierung
+        setTimeout(initChartsClean, 100);
+        </script>
+        
+        <!-- SAUBERES ENDE DER CHART-IMPLEMENTIERUNG -->
+        """.format(
+            top_prediction=top_prediction,
+            top_symbol=top_symbol,
+            avg_ml_score=avg_ml_score,
+            avg_sharpe=avg_sharpe,
+            total_analyzed=total_analyzed,
+            regions=global_coverage['regions'],
+            exchanges=global_coverage['exchanges'],
+            table_rows=table_rows
+        )
+        
+        return content
+
+    async def get_broker_integration_content(self):
+        """Broker-Integration content"""
+        return """
             const apexScript = document.createElement('script');
             apexScript.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.44.0/dist/apexcharts.min.js';
             apexScript.onload = function() {
@@ -1357,8 +1624,169 @@ class EnhancedFrontendService:
             }
         }
         
-        // ApexCharts Implementation (Preferred)
-        function createApexCharts(perfCanvas, riskCanvas, techCanvas) {
+        // DIREKTE CHART-ERSTELLUNG - VEREINFACHT UND ROBUST
+        function createDirectCharts(perfCanvas, riskCanvas, techCanvas) {
+            console.log('[PREDICTIONS] 🚀 DIREKTE Chart-Erstellung gestartet...');
+            
+            // Verwende Chart.js wenn ApexCharts nicht verfügbar
+            if (typeof Chart !== 'undefined') {
+                console.log('[PREDICTIONS] 📊 Verwende Chart.js für direkte Charts');
+                createSimpleChartJS(perfCanvas, riskCanvas, techCanvas);
+                return;
+            }
+            
+            if (typeof ApexCharts !== 'undefined') {
+                console.log('[PREDICTIONS] 📊 Verwende ApexCharts für direkte Charts');
+                createSimpleApexCharts(perfCanvas, riskCanvas, techCanvas);
+                return;
+            }
+            
+            console.error('[PREDICTIONS] ❌ Keine Chart-Library verfügbar');
+            showEmergencyChartMessage();
+        }
+        
+        // EINFACHE CHART.JS IMPLEMENTIERUNG
+        function createSimpleChartJS(perfCanvas, riskCanvas, techCanvas) {
+            console.log('[PREDICTIONS] 🎯 Erstelle Chart.js Charts...');
+            
+            // Performance Chart
+            try {
+                new Chart(perfCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: ['Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'NVDA ($)',
+                            data: [875, 935, 1021, 1075, 1090, 1037],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3
+                        }, {
+                            label: 'AAPL ($)',
+                            data: [193, 209, 220, 223, 224, 224],
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Aktienkurs-Verlauf (6 Monate)'
+                            }
+                        }
+                    }
+                });
+                console.log('[PREDICTIONS] ✅ Chart.js Performance Chart erstellt');
+            } catch (error) {
+                console.error('[PREDICTIONS] ❌ Chart.js Performance Chart Fehler:', error);
+            }
+            
+            // Risk Chart
+            try {
+                new Chart(riskCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: ['Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'NVDA Volatilität (%)',
+                            data: [12.3, 16.1, 21.4, 18.3, 19.8, 22.8],
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3
+                        }, {
+                            label: 'Portfolio Risiko (%)',
+                            data: [7.8, 8.6, 10.4, 10.2, 11.1, 11.8],
+                            borderColor: '#8B5CF6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3,
+                            borderDash: [5, 5]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Risiko-Verlauf (6 Monate)'
+                            }
+                        }
+                    }
+                });
+                console.log('[PREDICTIONS] ✅ Chart.js Risk Chart erstellt');
+            } catch (error) {
+                console.error('[PREDICTIONS] ❌ Chart.js Risk Chart Fehler:', error);
+            }
+            
+            // Technical Chart
+            try {
+                new Chart(techCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: ['Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'RSI',
+                            data: [45, 68, 87, 68, 76, 84],
+                            borderColor: '#FF6384',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3
+                        }, {
+                            label: 'MACD',
+                            data: [68, 82, 92, 77, 84, 91],
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Technical Analysis (6 Monate)'
+                            }
+                        }
+                    }
+                });
+                console.log('[PREDICTIONS] ✅ Chart.js Technical Chart erstellt');
+            } catch (error) {
+                console.error('[PREDICTIONS] ❌ Chart.js Technical Chart Fehler:', error);
+            }
+            
+            console.log('[PREDICTIONS] 🎯 Alle Chart.js Charts erfolgreich erstellt!');
+        }
+        
+        // NOTFALL-MESSAGE
+        function showEmergencyChartMessage() {
+            const message = `
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <h4>Charts werden geladen...</h4>
+                    <p>Bitte warten Sie einen Moment oder laden Sie die Seite neu.</p>
+                </div>
+            `;
+            
+            ['performance-chart', 'risk-chart', 'technical-chart'].forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas && canvas.parentElement) {
+                    canvas.parentElement.innerHTML = message;
+                }
+            });
+        }
+        
+        // ALTE APEX CHARTS IMPLEMENTIERUNG (Backup)
+        function createSimpleApexCharts(perfCanvas, riskCanvas, techCanvas) {
             console.log('[PREDICTIONS] 🚀 Creating ApexCharts timeline charts...');
             
             // Gemeinsame Zeitdaten
@@ -2426,6 +2854,280 @@ class EnhancedFrontendService:
         
         </script>
         """
+    
+    async def _get_static_predictions_content(self):
+        """Statische Fallback-Vorhersage-Inhalte für den Fall, dass der Market Data Service nicht verfügbar ist"""
+        return """
+        <!-- Chart.js für Grafiken -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-chart-line me-2"></i>ML-Ensemble Gewinn-Vorhersage</h5>
+                        <div class="text-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Fallback-Modus: Marktdaten-Service nicht verfügbar
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Performance Indicators -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-trophy fa-2x mb-2"></i>
+                        <h3 id="top-prediction">+18.5%</h3>
+                        <p class="mb-0">Top Gewinn-Prognose</p>
+                        <small id="top-prediction-timeframe">NVDA (3M)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-robot fa-2x mb-2"></i>
+                        <h3>87.3%</h3>
+                        <p class="mb-0">ML-Genauigkeit</p>
+                        <small>Ensemble-Modell</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-chart-area fa-2x mb-2"></i>
+                        <h3>1.42</h3>
+                        <p class="mb-0">Avg. Sharpe Ratio</p>
+                        <small>Top 10 Aktien</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h3>0.08s</h3>
+                        <p class="mb-0">Analyse-Zeit</p>
+                        <small>Letzte Vorhersage</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Gewinn-Vorhersagen Tabelle -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card service-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-table me-2"></i>Top 15 Gewinn-Vorhersagen (Statische Beispieldaten)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="predictions-table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Symbol</th>
+                                        <th>Unternehmen</th>
+                                        <th>Aktueller Kurs</th>
+                                        <th id="prediction-header">Vorhersage 3M</th>
+                                        <th>Gewinn %</th>
+                                        <th>Sharpe Ratio</th>
+                                        <th>ML-Score</th>
+                                        <th>Risiko</th>
+                                        <th>Aktion</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="predictions-tbody">
+                                    <tr class="table-success">
+                                        <td><span class="badge bg-warning">1</span></td>
+                                        <td><strong>NVDA</strong></td>
+                                        <td>NVIDIA Corp</td>
+                                        <td>$875.32</td>
+                                        <td>$1,037.50</td>
+                                        <td><span class="badge bg-success">+18.5%</span></td>
+                                        <td>1.87</td>
+                                        <td><span class="badge bg-primary">92.3</span></td>
+                                        <td><span class="badge bg-warning">Mittel</span></td>
+                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-secondary">2</span></td>
+                                        <td><strong>AAPL</strong></td>
+                                        <td>Apple Inc</td>
+                                        <td>$193.42</td>
+                                        <td>$224.80</td>
+                                        <td><span class="badge bg-success">+16.2%</span></td>
+                                        <td>1.65</td>
+                                        <td><span class="badge bg-primary">89.7</span></td>
+                                        <td><span class="badge bg-success">Niedrig</span></td>
+                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-secondary">3</span></td>
+                                        <td><strong>MSFT</strong></td>
+                                        <td>Microsoft Corp</td>
+                                        <td>$421.18</td>
+                                        <td>$485.90</td>
+                                        <td><span class="badge bg-success">+15.4%</span></td>
+                                        <td>1.52</td>
+                                        <td><span class="badge bg-primary">88.1</span></td>
+                                        <td><span class="badge bg-success">Niedrig</span></td>
+                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-secondary">4</span></td>
+                                        <td><strong>GOOGL</strong></td>
+                                        <td>Alphabet Inc</td>
+                                        <td>$168.24</td>
+                                        <td>$192.10</td>
+                                        <td><span class="badge bg-success">+14.2%</span></td>
+                                        <td>1.38</td>
+                                        <td><span class="badge bg-primary">85.9</span></td>
+                                        <td><span class="badge bg-warning">Mittel</span></td>
+                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-secondary">5</span></td>
+                                        <td><strong>TSLA</strong></td>
+                                        <td>Tesla Inc</td>
+                                        <td>$248.95</td>
+                                        <td>$282.70</td>
+                                        <td><span class="badge bg-success">+13.5%</span></td>
+                                        <td>1.21</td>
+                                        <td><span class="badge bg-primary">83.4</span></td>
+                                        <td><span class="badge bg-danger">Hoch</span></td>
+                                        <td><button class="btn btn-sm btn-warning"><i class="fas fa-exclamation-triangle me-1"></i>Vorsicht</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grafische Darstellungen -->
+        <div class="row mb-4">
+            <div class="col-md-8 mb-3">
+                <div class="card service-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-area me-2"></i>Gewinn-Vorhersage Verlauf</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performance-chart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card service-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-scatter me-2"></i>Risiko-Rendite Matrix</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="risk-chart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        // STATISCHER FALLBACK - DIREKTE CHART INITIALISIERUNG  
+        console.log('[FALLBACK] Initialisiere statische Charts...');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                initStaticCharts();
+            }, 500);
+        });
+        
+        function initStaticCharts() {
+            const perfCanvas = document.getElementById('performance-chart');
+            const riskCanvas = document.getElementById('risk-chart');
+            
+            if (typeof Chart !== 'undefined' && perfCanvas && riskCanvas) {
+                console.log('[FALLBACK] Chart.js verfügbar, erstelle statische Charts...');
+                
+                // Performance Chart
+                new Chart(perfCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: ['Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'Top Performer ($)',
+                            data: [875, 935, 1021, 1075, 1090, 1037],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Aktienkurs-Verlauf (Statische Daten)'
+                            }
+                        }
+                    }
+                });
+                
+                // Risk Chart
+                new Chart(riskCanvas, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Aktien Risiko-Rendite',
+                            data: [
+                                {x: 12, y: 18.5},
+                                {x: 8, y: 16.2},
+                                {x: 9, y: 15.4},
+                                {x: 11, y: 14.2},
+                                {x: 15, y: 13.5}
+                            ],
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            pointRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Risiko-Rendite Matrix (Statische Daten)'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Risiko (%)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Rendite (%)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                console.log('[FALLBACK] ✅ Statische Charts erfolgreich erstellt');
+            }
+        }
+        </script>
+        """
 
     async def get_admin_content(self):
         """Admin content"""
@@ -2595,6 +3297,56 @@ async def proxy_event_bus(path: str):
 @app.get("/api/core/{path:path}")
 async def proxy_core(path: str):
     return await frontend_service.proxy_request("core", f"/{path}")
+
+@app.get("/api/chart-data")
+async def get_chart_data():
+    """API-Endpunkt für dynamische Chart-Daten aus dem Market Data Service"""
+    try:
+        if not frontend_service.global_stock_data:
+            return {
+                "error": "Market Data Service nicht verfügbar",
+                "fallback": True,
+                "data": {
+                    "labels": ["Feb", "Mär", "Apr", "Mai", "Jun", "Jul"],
+                    "datasets": [{
+                        "label": "Fallback Daten",
+                        "data": [875, 935, 1021, 1075, 1090, 1037],
+                        "borderColor": "#10B981",
+                        "backgroundColor": "rgba(16, 185, 129, 0.1)"
+                    }]
+                }
+            }
+        
+        # Echte Chart-Daten generieren
+        top_symbols = [stock['symbol'] for stock in frontend_service.global_stock_data['top_performers'][:5]]
+        chart_data = await frontend_service.market_data_service.get_chart_data(top_symbols, days=180)
+        
+        return {
+            "success": True,
+            "fallback": False,
+            "data": chart_data,
+            "metadata": {
+                "symbols_count": len(top_symbols),
+                "data_source": "real_market_data",
+                "last_updated": datetime.now().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating chart data: {e}")
+        return {
+            "error": str(e),
+            "fallback": True,
+            "data": {
+                "labels": ["Feb", "Mär", "Apr", "Mai", "Jun", "Jul"],
+                "datasets": [{
+                    "label": "Fallback nach Fehler",
+                    "data": [875, 935, 1021, 1075, 1090, 1037],
+                    "borderColor": "#EF4444",
+                    "backgroundColor": "rgba(239, 68, 68, 0.1)"
+                }]
+            }
+        }
 
 @app.post("/api/predictions/refresh")
 async def refresh_predictions():
@@ -2777,6 +3529,29 @@ async def read_root():
             return f.read()
     except FileNotFoundError:
         return "<h1>Enhanced Frontend loading...</h1>"
+
+@app.get("/predictions", response_class=HTMLResponse)
+async def predictions_page():
+    """Direkte Predictions-Seite"""
+    try:
+        # Hole den Base-HTML-Content
+        base_html = await frontend_service.create_enhanced_static_files()
+        
+        # Hole den Predictions-Content
+        predictions_content = await frontend_service.get_predictions_content()
+        
+        # Füge den Predictions-Content in die Seite ein
+        # Ersetze den Platzhalter-Content im main-Bereich
+        final_html = base_html.replace(
+            '<div id="main-content" class="container mt-4">',
+            f'<div id="main-content" class="container mt-4">{predictions_content}'
+        )
+        
+        return final_html
+        
+    except Exception as e:
+        logger.error(f"Error loading predictions page: {e}")
+        return f"<h1>Fehler beim Laden der Predictions-Seite</h1><p>{str(e)}</p>"
 
 @app.on_event("startup")
 async def startup_event():
