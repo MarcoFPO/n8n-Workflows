@@ -292,16 +292,12 @@ def get_prediction_data(timeframe: str = "7D") -> List[Dict[str, Any]]:
     """Vereinfachte Funktion für Vorhersagedaten"""
     return market_data_bridge.get_prediction_data(timeframe)
 
-def test_market_data_connection() -> Dict[str, Any]:
-    """Test der Market Data Verbindung"""
-    return market_data_bridge.test_connection()
-
 if __name__ == "__main__":
     print("🔧 Market Data Integration Bridge Test")
     print("=" * 50)
     
     # Test der Bridge
-    connection_test = test_market_data_connection()
+    connection_test = market_data_bridge.test_connection()
     print(f"🔗 Bridge Status: {connection_test}")
     
     # Test Aktiendaten
