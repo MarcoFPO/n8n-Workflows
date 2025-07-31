@@ -11,13 +11,43 @@ from enum import Enum
 import logging
 from decimal import Decimal
 
-from ..source-adapters.base_market_data_adapter import (
-    BaseMarketDataAdapter, MarketDataSource, MarketDataPoint, 
-    APILimits, Exchange, DataType, AdapterStatus
-)
-from ..source-adapters.alpha_vantage_adapter.alpha_vantage_adapter import AlphaVantageAdapter
-from ..source-adapters.yahoo_finance_adapter.yahoo_finance_adapter import YahooFinanceAdapter  
-from ..source-adapters.fmp_adapter.fmp_adapter import FMPAdapter
+import importlib.util
+import os
+
+# Import base adapter using absolute path
+base_dir = os.path.dirname(os.path.dirname(__file__))
+base_adapter_path = os.path.join(base_dir, 'source_adapters', 'base_market_data_adapter.py')
+spec = importlib.util.spec_from_file_location('base_market_data_adapter', base_adapter_path)
+base_adapter_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(base_adapter_module)
+BaseMarketDataAdapter = base_adapter_module.BaseMarketDataAdapter
+MarketDataSource = base_adapter_module.MarketDataSource
+MarketDataPoint = base_adapter_module.MarketDataPoint
+APILimits = base_adapter_module.APILimits
+Exchange = base_adapter_module.Exchange
+DataType = base_adapter_module.DataType
+AdapterStatus = base_adapter_module.AdapterStatus
+
+# Import AlphaVantageAdapter
+alpha_path = os.path.join(base_dir, 'source_adapters', 'alpha_vantage_adapter', 'alpha_vantage_adapter.py')
+spec = importlib.util.spec_from_file_location('alpha_vantage_adapter', alpha_path)
+alpha_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(alpha_module)
+AlphaVantageAdapter = alpha_module.AlphaVantageAdapter
+
+# Import YahooFinanceAdapter
+yahoo_path = os.path.join(base_dir, 'source_adapters', 'yahoo_finance_adapter', 'yahoo_finance_adapter.py')
+spec = importlib.util.spec_from_file_location('yahoo_finance_adapter', yahoo_path)
+yahoo_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(yahoo_module)
+YahooFinanceAdapter = yahoo_module.YahooFinanceAdapter
+
+# Import FMPAdapter
+fmp_path = os.path.join(base_dir, 'source_adapters', 'fmp_adapter', 'fmp_adapter.py')
+spec = importlib.util.spec_from_file_location('fmp_adapter', fmp_path)
+fmp_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fmp_module)
+FMPAdapter = fmp_module.FMPAdapter
 
 class DataPriority(Enum):
     """Priorität der Datenquellen für verschiedene Anfragen"""

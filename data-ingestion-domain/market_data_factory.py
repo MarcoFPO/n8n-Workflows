@@ -12,28 +12,28 @@ import sys
 
 # Import MarketDataAggregator
 base_dir = os.path.dirname(__file__)
-aggregator_path = os.path.join(base_dir, 'data-aggregation', 'market_data_aggregator.py')
+aggregator_path = os.path.join(base_dir, 'data_aggregation', 'market_data_aggregator.py')
 spec = importlib.util.spec_from_file_location('market_data_aggregator', aggregator_path)
 aggregator_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(aggregator_module)
 MarketDataAggregator = aggregator_module.MarketDataAggregator
 
 # Import AlphaVantageAdapter
-alpha_path = os.path.join(base_dir, 'source-adapters', 'alpha_vantage_adapter', 'alpha_vantage_adapter.py')
+alpha_path = os.path.join(base_dir, 'source_adapters', 'alpha_vantage_adapter', 'alpha_vantage_adapter.py')
 spec = importlib.util.spec_from_file_location('alpha_vantage_adapter', alpha_path)
 alpha_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(alpha_module)
 AlphaVantageAdapter = alpha_module.AlphaVantageAdapter
 
 # Import YahooFinanceAdapter
-yahoo_path = os.path.join(base_dir, 'source-adapters', 'yahoo_finance_adapter', 'yahoo_finance_adapter.py')
+yahoo_path = os.path.join(base_dir, 'source_adapters', 'yahoo_finance_adapter', 'yahoo_finance_adapter.py')
 spec = importlib.util.spec_from_file_location('yahoo_finance_adapter', yahoo_path)
 yahoo_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(yahoo_module)
 YahooFinanceAdapter = yahoo_module.YahooFinanceAdapter
 
 # Import FMPAdapter
-fmp_path = os.path.join(base_dir, 'source-adapters', 'fmp_adapter', 'fmp_adapter.py')
+fmp_path = os.path.join(base_dir, 'source_adapters', 'fmp_adapter', 'fmp_adapter.py')
 spec = importlib.util.spec_from_file_location('fmp_adapter', fmp_path)
 fmp_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fmp_module)

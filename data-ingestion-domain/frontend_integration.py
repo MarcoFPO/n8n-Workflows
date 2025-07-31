@@ -24,23 +24,23 @@ except ImportError:
     spec.loader.exec_module(factory_module)
     create_market_data_service_from_env = factory_module.create_market_data_service_from_env
 
-# Import from data-aggregation
+# Import from data_aggregation
 try:
     from data_aggregation.market_data_aggregator import AggregationResult
 except ImportError:
-    # Import using absolute path for directory with hyphens
-    aggregator_path = os.path.join(base_dir, 'data-aggregation', 'market_data_aggregator.py')
+    # Import using absolute path
+    aggregator_path = os.path.join(base_dir, 'data_aggregation', 'market_data_aggregator.py')
     spec = importlib.util.spec_from_file_location('market_data_aggregator', aggregator_path)
     aggregator_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(aggregator_module)
     AggregationResult = aggregator_module.AggregationResult
 
-# Import from source-adapters  
+# Import from source_adapters  
 try:
     from source_adapters.base_market_data_adapter import Exchange, MarketDataPoint
 except ImportError:
-    # Import using absolute path for directory with hyphens
-    base_adapter_path = os.path.join(base_dir, 'source-adapters', 'base_market_data_adapter.py')
+    # Import using absolute path
+    base_adapter_path = os.path.join(base_dir, 'source_adapters', 'base_market_data_adapter.py')
     spec = importlib.util.spec_from_file_location('base_market_data_adapter', base_adapter_path)
     base_adapter_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(base_adapter_module)
