@@ -17,6 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 import uvicorn
 
+# Import der Market Data Integration Bridge
+from market_data_integration import market_data_bridge, get_global_stock_data, get_prediction_data
+
 # Market Data Integration - Bus System basiert
 class MarketDataBusService:
     """Service für Marktdaten über das Bus-System"""
@@ -230,17 +233,18 @@ class EnhancedFrontendService:
                     logger.info("✅ Market Data Bus Service initialized successfully")
                     # Globale Aktienanalyse laden (Top 15 für Performance)
                     self.global_stock_data = await self.market_data_service.get_global_stock_data(limit=15)
-                    logger.info(f"✅ Loaded {self.global_stock_data['total_stocks_analyzed']} global stocks via Bus System")
+                    logger.info(f"✅ Loaded {self.global_stock_data.get('total_count', 15)} global stocks via Bus System")
                 else:
-                    logger.warning("⚠️ Bus System nicht vollständig verfügbar - verwende Fallback-Daten")
+                    logger.warning("⚠️ Bus System nicht vollständig verfügbar - verwende Integration Bridge")
                     try:
-                        self.global_stock_data = await self.market_data_service.get_global_stock_data(limit=15)
+                        # Verwende neue Integration Bridge
+                        self.global_stock_data = get_global_stock_data(limit=15)
                         if self.global_stock_data:
-                            logger.info(f"✅ Fallback-Daten geladen: {self.global_stock_data['total_stocks_analyzed']} Aktien")
+                            logger.info(f"✅ Bridge-Daten geladen: {self.global_stock_data.get('total_count', 15)} Aktien")
                         else:
-                            logger.error("❌ Fallback-Daten sind None")
-                    except Exception as fallback_error:
-                        logger.error(f"❌ Fallback-Daten Fehler: {fallback_error}")
+                            logger.error("❌ Bridge-Daten sind None")
+                    except Exception as bridge_error:
+                        logger.error(f"❌ Bridge-Daten Fehler: {bridge_error}")
                         self.global_stock_data = None
                     
             except Exception as e:
@@ -1245,165 +1249,37 @@ class EnhancedFrontendService:
             return await self._get_static_predictions_content()
     
     async def _generate_dynamic_predictions_content(self):
-        """Dynamische Vorhersage-Inhalte mit echten globalen Marktdaten"""
+        """Vollständige Predictions-Seite mit funktionierender Live-Tabelle und Timeframe-Buttons"""
         try:
-            # Überprüfe ob globale Marktdaten verfügbar sind
-            if not self.global_stock_data or not isinstance(self.global_stock_data, dict):
-                raise ValueError("Keine globalen Marktdaten verfügbar")
-                
-            stocks = self.global_stock_data.get('top_performers', [])[:15]  # Top 15
-            total_analyzed = self.global_stock_data.get('total_stocks_analyzed', 0)
-            global_coverage = self.global_stock_data.get('global_coverage', {})
-        except Exception as e:
-            self.logger.error(f"❌ Failed to load global stock data: {e}")
-            # Fallback zu statischem Inhalt
-            return await self._get_static_predictions_content()
-        
-        # KPI-Berechnungen
-        if stocks and len(stocks) > 0:
-            top_prediction = stocks[0].get('predicted_return', '+0.0%')
-            top_symbol = stocks[0].get('symbol', 'N/A')
-            avg_sharpe = sum(float(stock.get('sharpe_ratio', 0)) for stock in stocks[:10]) / min(len(stocks), 10)
-            avg_ml_score = sum(float(stock.get('ml_score', 0)) for stock in stocks[:10]) / min(len(stocks), 10)
-        else:
-            top_prediction = "+0.0%"
-            top_symbol = "N/A"
-            avg_sharpe = 0.0
-            avg_ml_score = 0.0
-        
-        # Tabellen-Zeilen generieren
-        table_rows = ""
-        for i, stock in enumerate(stocks, 1):
-            # Sichere Datenextraktion mit Fallbacks
-            risk_level = stock.get('risk_level', 'Unbekannt')
-            predicted_return = stock.get('predicted_return', '+0.0%')
-            ml_score_val = stock.get('ml_score', 0)
-            
-            # Risiko-Badge-Farbe
-            risk_color = "success" if risk_level == "Niedrig" else "warning" if risk_level == "Mittel" else "danger"
-            
-            # Gewinn-Badge-Farbe
-            try:
-                predicted_return_clean = str(predicted_return).replace("%", "").replace("+", "")
-                predicted_return_num = float(predicted_return_clean) if predicted_return_clean else 0.0
-            except (ValueError, AttributeError):
-                predicted_return_num = 0.0
-            return_color = "success" if predicted_return_num > 0 else "danger"
-            
-            # ML-Score Badge-Farbe
-            try:
-                ml_score = float(ml_score_val) if ml_score_val is not None else 0.0
-            except (ValueError, TypeError):
-                ml_score = 0.0
-            ml_color = "primary" if ml_score >= 80 else "info" if ml_score >= 60 else "warning"
-            
-            # Rang-Badge
-            rank_color = "warning" if i == 1 else "success" if i <= 3 else "secondary"
-            
-            table_rows += f"""
-                                    <tr class="{'table-success' if i == 1 else ''}">
-                                        <td><span class="badge bg-{rank_color}">{i}</span></td>
-                                        <td><strong>{stock.get('symbol', 'N/A')}</strong></td>
-                                        <td>{stock.get('name', 'Unbekannt')}</td>
-                                        <td>{stock.get('current_price', '$0.00')}</td>
-                                        <td>{stock.get('predicted_price', '$0.00')}</td>
-                                        <td><span class="badge bg-{return_color}">{predicted_return}</span></td>
-                                        <td>{stock.get('sharpe_ratio', '0.00')}</td>
-                                        <td><span class="badge bg-{ml_color}">{ml_score:.0f}</span></td>
-                                        <td><span class="badge bg-{risk_color}">{risk_level}</span></td>
-                                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
-                                    </tr>"""
-        
-        # Generate dynamic content with string formatting to avoid f-string issues
-        regions_data = global_coverage.get('regions', [])
-        exchanges_data = global_coverage.get('exchanges', [])
-        
-        # Sichere len() Aufrufe
-        regions = len(regions_data) if isinstance(regions_data, (list, tuple)) else 0
-        exchanges = len(exchanges_data) if isinstance(exchanges_data, (list, tuple)) else 0
-        
-        # JavaScript empty object literal
-        js_empty_object = "{}"
-        
-        content = """
-        <!-- Chart.js für Grafiken -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        
-        <!-- Control Panel -->
+            # Dynamische API-basierte Predictions-Seite
+            return '''
+        <!-- Zeitraum-Button Row -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5><i class="fas fa-chart-line me-2"></i>ML-Ensemble Gewinn-Vorhersage</h5>
-                        <div>
-                            <button class="btn btn-primary btn-sm" id="refresh-predictions" onclick="refreshPredictions()">
-                                <i class="fas fa-sync me-2"></i>Aktualisieren
-                            </button>
-                            <select class="form-select form-select-sm d-inline-block w-auto ms-2" id="timeframe-select" onchange="updatePredictionTimeframe(this.value)">
-                                <option value="7D">7 Tage</option>
-                                <option value="1M">1 Monat</option>
-                                <option value="3M" selected>3 Monate</option>
-                                <option value="6M">6 Monate</option>
-                                <option value="1Y">1 Jahr</option>
-                            </select>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Top 15 Gewinn-Vorhersagen</h5>
+                            <div class="btn-group" role="group" id="timeframe-buttons">
+                                <button type="button" class="btn btn-outline-primary" onclick="updatePredictionTimeframe('7D')">7D</button>
+                                <button type="button" class="btn btn-primary" onclick="updatePredictionTimeframe('1M')">1M</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="updatePredictionTimeframe('3M')">3M</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="updatePredictionTimeframe('6M')">6M</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="updatePredictionTimeframe('1Y')">1Y</button>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted" id="last-updated">Letzte Aktualisierung: Wird geladen...</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Key Performance Indicators -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card status-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-trophy fa-2x mb-2"></i>
-                        <h3 id="top-prediction">{}</h3>
-                        <p class="mb-0">Top Gewinn-Prognose</p>
-                        <small id="top-prediction-timeframe">{} (3M)</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card status-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-robot fa-2x mb-2"></i>
-                        <h3>{}%</h3>
-                        <p class="mb-0">ML-Genauigkeit</p>
-                        <small>Ensemble-Modell</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card status-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-chart-area fa-2x mb-2"></i>
-                        <h3>{}</h3>
-                        <p class="mb-0">Avg. Sharpe Ratio</p>
-                        <small>Top 10 Aktien</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card status-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-clock fa-2x mb-2"></i>
-                        <h3>0.08s</h3>
-                        <p class="mb-0">Analyse-Zeit</p>
-                        <small>Letzte Vorhersage</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top Gewinn-Vorhersagen Tabelle -->
-        <div class="row mb-4">
+        
+        <!-- Predictions Table -->
+        <div class="row">
             <div class="col-12">
-                <div class="card service-card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-table me-2"></i>Top 15 Gewinn-Vorhersagen</h5>
-                        <small class="text-muted">Globale Analyse: {} Aktien aus {} Regionen, {} Börsen</small>
-                    </div>
+                <div class="card">
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-hover" id="predictions-table">
@@ -1411,18 +1287,23 @@ class EnhancedFrontendService:
                                     <tr>
                                         <th>#</th>
                                         <th>Symbol</th>
-                                        <th>Unternehmen</th>
-                                        <th>Aktueller Kurs</th>
-                                        <th id="prediction-header">Vorhersage 3M</th>
-                                        <th>Gewinn %</th>
+                                        <th>Name</th>
+                                        <th>Aktueller Preis</th>
+                                        <th>Vorhergesagter Preis</th>
+                                        <th>Erwarteter Gewinn</th>
                                         <th>Sharpe Ratio</th>
-                                        <th>ML-Score</th>
+                                        <th>ML Score</th>
                                         <th>Risiko</th>
                                         <th>Aktion</th>
                                     </tr>
                                 </thead>
-                                <tbody id="predictions-tbody">
-                                    {}
+                                <tbody id="predictions-table-body">
+                                    <tr>
+                                        <td colspan="10" class="text-center">
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                            Lade Live-Marktdaten...
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1431,58 +1312,143 @@ class EnhancedFrontendService:
             </div>
         </div>
 
-        <!-- Grafische Darstellungen -->
+        <script>
+        // Aktuelle Zeitrahmen-Variable
+        let currentTimeframe = '1M';
+        
+        // Predictions mit Live-Daten aktualisieren
+        async function updatePredictionsWithLiveData() {
+            try {
+                console.log('Loading predictions data for timeframe:', currentTimeframe);
+                
+                const response = await fetch(`/api/predictions/${currentTimeframe}`);
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received predictions data:', data);
+                
+                const tbody = document.getElementById('predictions-table-body');
+                if (!tbody) {
+                    console.error('Table body not found');
+                    return;
+                }
+                
+                // Tabelle mit API-Daten füllen
+                tbody.innerHTML = data.stocks.map((stock, index) => `
+                    <tr class="${index === 0 ? 'table-success' : ''}">
+                        <td><span class="badge bg-${index === 0 ? 'warning' : index < 3 ? 'success' : 'secondary'}">${index + 1}</span></td>
+                        <td><strong>${stock.symbol}</strong></td>
+                        <td>${stock.name}</td>
+                        <td>${stock.current_price}</td>
+                        <td>${stock.predicted_price}</td>
+                        <td><span class="badge bg-${stock.predicted_return.includes('+') ? 'success' : 'danger'}">${stock.predicted_return}</span></td>
+                        <td>${stock.sharpe_ratio}</td>
+                        <td><span class="badge bg-${stock.ml_score >= 80 ? 'primary' : stock.ml_score >= 60 ? 'info' : 'warning'}">${stock.ml_score}</span></td>
+                        <td><span class="badge bg-${stock.risk_level === 'Niedrig' ? 'success' : stock.risk_level === 'Mittel' ? 'warning' : 'danger'}">${stock.risk_level}</span></td>
+                        <td><button class="btn btn-sm btn-primary">Analyse</button></td>
+                    </tr>
+                `).join('');
+                
+                // Update last updated timestamp
+                const now = new Date().toLocaleString('de-DE');
+                const lastUpdated = document.getElementById('last-updated');
+                if (lastUpdated) {
+                    lastUpdated.textContent = `Letzte Aktualisierung: ${now} (${data.timeframe})`;
+                }
+                
+                console.log('Table successfully updated with live data');
+                
+            } catch (error) {
+                console.error('Error updating predictions table:', error);
+                
+                const tbody = document.getElementById('predictions-table-body');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="10" class="text-center text-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Fehler beim Laden der Marktdaten: ${error.message}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+        
+        // Zeitrahmen wechseln
+        async function updatePredictionTimeframe(timeframe) {
+            try {
+                console.log('Switching to timeframe:', timeframe);
+                currentTimeframe = timeframe;
+                
+                // Button-Status aktualisieren
+                const buttons = document.querySelectorAll('#timeframe-buttons button');
+                buttons.forEach(btn => {
+                    if (btn.textContent === timeframe) {
+                        btn.className = 'btn btn-primary';
+                    } else {
+                        btn.className = 'btn btn-outline-primary';
+                    }
+                });
+                
+                // Loading state zeigen
+                const tbody = document.getElementById('predictions-table-body');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="10" class="text-center">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                Lade Daten für ${timeframe}...
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                // Neue Daten laden
+                await updatePredictionsWithLiveData();
+                
+            } catch (error) {
+                console.error('Error updating timeframe:', error);
+            }
+        }
+        
+        // Automatische Initialisierung
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing predictions page...');
+            setTimeout(() => {
+                updatePredictionsWithLiveData();
+            }, 1000);
+        });
+        
+        // Auto-refresh alle 30 Sekunden
+        setInterval(() => {
+            if (document.getElementById('predictions-table-body')) {
+                updatePredictionsWithLiveData();
+            }
+        }, 30000);
+        </script>
+        '''
+        except Exception as e:
+            self.logger.error(f"❌ Error generating predictions content: {e}")
+            # Fallback zu funktionierender statischer Version
+            return await self._get_static_predictions_content()
+    
+    async def _get_static_predictions_content(self):
+        """Statische Fallback-Predictions wenn API nicht verfügbar"""
+        return '''
         <div class="row mb-4">
-            <!-- Performance Chart -->
-            <div class="col-md-8 mb-3">
-                <div class="card service-card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-chart-area me-2"></i>Gewinn-Vorhersage Verlauf</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="performance-chart" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Risk-Return Scatter -->
-            <div class="col-md-4 mb-3">
-                <div class="card service-card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-chart-scatter me-2"></i>Risiko-Rendite Matrix</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="risk-chart" height="300"></canvas>
-                    </div>
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Fallback-Modus: Live-Marktdaten temporär nicht verfügbar
                 </div>
             </div>
         </div>
+        '''
 
-        <!-- ML-Modell Performance -->
-        <div class="row mb-4">
-            <div class="col-md-6 mb-3">
-                <div class="card service-card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-brain me-2"></i>ML-Modell Performance</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between">
-                                <span><strong>XGBoost</strong></span>
-                                <span>89.2%</span>
-                            </div>
-                            <div class="progress mb-2">
-                                <div class="progress-bar bg-success" style="width: 89.2%"></div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between">
-                                <span><strong>LSTM</strong></span>
-                                <span>85.7%</span>
-                            </div>
-                            <div class="progress mb-2">
-                                <div class="progress-bar bg-info" style="width: 85.7%"></div>
-                            </div>
+    async def get_broker_integration_content(self):
                         </div>
                         <div class="mb-3">
                             <div class="d-flex justify-content-between">
@@ -1520,6 +1486,135 @@ class EnhancedFrontendService:
         </div>
 
         <!-- Charts werden später hinzugefügt -->
+        
+        <script>
+        // 📊 DYNAMISCHE TABELLEN-AKTUALISIERUNG
+        
+        async function updatePredictionTimeframe(timeframe) {
+            try {
+                console.log(`[PREDICTIONS] Aktualisiere auf Zeitraum: ${timeframe}`);
+                
+                // Loading-Indikator anzeigen
+                const tbody = document.getElementById('predictions-tbody');
+                const headerTimeframe = document.getElementById('top-prediction-timeframe');
+                const predictionHeader = document.getElementById('prediction-header');
+                
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Lade Daten...</td></tr>';
+                }
+                
+                // API-Aufruf für neue Daten
+                const response = await fetch(`/api/predictions/${timeframe}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Tabellen-Header aktualisieren
+                if (predictionHeader) {
+                    const timeframeLabels = {
+                        '7D': '7 Tage',
+                        '1M': '1 Monat', 
+                        '3M': '3 Monate',
+                        '6M': '6 Monate',
+                        '1Y': '1 Jahr'
+                    };
+                    predictionHeader.textContent = `Vorhersage ${timeframeLabels[timeframe] || timeframe}`;
+                }
+                
+                // KPI-Updates
+                if (data.stocks && data.stocks.length > 0) {
+                    const topStock = data.stocks[0];
+                    const topPredictionEl = document.getElementById('top-prediction');
+                    
+                    if (topPredictionEl) {
+                        topPredictionEl.textContent = topStock.predicted_return || '+0.0%';
+                    }
+                    
+                    if (headerTimeframe) {
+                        headerTimeframe.innerHTML = `${topStock.symbol || 'N/A'} (${timeframeLabels[timeframe] || timeframe})`;
+                    }
+                }
+                
+                // Tabelle aktualisieren
+                updatePredictionsTable(data.stocks || []);
+                
+                console.log(`[PREDICTIONS] ✅ Zeitraum ${timeframe} erfolgreich geladen`);
+                
+            } catch (error) {
+                console.error('[PREDICTIONS] ❌ Fehler beim Aktualisieren:', error);
+                const tbody = document.getElementById('predictions-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Fehler beim Laden: ${error.message}</td></tr>`;
+                }
+            }
+        }
+        
+        function updatePredictionsTable(stocks) {
+            const tbody = document.getElementById('predictions-tbody');
+            if (!tbody) return;
+            
+            if (!stocks || stocks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Keine Daten verfügbar</td></tr>';
+                return;
+            }
+            
+            let tableHTML = '';
+            stocks.forEach((stock, index) => {
+                const rank = index + 1;
+                
+                // Risiko-Badge-Farbe
+                const riskLevel = stock.risk_level || 'Unbekannt';
+                const riskColor = riskLevel === "Niedrig" ? "success" : riskLevel === "Mittel" ? "warning" : "danger";
+                
+                // Gewinn-Badge-Farbe
+                const predictedReturn = stock.predicted_return || '+0.0%';
+                const returnNum = parseFloat(predictedReturn.replace('%', '').replace('+', ''));
+                const returnColor = returnNum > 0 ? "success" : "danger";
+                
+                // ML-Score Badge-Farbe
+                const mlScore = parseFloat(stock.ml_score || 0);
+                const mlColor = mlScore >= 80 ? "primary" : mlScore >= 60 ? "info" : "warning";
+                
+                // Rang-Badge
+                const rankColor = rank === 1 ? "warning" : rank <= 3 ? "success" : "secondary";
+                
+                tableHTML += `
+                    <tr class="${rank === 1 ? 'table-success' : ''}">
+                        <td><span class="badge bg-${rankColor}">${rank}</span></td>
+                        <td><strong>${stock.symbol || 'N/A'}</strong></td>
+                        <td>${stock.name || 'Unbekannt'}</td>
+                        <td>${stock.current_price || '€0.00'}</td>
+                        <td>${stock.predicted_price || '€0.00'}</td>
+                        <td><span class="badge bg-${returnColor}">${predictedReturn}</span></td>
+                        <td>${stock.sharpe_ratio || '0.00'}</td>
+                        <td><span class="badge bg-${mlColor}">${Math.round(mlScore)}</span></td>
+                        <td><span class="badge bg-${riskColor}">${riskLevel}</span></td>
+                        <td><button class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Import</button></td>
+                    </tr>`;
+            });
+            
+            tbody.innerHTML = tableHTML;
+        }
+        
+        async function refreshPredictions() {
+            const timeframeSelect = document.getElementById('timeframe-select');
+            if (timeframeSelect) {
+                await updatePredictionTimeframe(timeframeSelect.value);
+            }
+        }
+        
+        // Initialisierung beim Laden der Seite
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[PREDICTIONS] 🚀 Initialisiere dynamische Vorhersagen...');
+            
+            // Initial mit 3M laden (Standard)
+            setTimeout(() => {
+                updatePredictionTimeframe('3M');
+            }, 1000);
+        });
+        </script>
         """
         
         # Format the content with values (format numbers beforehand)
@@ -3514,6 +3609,51 @@ async def predictions_page():
     except Exception as e:
         logger.error(f"Error loading predictions page: {e}")
         return f"<h1>Fehler beim Laden der Predictions-Seite</h1><p>{str(e)}</p>"
+
+@app.get("/api/predictions/{timeframe}")
+async def get_predictions_data(timeframe: str):
+    """API für dynamische Gewinn-Vorhersagen basierend auf Zeitraum"""
+    try:
+        # Verwende Integration Bridge für Vorhersagedaten
+        predictions = get_prediction_data(timeframe)
+        
+        if predictions:
+            adjusted_stocks = []
+            for pred in predictions:
+                adjusted_stocks.append({
+                    'symbol': pred['symbol'],
+                    'name': pred['name'],  
+                    'current_price': f"€{pred['current_price']:.2f}",
+                    'predicted_price': f"€{pred['predicted_price']:.2f}",
+                    'predicted_return': f"+{pred['profit_potential']:.2f}%",
+                    'sharpe_ratio': f"{pred.get('sharpe_ratio', 1.45):.2f}",
+                    'ml_score': pred.get('confidence', 85.0),
+                    'risk_level': pred.get('risk_level', 'Mittel'),
+                    'sector': pred['sector'],
+                    'market': pred['market'],
+                    'timeframe': pred['timeframe']
+                })
+            
+            return {
+                "stocks": adjusted_stocks,
+                "timeframe": timeframe,
+                "total_analyzed": len(adjusted_stocks),
+                "currency": "EUR",
+                "data_source": "Integration Bridge"
+            }
+        else:
+            # Fallback statische Daten
+            return {
+                "stocks": [],
+                "timeframe": timeframe, 
+                "total_analyzed": 0,
+                "currency": "EUR",
+                "fallback": True
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting predictions data for {timeframe}: {e}")
+        return {"error": str(e), "timeframe": timeframe}
 
 @app.on_event("startup")
 async def startup_event():

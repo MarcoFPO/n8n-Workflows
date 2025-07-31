@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Gewinn-Vorhersagen</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1>Debug - Predictions Tabelle</h1>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <button onclick="testAPI()" class="btn btn-primary">API Testen</button>
+                            <button onclick="loadData()" class="btn btn-success">Daten Laden</button>
+                        </div>
+                        <div id="debug-output" class="alert alert-info">
+                            Warte auf Test...
+                        </div>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rang</th>
+                                    <th>Symbol</th>
+                                    <th>Name</th>
+                                    <th>Aktueller Preis</th>
+                                    <th>Vorhersage</th>
+                                    <th>Gewinn %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictions-table-body">
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                        Lade Live-Marktdaten...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function debugLog(message) {
+            console.log(message);
+            document.getElementById('debug-output').innerHTML += '<br>' + message;
+        }
+        
+        async function testAPI() {
+            try {
+                debugLog('🔍 Teste API...');
+                const response = await fetch('/api/predictions/1M');
+                debugLog(`📡 Response status: ${response.status}`);
+                debugLog(`📡 Response ok: ${response.ok}`);
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                debugLog(`📊 Daten erhalten: ${data.stocks.length} Aktien`);
+                debugLog(`💰 Erste Aktie: ${data.stocks[0].symbol} - ${data.stocks[0].predicted_return}`);
+                
+            } catch (error) {
+                debugLog(`❌ Fehler: ${error.message}`);
+            }
+        }
+        
+        async function loadData() {
+            try {
+                debugLog('📈 Lade Predictions-Daten...');
+                
+                const response = await fetch('/api/predictions/1M');
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                debugLog(`✅ ${data.stocks.length} Aktien geladen`);
+                
+                const tbody = document.getElementById('predictions-table-body');
+                if (!tbody) {
+                    debugLog('❌ Table Body nicht gefunden!');
+                    return;
+                }
+                
+                debugLog('🔄 Aktualisiere Tabelle...');
+                tbody.innerHTML = data.stocks.slice(0, 5).map((stock, index) => `
+                    <tr>
+                        <td><span class="badge bg-primary">${index + 1}</span></td>
+                        <td><strong>${stock.symbol}</strong></td>
+                        <td>${stock.name}</td>
+                        <td>${stock.current_price}</td>
+                        <td>${stock.predicted_price}</td>
+                        <td><span class="badge bg-success">${stock.predicted_return}</span></td>
+                    </tr>
+                `).join('');
+                
+                debugLog('✅ Tabelle erfolgreich aktualisiert!');
+                
+            } catch (error) {
+                debugLog(`❌ Fehler beim Laden: ${error.message}`);
+                const tbody = document.getElementById('predictions-table-body');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Fehler: ${error.message}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+        
+        // Auto-Load nach 2 Sekunden
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('📋 DOM geladen, starte in 2 Sekunden...');
+            setTimeout(() => {
+                loadData();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
