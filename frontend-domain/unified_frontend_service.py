@@ -22,6 +22,17 @@ import uvicorn
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from core.unified_fallback_provider import get_fallback_stock_data, get_fallback_predictions, get_fallback_metrics
+try:
+    from depot_management_module import DepotContentProviderFactory
+except ImportError:
+    try:
+        from .depot_management_module import DepotContentProviderFactory
+    except ImportError:
+        # Fallback für lokale Tests
+        import sys
+        sys.path.append(str(Path(__file__).parent))
+        from depot_management_module import DepotContentProviderFactory
+
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO)
@@ -312,6 +323,11 @@ class UnifiedFrontendService:
         self.content_providers['dashboard'] = ContentProviderFactory.get_provider('dashboard', self.event_bus, self.api_gateway)
         self.content_providers['predictions'] = ContentProviderFactory.get_provider('predictions', self.event_bus, self.api_gateway)
         
+        # Depot-Management Provider
+        self.content_providers['depot-overview'] = DepotContentProviderFactory.get_provider('depot-overview', self.event_bus, self.api_gateway)
+        self.content_providers['depot-details'] = DepotContentProviderFactory.get_provider('depot-details', self.event_bus, self.api_gateway)
+        self.content_providers['depot-trading'] = DepotContentProviderFactory.get_provider('depot-trading', self.event_bus, self.api_gateway)
+        
         # Static Files
         await self._create_static_files()
         
@@ -369,6 +385,18 @@ class UnifiedFrontendService:
                     <a href="#" id="nav-predictions" onclick="loadContent('predictions')">
                         <i class="fas fa-chart-line me-2"></i> Gewinn-Vorhersage
                     </a>
+                    <div class="mt-2 mb-2">
+                        <small class="text-white-50 px-3">DEPOTVERWALTUNG</small>
+                    </div>
+                    <a href="#" id="nav-depot-overview" onclick="loadContent('depot-overview')">
+                        <i class="fas fa-briefcase me-2"></i> Portfolio Übersicht
+                    </a>
+                    <a href="#" id="nav-depot-details" onclick="loadContent('depot-details', {portfolio_id: 'portfolio_001'})">
+                        <i class="fas fa-list-alt me-2"></i> Portfolio Details
+                    </a>
+                    <a href="#" id="nav-depot-trading" onclick="loadContent('depot-trading', {portfolio_id: 'portfolio_001'})">
+                        <i class="fas fa-exchange-alt me-2"></i> Trading Interface
+                    </a>
                 </nav>
             </div>
             
@@ -386,24 +414,45 @@ class UnifiedFrontendService:
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        async function loadContent(section) {
+        async function loadContent(section, context = {}) {
             try {
-                document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
-                document.getElementById('nav-' + section).classList.add('active');
+                // Navigation Update nur für Hauptnavigation
+                const navItem = document.getElementById('nav-' + section);
+                if (navItem) {
+                    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+                    navItem.classList.add('active');
+                }
                 
+                // Loading anzeigen
                 document.getElementById('main-content').innerHTML = 
                     '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Lade ' + section + '...</p></div>';
                 
-                const response = await fetch('/api/content/' + section);
+                // API-Aufruf mit Context
+                let url = '/api/content/' + section;
+                if (Object.keys(context).length > 0) {
+                    const params = new URLSearchParams(context);
+                    url += '?' + params.toString();
+                }
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const content = await response.text();
                 document.getElementById('main-content').innerHTML = content;
+                
+                console.log(`✅ Content loaded: ${section}`, context);
                 
             } catch (error) {
                 console.error('Content loading failed:', error);
                 document.getElementById('main-content').innerHTML = 
-                    '<div class="alert alert-danger">Fehler beim Laden: ' + error.message + '</div>';
+                    '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Fehler beim Laden: ' + error.message + '</div>';
             }
         }
+        
+        // Global verfügbare Funktionen für Depot-Management
+        window.loadContent = loadContent;
         
         document.addEventListener('DOMContentLoaded', function() {
             loadContent('dashboard');
@@ -461,6 +510,100 @@ async def health_check():
         "architecture": "consolidated",
         "event_bus_connected": frontend_service.event_bus.connected
     }
+
+# Portfolio Management API Endpoints
+@app.get("/api/portfolios")
+async def get_portfolios():
+    """Alle Portfolios abrufen"""
+    try:
+        logger.info("📊 Portfolios request")
+        # Mock-Daten für Demo - später durch echte API ersetzen
+        portfolios = [
+            {
+                "portfolio_id": "portfolio_001",
+                "name": "Hauptportfolio",
+                "description": "Langfristige Anlagestrategie",
+                "currency": "EUR",
+                "total_value": 125000.50,
+                "cash_balance": 5000.00,
+                "performance": {"daily": 2.3, "weekly": 8.7, "monthly": 12.1},
+                "risk_profile": "moderate"
+            },
+            {
+                "portfolio_id": "portfolio_002", 
+                "name": "Trading Portfolio",
+                "description": "Kurzfristige Trades",
+                "currency": "EUR",
+                "total_value": 45000.00,
+                "cash_balance": 12000.00,
+                "performance": {"daily": -0.8, "weekly": 3.2, "monthly": 18.5},
+                "risk_profile": "aggressive"
+            }
+        ]
+        await frontend_service.event_bus.emit("frontend.api.portfolios.delivered", {
+            "portfolio_count": len(portfolios)
+        })
+        return portfolios
+    except Exception as e:
+        logger.error(f"❌ Portfolios API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/portfolios/{portfolio_id}/positions")
+async def get_portfolio_positions(portfolio_id: str):
+    """Positionen eines Portfolios abrufen"""
+    try:
+        logger.info(f"📈 Portfolio positions request: {portfolio_id}")
+        # Mock-Daten für Demo
+        positions = [
+            {
+                "symbol": "AAPL",
+                "name": "Apple Inc.",
+                "quantity": 50,
+                "avg_buy_price": 180.25,
+                "current_price": 192.30,
+                "market_value": 9615.00,
+                "unrealized_pnl": 602.50,
+                "unrealized_pnl_percent": 6.69,
+                "allocation_percent": 15.2
+            },
+            {
+                "symbol": "MSFT",
+                "name": "Microsoft Corporation", 
+                "quantity": 30,
+                "avg_buy_price": 320.50,
+                "current_price": 335.80,
+                "market_value": 10074.00,
+                "unrealized_pnl": 459.00,
+                "unrealized_pnl_percent": 4.78,
+                "allocation_percent": 16.1
+            }
+        ]
+        return positions
+    except Exception as e:
+        logger.error(f"❌ Portfolio positions API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/portfolios/{portfolio_id}/orders")
+async def create_order(portfolio_id: str, order_data: dict):
+    """Neue Order erstellen"""
+    try:
+        logger.info(f"📝 Creating order for portfolio {portfolio_id}: {order_data}")
+        # Order-Validierung und Simulation
+        order_result = {
+            "order_id": f"order_{portfolio_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "status": "pending",
+            "portfolio_id": portfolio_id,
+            "symbol": order_data.get("symbol"),
+            "quantity": order_data.get("quantity"),
+            "order_type": order_data.get("order_type", "market"),
+            "estimated_total": order_data.get("quantity", 0) * order_data.get("price", 0),
+            "created_at": datetime.now().isoformat()
+        }
+        await frontend_service.event_bus.emit("frontend.api.order.created", order_result)
+        return order_result
+    except Exception as e:
+        logger.error(f"❌ Order creation API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
