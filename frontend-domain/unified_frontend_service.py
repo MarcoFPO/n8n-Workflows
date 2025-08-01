@@ -22,16 +22,30 @@ import uvicorn
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from core.unified_fallback_provider import get_fallback_stock_data, get_fallback_predictions, get_fallback_metrics
+
+# Import aller Provider
 try:
     from depot_management_module import DepotContentProviderFactory
+    from technical_analysis_provider import TechnicalAnalysisProvider
+    from market_data_provider import MarketDataProvider
+    from portfolio_analytics_provider import PortfolioAnalyticsProvider
+    from trading_interface_provider import TradingInterfaceProvider
 except ImportError:
     try:
         from .depot_management_module import DepotContentProviderFactory
+        from .technical_analysis_provider import TechnicalAnalysisProvider
+        from .market_data_provider import MarketDataProvider
+        from .portfolio_analytics_provider import PortfolioAnalyticsProvider
+        from .trading_interface_provider import TradingInterfaceProvider
     except ImportError:
         # Fallback für lokale Tests
         import sys
         sys.path.append(str(Path(__file__).parent))
         from depot_management_module import DepotContentProviderFactory
+        from technical_analysis_provider import TechnicalAnalysisProvider
+        from market_data_provider import MarketDataProvider
+        from portfolio_analytics_provider import PortfolioAnalyticsProvider
+        from trading_interface_provider import TradingInterfaceProvider
 
 
 # Setup Logging
@@ -289,6 +303,43 @@ class DashboardContentProvider(BaseContentProvider):
         '''
 
 
+# Wrapper-Klassen für Provider-Kompatibilität
+class TechnicalAnalysisContentProvider(BaseContentProvider):
+    """Wrapper für Technical Analysis Provider"""
+    def __init__(self, event_bus, api_gateway):
+        super().__init__(event_bus, api_gateway)
+        self.provider = TechnicalAnalysisProvider(event_bus, api_gateway)
+    
+    async def get_content(self, context: Dict[str, Any]) -> str:
+        return await self.provider.get_technical_analysis_content(context)
+
+class MarketDataContentProvider(BaseContentProvider):
+    """Wrapper für Market Data Provider"""
+    def __init__(self, event_bus, api_gateway):
+        super().__init__(event_bus, api_gateway)
+        self.provider = MarketDataProvider(event_bus, api_gateway)
+    
+    async def get_content(self, context: Dict[str, Any]) -> str:
+        return await self.provider.get_market_data_content(context)
+
+class PortfolioAnalyticsContentProvider(BaseContentProvider):
+    """Wrapper für Portfolio Analytics Provider"""
+    def __init__(self, event_bus, api_gateway):
+        super().__init__(event_bus, api_gateway)
+        self.provider = PortfolioAnalyticsProvider(event_bus, api_gateway)
+    
+    async def get_content(self, context: Dict[str, Any]) -> str:
+        return await self.provider.get_portfolio_analytics_content(context)
+
+class TradingInterfaceContentProvider(BaseContentProvider):
+    """Wrapper für Trading Interface Provider"""
+    def __init__(self, event_bus, api_gateway):
+        super().__init__(event_bus, api_gateway)
+        self.provider = TradingInterfaceProvider(event_bus, api_gateway)
+    
+    async def get_content(self, context: Dict[str, Any]) -> str:
+        return await self.provider.get_trading_interface_content(context)
+
 class ContentProviderFactory:
     """Factory für Content Provider"""
     
@@ -296,7 +347,11 @@ class ContentProviderFactory:
     def get_provider(provider_type: str, event_bus, api_gateway):
         providers = {
             'dashboard': DashboardContentProvider,
-            'predictions': PredictionsContentProvider
+            'predictions': PredictionsContentProvider,
+            'technical-analysis': TechnicalAnalysisContentProvider,
+            'market-data': MarketDataContentProvider,
+            'portfolio-analytics': PortfolioAnalyticsContentProvider,
+            'trading-interface': TradingInterfaceContentProvider
         }
         provider_class = providers.get(provider_type)
         return provider_class(event_bus, api_gateway) if provider_class else None
@@ -322,6 +377,12 @@ class UnifiedFrontendService:
         # Content Providers
         self.content_providers['dashboard'] = ContentProviderFactory.get_provider('dashboard', self.event_bus, self.api_gateway)
         self.content_providers['predictions'] = ContentProviderFactory.get_provider('predictions', self.event_bus, self.api_gateway)
+        
+        # Analyse & Trading Provider
+        self.content_providers['technical-analysis'] = ContentProviderFactory.get_provider('technical-analysis', self.event_bus, self.api_gateway)
+        self.content_providers['market-data'] = ContentProviderFactory.get_provider('market-data', self.event_bus, self.api_gateway)
+        self.content_providers['portfolio-analytics'] = ContentProviderFactory.get_provider('portfolio-analytics', self.event_bus, self.api_gateway)
+        self.content_providers['trading-interface'] = ContentProviderFactory.get_provider('trading-interface', self.event_bus, self.api_gateway)
         
         # Depot-Management Provider
         self.content_providers['depot-overview'] = DepotContentProviderFactory.get_provider('depot-overview', self.event_bus, self.api_gateway)
@@ -384,6 +445,21 @@ class UnifiedFrontendService:
                     </a>
                     <a href="#" id="nav-predictions" onclick="loadContent('predictions')">
                         <i class="fas fa-chart-line me-2"></i> Gewinn-Vorhersage
+                    </a>
+                    <div class="mt-2 mb-2">
+                        <small class="text-white-50 px-3">ANALYSE & TRADING</small>
+                    </div>
+                    <a href="#" id="nav-technical-analysis" onclick="loadContent('technical-analysis')">
+                        <i class="fas fa-chart-bar me-2"></i> Technische Analyse
+                    </a>
+                    <a href="#" id="nav-market-data" onclick="loadContent('market-data')">
+                        <i class="fas fa-globe me-2"></i> Live Marktdaten
+                    </a>
+                    <a href="#" id="nav-portfolio-analytics" onclick="loadContent('portfolio-analytics')">
+                        <i class="fas fa-analytics me-2"></i> Portfolio Analytics
+                    </a>
+                    <a href="#" id="nav-trading-interface" onclick="loadContent('trading-interface')">
+                        <i class="fas fa-coins me-2"></i> Trading Interface
                     </a>
                     <div class="mt-2 mb-2">
                         <small class="text-white-50 px-3">DEPOTVERWALTUNG</small>

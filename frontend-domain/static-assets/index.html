@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aktienanalyse-Ökosystem - Unified</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .sidebar-nav a { color: white; text-decoration: none; padding: 0.8rem 1.2rem; display: block; border-radius: 5px; margin: 0.2rem; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: rgba(255,255,255,0.2); }
+        .status-card { border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar text-white vh-100 p-0">
+                <div class="p-3">
+                    <h4><i class="fas fa-chart-line me-2"></i>Unified Frontend</h4>
+                </div>
+                <nav class="sidebar-nav">
+                    <a href="#" id="nav-dashboard" onclick="loadContent('dashboard')" class="active">
+                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    </a>
+                    <a href="#" id="nav-predictions" onclick="loadContent('predictions')">
+                        <i class="fas fa-chart-line me-2"></i> Gewinn-Vorhersage
+                    </a>
+                    <div class="mt-2 mb-2">
+                        <small class="text-white-50 px-3">ANALYSE & TRADING</small>
+                    </div>
+                    <a href="#" id="nav-technical-analysis" onclick="loadContent('technical-analysis')">
+                        <i class="fas fa-chart-bar me-2"></i> Technische Analyse
+                    </a>
+                    <a href="#" id="nav-market-data" onclick="loadContent('market-data')">
+                        <i class="fas fa-globe me-2"></i> Live Marktdaten
+                    </a>
+                    <a href="#" id="nav-portfolio-analytics" onclick="loadContent('portfolio-analytics')">
+                        <i class="fas fa-analytics me-2"></i> Portfolio Analytics
+                    </a>
+                    <a href="#" id="nav-trading-interface" onclick="loadContent('trading-interface')">
+                        <i class="fas fa-coins me-2"></i> Trading Interface
+                    </a>
+                    <div class="mt-2 mb-2">
+                        <small class="text-white-50 px-3">DEPOTVERWALTUNG</small>
+                    </div>
+                    <a href="#" id="nav-depot-overview" onclick="loadContent('depot-overview')">
+                        <i class="fas fa-briefcase me-2"></i> Portfolio Übersicht
+                    </a>
+                    <a href="#" id="nav-depot-details" onclick="loadContent('depot-details', {portfolio_id: 'portfolio_001'})">
+                        <i class="fas fa-list-alt me-2"></i> Portfolio Details
+                    </a>
+                    <a href="#" id="nav-depot-trading" onclick="loadContent('depot-trading', {portfolio_id: 'portfolio_001'})">
+                        <i class="fas fa-exchange-alt me-2"></i> Trading Interface
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="col-md-10 p-4">
+                <div id="main-content">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Lade Dashboard...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        async function loadContent(section, context = {}) {
+            try {
+                // Navigation Update nur für Hauptnavigation
+                const navItem = document.getElementById('nav-' + section);
+                if (navItem) {
+                    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+                    navItem.classList.add('active');
+                }
+                
+                // Loading anzeigen
+                document.getElementById('main-content').innerHTML = 
+                    '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Lade ' + section + '...</p></div>';
+                
+                // API-Aufruf mit Context
+                let url = '/api/content/' + section;
+                if (Object.keys(context).length > 0) {
+                    const params = new URLSearchParams(context);
+                    url += '?' + params.toString();
+                }
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const content = await response.text();
+                document.getElementById('main-content').innerHTML = content;
+                
+                console.log(`✅ Content loaded: ${section}`, context);
+                
+            } catch (error) {
+                console.error('Content loading failed:', error);
+                document.getElementById('main-content').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Fehler beim Laden: ' + error.message + '</div>';
+            }
+        }
+        
+        // Global verfügbare Funktionen für Depot-Management
+        window.loadContent = loadContent;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadContent('dashboard');
+        });
+    </script>
+</body>
+</html>
