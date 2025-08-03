@@ -8,11 +8,11 @@
 
 Transformation von chaotischer Multi-Service-Architektur zu eleganter Event-driven Lösung:
 - **Query-Performance**: 2.3s → 0.12s (-95%)
-- **Services**: 12 → 5 (-58% Komplexitäts-Reduktion)
+- **Services**: 12 → 6 (inkl. Diagnostic Service)
 - **Memory**: 2.1GB → 0.8GB (-62% Effizienz-Steigerung)
-- **APIs**: 42 → 8 (-81% durch Event-driven Design)
+- **Diagnostic Integration**: Vollständiges Event-Bus Monitoring & Testing
 
-## 🏗️ **Optimierte 5-Service-Architektur**
+## 🏗️ **Optimierte 6-Service-Architektur**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -20,18 +20,18 @@ Transformation von chaotischer Multi-Service-Architektur zu eleganter Event-driv
 │                     📊 PostgreSQL Event-Store + Views                          │
 └─────────────────────┬───────────────────────────────────────────────────────────┘
                       │
-      ┌───────────────┼───────────────┬───────────────┬───────────────┐
-      │               │               │               │               │
-      ▼               ▼               ▼               ▼               ▼
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│ 🧠 Core     │ │ 📡 Broker   │ │ 🎨 Frontend │ │ 🔍 Monitor  │ │ 🚌 Event   │
-│ Intelligence│ │ Gateway     │ │ Service     │ │ Service     │ │ Bus Service │
-│             │ │             │ │             │ │             │ │             │
-│ •Analysis   │ │ •Bitpanda   │ │ •Sidebar    │ │ •Analytics  │ │ •Redis      │
-│ •Performance│ │ •Trading    │ │ •Navigation │ │ •Health     │ │ •Pub/Sub    │
-│ •Intelligence│ │ •Orders    │ │ •Bootstrap5 │ │ •Business   │ │ •Queues     │
-│ •Views      │ │ •Market     │ │ •Content-API│ │ •Intel      │ │ •Routing    │
-└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+      ┌───────────────┼───────────────┬───────────────┬───────────────┬─────────────┐
+      │               │               │               │               │             │
+      ▼               ▼               ▼               ▼               ▼             ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│ 🧠 Core     │ │ 📡 Broker   │ │ 🎨 Frontend │ │ 🔍 Monitor  │ │ 🚌 Event   │ │ 🔧 Diagnostic│
+│ Intelligence│ │ Gateway     │ │ Service     │ │ Service     │ │ Bus Service │ │ Service     │
+│             │ │             │ │             │ │             │ │             │ │             │
+│ •Analysis   │ │ •Bitpanda   │ │ •Sidebar    │ │ •Analytics  │ │ •Redis      │ │ •Event Mon  │
+│ •Performance│ │ •Trading    │ │ •Navigation │ │ •Health     │ │ •Pub/Sub    │ │ •Test Gen   │
+│ •Intelligence│ │ •Orders    │ │ •Bootstrap5 │ │ •Business   │ │ •Queues     │ │ •Health Mon │
+│ •Views      │ │ •Market     │ │ •Content-API│ │ •Intel      │ │ •Routing    │ │ •REST API   │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
 ## 🔄 **Event-Driven Cross-System Intelligence**
@@ -82,20 +82,21 @@ event_store_db:
 ```
 aktienanalyse-ökosystem/
 ├── services/
-│   ├── intelligent-core-service/    # Unified Analysis + Performance + Intelligence
-│   ├── broker-gateway-service/      # Trading Logic (Bitpanda Pro)
-│   ├── event-bus-service/          # Redis Cluster Event-Bus
-│   ├── frontend-service/           # React Event-driven UI
-│   └── monitoring-service/         # Analytics & Health Monitoring
+│   ├── intelligent-core-service-modular/    # Unified Analysis + Performance + Intelligence (4 Module)
+│   ├── broker-gateway-service-modular/      # Trading Logic (Bitpanda Pro) (3 Module)
+│   ├── event-bus-service/                   # Redis Cluster Event-Bus
+│   ├── frontend-service-modular/            # React Event-driven UI (6 Module)
+│   ├── diagnostic-service/                  # Event-Bus Monitoring & Testing (NEU)
+│   └── monitoring-service/                  # Analytics & Health Monitoring
 ├── shared/
-│   ├── event-schemas/              # Event Schema Registry
-│   ├── database/                   # PostgreSQL Event-Store Schema
-│   ├── config/                     # Shared Configuration
-│   └── utils/                      # Common Utilities
-├── docs/                          # Architecture Documentation
-├── deployment/                    # LXC & systemd Infrastructure
-├── tests/                         # Comprehensive Test Suite
-└── scripts/                       # Development & Deployment Scripts
+│   ├── backend_base_module.py               # Backend Module Pattern
+│   ├── event_bus.py                         # Event-Bus Infrastructure
+│   ├── event-schemas/                       # Event Schema Registry
+│   ├── database/                            # PostgreSQL Event-Store Schema
+│   └── logging_config.py                    # Shared Logging
+├── docs/                                   # Architecture Documentation (36 Dateien)
+├── tests/                                  # Comprehensive Test Suite
+└── scripts/                                # Development & Deployment Scripts
 ```
 
 ## 🚀 **Quick Start**
@@ -126,7 +127,10 @@ sudo systemctl enable --now postgresql redis-server rabbitmq-server
 sudo systemctl start aktienanalyse.target
 
 # Access Enhanced GUI (Sidebar Navigation)
-open https://localhost:443
+open https://10.1.1.174/
+
+# Access Diagnostic API
+open https://10.1.1.174/api/diagnostic/
 ```
 
 ### **Production Deployment:**
@@ -148,7 +152,10 @@ sudo systemctl enable aktienanalyse.target
 sudo systemctl start aktienanalyse.target
 
 # Enhanced GUI mit Sidebar-Navigation (Port 443 HTTPS)
-open https://10.1.1.174:443
+open https://10.1.1.174/
+
+# Diagnostic Service für Event-Bus Monitoring
+open https://10.1.1.174/api/diagnostic/docs
 ```
 
 ## 📊 **Performance Benchmarks**
@@ -232,6 +239,16 @@ GET  /api/content/monitoring         # System-Monitoring Live-Daten
 GET  /api/content/api                # API-Dokumentation aller Services
 GET  /api/content/predictions        # ML-Gewinn-Vorhersage mit interaktiven Charts
 GET  /api/content/admin              # Administration und Konfiguration
+```
+
+### **Diagnostic Service APIs (NEU):**
+```python
+GET  /api/diagnostic/health           # Service Health Check
+GET  /api/diagnostic/monitor/statistics # Event-Bus Statistiken
+GET  /api/diagnostic/monitor/events   # Recent Events
+POST /api/diagnostic/test/send-message # Custom Test-Message senden
+POST /api/diagnostic/test/scenario/{name} # Test-Szenario ausführen
+GET  /api/diagnostic/docs             # Interactive API Documentation
 ```
 
 ### **Event-Stream Integration:**
