@@ -197,7 +197,7 @@ class PortfolioAnalyticsProvider:
             <div class="col-12 mb-4">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-calculator me-2"></i>Steuerberechnung (Österreich)</h5>
+                        <h5><i class="fas fa-calculator me-2"></i>Steuerberechnung (Deutschland)</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -207,11 +207,11 @@ class PortfolioAnalyticsProvider:
                             </div>
                             <div class="col-md-3 text-center">
                                 <h4 class="text-warning">{portfolio_data['tax_data']['kest']:,.2f}€</h4>
-                                <p class="mb-0">KESt (27.5%)</p>
+                                <p class="mb-0">KESt (25%)</p>
                             </div>
                             <div class="col-md-3 text-center">
                                 <h4 class="text-info">{portfolio_data['tax_data']['solz']:,.2f}€</h4>
-                                <p class="mb-0">SolZ (5.5%)</p>
+                                <p class="mb-0">SolZ (5.5% auf KESt)</p>
                             </div>
                             <div class="col-md-3 text-center">
                                 <h4 class="text-primary">{portfolio_data['tax_data']['net_gain']:,.2f}€</h4>
@@ -301,12 +301,7 @@ class PortfolioAnalyticsProvider:
                     'weight': 28.0
                 }
             ],
-            'tax_data': {
-                'gross_gain': 3814.25,
-                'kest': 1048.92,  # 27.5%
-                'solz': 57.69,    # 5.5% of KESt
-                'net_gain': 2707.64
-            }
+            'tax_data': self._calculate_german_taxes(3814.25)
         }
     
     def _generate_holdings_table(self, holdings: List[Dict]) -> str:
@@ -347,3 +342,42 @@ class PortfolioAnalyticsProvider:
             return "warning"
         else:
             return "success"
+    
+    def _calculate_german_taxes(self, gross_gain: float) -> dict:
+        """
+        Deutsche Steuerberechnung für private Kapitalerträge
+        - 25% Kapitalertragsteuer (Abgeltungsteuer)
+        - 5,5% Solidaritätszuschlag auf die Kapitalertragsteuer
+        - KEINE Kirchensteuer (nicht zutreffend)
+        - Gesamtsteuersatz: 26,375%
+        """
+        if gross_gain <= 0:
+            return {
+                'gross_gain': gross_gain,
+                'kest': 0.0,
+                'solz': 0.0,
+                'total_tax': 0.0,
+                'net_gain': gross_gain,
+                'effective_rate': 0.0
+            }
+        
+        # Deutsche Steuersätze
+        KAPITALERTRAGSTEUER_RATE = 0.25    # 25%
+        SOLIDARITAETSZUSCHLAG_RATE = 0.055  # 5,5%
+        
+        # Steuerberechnung
+        kest = gross_gain * KAPITALERTRAGSTEUER_RATE
+        solz = kest * SOLIDARITAETSZUSCHLAG_RATE  # SolZ auf KESt, nicht auf Gewinn
+        total_tax = kest + solz
+        net_gain = gross_gain - total_tax
+        effective_rate = total_tax / gross_gain
+        
+        return {
+            'gross_gain': round(gross_gain, 2),
+            'kest': round(kest, 2),
+            'solz': round(solz, 2),
+            'total_tax': round(total_tax, 2),
+            'net_gain': round(net_gain, 2),
+            'effective_rate': round(effective_rate, 4),  # 0.26375 = 26,375%
+            'effective_rate_percent': round(effective_rate * 100, 3)  # 26,375%
+        }

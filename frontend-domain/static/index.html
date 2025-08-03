@@ -3,69 +3,688 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aktienanalyse-Ökosystem - Modular</title>
+    <title>Aktienanalyse-Ökosystem</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
-        .sidebar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .sidebar-nav a { color: white; text-decoration: none; padding: 0.8rem 1.2rem; display: block; border-radius: 5px; margin: 0.2rem; }
-        .sidebar-nav a:hover, .sidebar-nav a.active { background: rgba(255,255,255,0.2); }
-        .status-card { border-left: 4px solid #007bff; }
+        :root {
+            --sidebar-width: 280px;
+            --sidebar-width-collapsed: 60px;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --dark-bg: #1a1d29;
+            --card-bg: #ffffff;
+            --border-color: #e3e6f0;
+            --text-muted: #5a5c69;
+            --shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            --sidebar-shadow: 0 0 35px 0 rgba(154, 161, 171, 0.15);
+        }
+
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8f9fc;
+            overflow-x: hidden;
+        }
+
+        /* Modern Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: var(--primary-gradient);
+            box-shadow: var(--sidebar-shadow);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-width-collapsed);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-brand {
+            color: white;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-brand .brand-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Navigation */
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            padding: 0 1.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .nav-section-title {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .nav-item {
+            margin: 0.25rem 0.75rem;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(0.25rem);
+        }
+
+        .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 1.5rem;
+            background: white;
+            border-radius: 0 2px 2px 0;
+        }
+
+        .nav-icon {
+            font-size: 1rem;
+            width: 1.25rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .nav-text {
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .nav-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.75rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed + .main-content {
+            margin-left: var(--sidebar-width-collapsed);
+        }
+
+        .content-header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .content-body {
+            padding: 2rem;
+        }
+
+        /* Cards */
+        .dashboard-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-0.125rem);
+            box-shadow: 0 0.25rem 2rem 0 rgba(58, 59, 69, 0.2);
+        }
+
+        .card-gradient-primary {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .card-gradient-success {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .card-gradient-secondary {
+            background: var(--secondary-gradient);
+            color: white;
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        .status-online { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-offline { background: #dc3545; }
+
+        /* Loading */
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+                display: none;
+            }
+            
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+
+        /* Tooltips for collapsed sidebar */
+        .tooltip {
+            font-size: 0.8rem;
+        }
+
+        /* Scrollbar styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
+        }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-2 sidebar text-white vh-100 p-0">
-                <div class="p-3">
-                    <h4><i class="fas fa-chart-line me-2"></i>Modular UI</h4>
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Modern Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="#" class="sidebar-brand">
+                <i class="fas fa-chart-line"></i>
+                <span class="brand-text">Aktienanalyse</span>
+            </a>
+            <button class="sidebar-toggle" id="sidebarToggle" data-bs-toggle="tooltip" title="Sidebar minimieren">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <div class="sidebar-nav">
+            <!-- Overview Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">Übersicht</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link active" id="nav-dashboard" onclick="loadContent('dashboard')">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
                 </div>
-                <nav class="sidebar-nav">
-                    <a href="#" id="nav-dashboard" onclick="loadContent('dashboard')" class="active">
-                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-events" onclick="loadContent('events')">
+                        <i class="nav-icon fas fa-stream"></i>
+                        <span class="nav-text">Event-Bus</span>
                     </a>
-                    <a href="#" id="nav-predictions" onclick="loadContent('predictions')">
-                        <i class="fas fa-chart-line me-2"></i> Gewinn-Vorhersage
+                </div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-monitoring" onclick="loadContent('monitoring')">
+                        <i class="nav-icon fas fa-desktop"></i>
+                        <span class="nav-text">Monitoring</span>
                     </a>
-                </nav>
+                </div>
             </div>
             
-            <div class="col-md-10 p-4">
-                <div id="main-content">
-                    <div class="text-center">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2">Lade Dashboard...</p>
-                    </div>
+            <!-- Analytics Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">Analyse</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-predictions" onclick="loadContent('predictions')">
+                        <i class="nav-icon fas fa-chart-line"></i>
+                        <span class="nav-text">Gewinn-Vorhersage</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-api" onclick="loadContent('api')">
+                        <i class="nav-icon fas fa-code"></i>
+                        <span class="nav-text">API-Dokumentation</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Portfolio Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">Depotverwaltung</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-depot-overview" onclick="loadContent('depot-overview')">
+                        <i class="nav-icon fas fa-briefcase"></i>
+                        <span class="nav-text">Portfolio Übersicht</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-depot-details" onclick="loadContent('depot-details', {portfolio_id: 'portfolio_001'})">
+                        <i class="nav-icon fas fa-list-alt"></i>
+                        <span class="nav-text">Portfolio Details</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-depot-trading" onclick="loadContent('depot-trading', {portfolio_id: 'portfolio_001'})">
+                        <i class="nav-icon fas fa-exchange-alt"></i>
+                        <span class="nav-text">Trading Interface</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- System Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" id="nav-admin" onclick="loadContent('admin')">
+                        <i class="nav-icon fas fa-cogs"></i>
+                        <span class="nav-text">Administration</span>
+                    </a>
                 </div>
             </div>
         </div>
-    </div>
+    </nav>
+    
+    <!-- Main Content Area -->
+    <main class="main-content" id="mainContent">
+        <header class="content-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800" id="pageTitle">Dashboard</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0" id="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#" onclick="loadContent('dashboard')">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="status-indicator status-online"></span>
+                    <small class="text-muted">System Online</small>
+                    <button class="btn btn-sm btn-outline-secondary d-md-none" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="content-body">
+            <div id="main-content">
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary me-3" role="status"></div>
+                    <span>Lade Dashboard...</span>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        async function loadContent(section) {
+        // Application State
+        const AppState = {
+            currentSection: 'dashboard',
+            sidebarCollapsed: false,
+            isMobile: window.innerWidth <= 768
+        };
+
+        // UI Constants
+        const UI = {
+            sectionTitles: {
+                'dashboard': 'Dashboard',
+                'events': 'Event-Bus',
+                'monitoring': 'System-Monitoring',
+                'predictions': 'Gewinn-Vorhersage',
+                'api': 'API-Dokumentation',
+                'depot-overview': 'Portfolio Übersicht',
+                'depot-details': 'Portfolio Details',
+                'depot-trading': 'Trading Interface',
+                'admin': 'Administration'
+            },
+            breadcrumbs: {
+                'dashboard': [['Home', 'dashboard'], ['Dashboard']],
+                'events': [['Home', 'dashboard'], ['Event-Bus']],
+                'monitoring': [['Home', 'dashboard'], ['Monitoring']],
+                'predictions': [['Home', 'dashboard'], ['Analyse', null], ['Gewinn-Vorhersage']],
+                'api': [['Home', 'dashboard'], ['Analyse', null], ['API-Dokumentation']],
+                'depot-overview': [['Home', 'dashboard'], ['Depot', null], ['Portfolio Übersicht']],
+                'depot-details': [['Home', 'dashboard'], ['Depot', 'depot-overview'], ['Portfolio Details']],
+                'depot-trading': [['Home', 'dashboard'], ['Depot', 'depot-overview'], ['Trading Interface']],
+                'admin': [['Home', 'dashboard'], ['System', null], ['Administration']]
+            }
+        };
+
+        // Content Loading Function
+        async function loadContent(section, params = {}) {
             try {
-                document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
-                document.getElementById('nav-' + section).classList.add('active');
+                // Update navigation state
+                updateNavigationState(section);
                 
-                document.getElementById('main-content').innerHTML = 
-                    '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Lade ' + section + '...</p></div>';
+                // Update page title and breadcrumbs
+                updatePageHeader(section);
                 
-                const response = await fetch('/api/content/' + section);
+                // Show loading state
+                showLoadingState(section);
+                
+                // Build API URL
+                let apiUrl = `/api/content/${section}`;
+                if (Object.keys(params).length > 0) {
+                    const urlParams = new URLSearchParams(params);
+                    apiUrl += `?${urlParams.toString()}`;
+                }
+                
+                // Fetch content
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const content = await response.text();
+                
+                // Update content
                 document.getElementById('main-content').innerHTML = content;
+                
+                // Update app state
+                AppState.currentSection = section;
+                
+                // Close mobile sidebar
+                if (AppState.isMobile) {
+                    closeMobileSidebar();
+                }
                 
             } catch (error) {
                 console.error('Content loading failed:', error);
-                document.getElementById('main-content').innerHTML = 
-                    '<div class="alert alert-danger">Fehler beim Laden: ' + error.message + '</div>';
+                showErrorState(error.message);
             }
         }
-        
-        document.addEventListener('DOMContentLoaded', function() {
+
+        // Navigation State Management
+        function updateNavigationState(section) {
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Add active class to current nav link
+            const currentNavLink = document.getElementById(`nav-${section}`);
+            if (currentNavLink) {
+                currentNavLink.classList.add('active');
+            }
+        }
+
+        // Page Header Updates
+        function updatePageHeader(section) {
+            // Update page title
+            const pageTitle = UI.sectionTitles[section] || section;
+            document.getElementById('pageTitle').textContent = pageTitle;
+            document.title = `${pageTitle} - Aktienanalyse-Ökosystem`;
+            
+            // Update breadcrumbs
+            updateBreadcrumbs(section);
+        }
+
+        function updateBreadcrumbs(section) {
+            const breadcrumbContainer = document.getElementById('breadcrumb');
+            const breadcrumbs = UI.breadcrumbs[section] || [['Home', 'dashboard'], [section]];
+            
+            breadcrumbContainer.innerHTML = breadcrumbs.map((crumb, index) => {
+                const [text, link] = crumb;
+                const isLast = index === breadcrumbs.length - 1;
+                
+                if (isLast) {
+                    return `<li class="breadcrumb-item active" aria-current="page">${text}</li>`;
+                } else if (link) {
+                    return `<li class="breadcrumb-item"><a href="#" onclick="loadContent('${link}')">${text}</a></li>`;
+                } else {
+                    return `<li class="breadcrumb-item">${text}</li>`;
+                }
+            }).join('');
+        }
+
+        // Loading States
+        function showLoadingState(section) {
+            const sectionTitle = UI.sectionTitles[section] || section;
+            document.getElementById('main-content').innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary me-3" role="status"></div>
+                    <span>Lade ${sectionTitle}...</span>
+                </div>
+            `;
+        }
+
+        function showErrorState(errorMessage) {
+            document.getElementById('main-content').innerHTML = `
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="fas fa-exclamation-triangle me-3"></i>
+                    <div>
+                        <h5 class="alert-heading">Fehler beim Laden</h5>
+                        <p class="mb-0">${errorMessage}</p>
+                        <hr>
+                        <button class="btn btn-outline-danger btn-sm" onclick="loadContent(AppState.currentSection)">
+                            <i class="fas fa-redo me-1"></i> Erneut versuchen
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Sidebar Management
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleIcon = document.querySelector('#sidebarToggle i');
+            
+            AppState.sidebarCollapsed = !AppState.sidebarCollapsed;
+            
+            if (AppState.sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                toggleIcon.classList.replace('fa-bars', 'fa-arrows-alt-h');
+            } else {
+                sidebar.classList.remove('collapsed');
+                toggleIcon.classList.replace('fa-arrows-alt-h', 'fa-bars');
+            }
+            
+            // Store preference
+            localStorage.setItem('sidebarCollapsed', AppState.sidebarCollapsed);
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+        }
+
+        // Responsive Handling
+        function handleResize() {
+            const wasMobile = AppState.isMobile;
+            AppState.isMobile = window.innerWidth <= 768;
+            
+            if (wasMobile !== AppState.isMobile) {
+                if (!AppState.isMobile) {
+                    // Switched to desktop
+                    closeMobileSidebar();
+                    const sidebar = document.getElementById('sidebar');
+                    sidebar.classList.remove('show');
+                }
+            }
+        }
+
+        // Keyboard Navigation
+        function handleKeyboard(event) {
+            // Alt + S: Toggle sidebar
+            if (event.altKey && event.code === 'KeyS') {
+                event.preventDefault();
+                if (AppState.isMobile) {
+                    toggleMobileSidebar();
+                } else {
+                    toggleSidebar();
+                }
+            }
+            
+            // Escape: Close mobile sidebar
+            if (event.code === 'Escape' && AppState.isMobile) {
+                closeMobileSidebar();
+            }
+        }
+
+        // Application Initialization
+        function initializeApp() {
+            // Restore sidebar state
+            const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+            if (savedSidebarState === 'true') {
+                AppState.sidebarCollapsed = true;
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.querySelector('#sidebarToggle i').classList.replace('fa-bars', 'fa-arrows-alt-h');
+            }
+            
+            // Set up event listeners
+            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+            document.getElementById('mobileMenuToggle').addEventListener('click', toggleMobileSidebar);
+            document.getElementById('sidebarOverlay').addEventListener('click', closeMobileSidebar);
+            
+            // Responsive handler
+            window.addEventListener('resize', handleResize);
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', handleKeyboard);
+            
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Load initial content
             loadContent('dashboard');
-        });
+        }
+
+        // Start application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
