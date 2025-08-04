@@ -1,0 +1,19 @@
+[Unit]
+Description=Aktienanalyse Monitoring Service Modular
+After=network.target
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/monitoring-service-modular
+ExecStart=/opt/aktienanalyse-ökosystem/services/monitoring-service-modular/start_service.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem:/opt/aktienanalyse-ökosystem/shared
+Environment=MONITORING_SERVICE_PORT=8015
+
+[Install]
+WantedBy=multi-user.target
