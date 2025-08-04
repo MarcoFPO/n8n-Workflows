@@ -3,16 +3,16 @@ Market Data Module für Broker-Gateway-Service
 Real-time Market Data und Price Feeds
 """
 
-import asyncio
 import aiohttp
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel
 import sys
-sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
+sys.path.append('/opt/aktienanalyse-ökosystem')
+
+# Shared Library Import für Code-Duplikation-Eliminierung
+from shared.common_imports import (
+    asyncio, datetime, timedelta, Dict, Any, List, Optional, BaseModel, structlog
+)
 from backend_base_module import BackendBaseModule
 from event_bus import EventType
-import structlog
 
 
 class MarketData(BaseModel):

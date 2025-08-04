@@ -19,6 +19,7 @@ logger = structlog.get_logger(__name__)
 
 class EventType(Enum):
     """Standardized event types"""
+    # State Change Events
     ANALYSIS_STATE_CHANGED = "analysis.state.changed"
     PORTFOLIO_STATE_CHANGED = "portfolio.state.changed"
     TRADING_STATE_CHANGED = "trading.state.changed"
@@ -27,6 +28,28 @@ class EventType(Enum):
     SYSTEM_ALERT_RAISED = "system.alert.raised"
     USER_INTERACTION_LOGGED = "user.interaction.logged"
     CONFIG_UPDATED = "config.updated"
+    
+    # Request/Response Events for Event-Bus-Compliance
+    DASHBOARD_REQUEST = "dashboard.request"
+    DASHBOARD_RESPONSE = "dashboard.response"
+    MARKET_DATA_REQUEST = "market.data.request"
+    MARKET_DATA_RESPONSE = "market.data.response"
+    TRADING_REQUEST = "trading.request"
+    TRADING_RESPONSE = "trading.response"
+    ACCOUNT_BALANCE_REQUEST = "account.balance.request"
+    ACCOUNT_BALANCE_RESPONSE = "account.balance.response"
+    ORDER_REQUEST = "order.request"
+    ORDER_RESPONSE = "order.response"
+    
+    # System Events
+    SYSTEM_HEALTH_REQUEST = "system.health.request"
+    SYSTEM_HEALTH_RESPONSE = "system.health.response"
+    MODULE_TEST_REQUEST = "module.test.request"
+    MODULE_TEST_RESPONSE = "module.test.response"
+    
+    # Module Communication Events
+    MODULE_REQUEST = "module.request"
+    MODULE_RESPONSE = "module.response"
 
 
 @dataclass
@@ -137,10 +160,9 @@ class EventBusConnector:
     async def _connect_redis(self):
         """Connect to Redis"""
         try:
-            self.redis = await aioredis.from_url(
+            self.redis = await aioredis.create_redis_pool(
                 self.config.redis_url,
-                encoding="utf-8",
-                decode_responses=True
+                encoding="utf-8"
             )
             
             # Test connection

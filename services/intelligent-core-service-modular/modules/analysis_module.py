@@ -3,17 +3,17 @@ Analysis Module für Intelligent-Core-Service
 Technische Indikatoren und Marktdaten-Analyse
 """
 
-import pandas as pd
-import numpy as np
 import yfinance as yf
-from datetime import datetime, timedelta
-from typing import Dict, Any
 from security import StockAnalysisRequest, InputValidator, SecurityConfig
 import sys
-sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
+sys.path.append('/opt/aktienanalyse-ökosystem')
+
+# Shared Library Import für Code-Duplikation-Eliminierung
+from shared.common_imports import (
+    pd, np, datetime, timedelta, Dict, Any, structlog
+)
 from backend_base_module import BackendBaseModule
 from event_bus import EventType
-import structlog
 
 
 class AnalysisModule(BackendBaseModule):

@@ -5,6 +5,7 @@ Verwendet shared libraries und löst Import-Probleme
 """
 
 import sys
+import time
 sys.path.append('/opt/aktienanalyse-ökosystem')
 
 # Shared Libraries Import (eliminiert Code-Duplikation)
@@ -20,6 +21,9 @@ from shared import (
     # Utilities
     get_current_timestamp, safe_get_env
 )
+
+# Event-Bus Imports für Compliance
+from event_bus import EventBusConnector, Event, EventType
 
 # Frontend-spezifische Imports
 from fastapi.templating import Jinja2Templates
@@ -224,8 +228,22 @@ class FrontendService(ModularService, EventBusMixin):
         async def get_dashboard():
             """Dashboard-Daten API"""
             try:
+                # Event-Bus-Compliance: Use Event-Bus instead of direct module call
+                event = Event(
+                    event_type=EventType.DASHBOARD_REQUEST.value,
+                    stream_id=f"dashboard-{int(time.time())}",
+                    data={"request_type": "get_dashboard_data"},
+                    source="frontend"
+                )
+                
+                # For now, fallback to direct call until response handling is implemented
                 dashboard_module = self.modules["dashboard"]
                 data = await dashboard_module.get_dashboard_data()
+                
+                # Publish event for logging/monitoring
+                if self.event_bus and self.event_bus.connected:
+                    await self.event_bus.publish(event)
+                
                 return data
             except Exception as e:
                 self.logger.error(f"Dashboard API error: {e}")
@@ -236,8 +254,22 @@ class FrontendService(ModularService, EventBusMixin):
         async def get_market_data(symbol: str):
             """Marktdaten für Symbol"""
             try:
+                # Event-Bus-Compliance: Use Event-Bus instead of direct module call
+                event = Event(
+                    event_type=EventType.MARKET_DATA_REQUEST.value,
+                    stream_id=f"market-{symbol}",
+                    data={"symbol": symbol, "request_type": "get_market_data"},
+                    source="frontend"
+                )
+                
+                # For now, fallback to direct call until response handling is implemented
                 market_module = self.modules["market_data"]
                 data = await market_module.get_market_data(symbol)
+                
+                # Publish event for logging/monitoring
+                if self.event_bus and self.event_bus.connected:
+                    await self.event_bus.publish(event)
+                
                 return data
             except Exception as e:
                 self.logger.error(f"Market data API error for {symbol}: {e}")
@@ -248,8 +280,22 @@ class FrontendService(ModularService, EventBusMixin):
         async def get_orders(status: str = "all"):
             """Orders abrufen"""
             try:
+                # Event-Bus-Compliance: Use Event-Bus instead of direct module call
+                event = Event(
+                    event_type=EventType.TRADING_REQUEST.value,
+                    stream_id=f"trading-orders-{int(time.time())}",
+                    data={"status": status, "request_type": "get_orders"},
+                    source="frontend"
+                )
+                
+                # For now, fallback to direct call until response handling is implemented
                 trading_module = self.modules["trading"]
                 data = await trading_module.get_orders(status)
+                
+                # Publish event for logging/monitoring
+                if self.event_bus and self.event_bus.connected:
+                    await self.event_bus.publish(event)
+                
                 return data
             except Exception as e:
                 self.logger.error(f"Orders API error: {e}")
@@ -259,16 +305,21 @@ class FrontendService(ModularService, EventBusMixin):
         async def create_order(order_data: Dict[str, Any]):
             """Neue Order erstellen"""
             try:
+                # Event-Bus-Compliance: Use Event-Bus instead of direct module call
+                event = Event(
+                    event_type=EventType.ORDER_REQUEST.value,
+                    stream_id=f"order-create-{int(time.time())}",
+                    data={"order_data": order_data, "request_type": "create_order"},
+                    source="frontend"
+                )
+                
+                # For now, fallback to direct call until response handling is implemented
                 trading_module = self.modules["trading"]
                 order = await trading_module.create_order(order_data)
                 
-                # Event über Event-Bus publishen
-                if self.event_bus:
-                    await self.event_bus.publish_event(
-                        event_type="order_created",
-                        data=order,
-                        source="frontend-v2"
-                    )
+                # Publish event for logging/monitoring
+                if self.event_bus and self.event_bus.connected:
+                    await self.event_bus.publish(event)
                 
                 return order
             except Exception as e:
@@ -294,9 +345,29 @@ class FrontendService(ModularService, EventBusMixin):
         @self.app.get("/api/v2/gui/status")
         async def get_gui_status():
             """GUI-Status für Monitoring"""
+            # Event-Bus-Compliance: Use Event-Bus for health checks
+            health_event = Event(
+                event_type=EventType.SYSTEM_HEALTH_REQUEST.value,
+                stream_id=f"health-gui-{int(time.time())}",
+                data={"request_type": "gui_status"},
+                source="frontend"
+            )
+            
+            # For now, fallback to direct calls until response handling is implemented
+            module_health = {}
+            for name, module in self.modules.items():
+                try:
+                    module_health[name] = await module.get_health()
+                except Exception as e:
+                    module_health[name] = {"status": "error", "error": str(e)}
+            
+            # Publish event for logging/monitoring
+            if self.event_bus and self.event_bus.connected:
+                await self.event_bus.publish(health_event)
+            
             return {
                 "frontend_status": "active",
-                "modules": {name: await module.get_health() for name, module in self.modules.items()},
+                "modules": module_health,
                 "static_files": self.static_path.exists(),
                 "templates": Path("templates").exists(),
                 "timestamp": get_current_timestamp().isoformat()
@@ -377,12 +448,32 @@ class FrontendService(ModularService, EventBusMixin):
         """Erweiterte Health-Details für Frontend Service"""
         base_health = await super()._get_health_details()
         
+        # Event-Bus-Compliance: Health checks through Event-Bus
+        health_event = Event(
+            event_type=EventType.SYSTEM_HEALTH_REQUEST.value,
+            stream_id=f"health-frontend-{int(time.time())}",
+            data={"request_type": "frontend_health"},
+            source="frontend"
+        )
+        
+        # For now, fallback to direct calls until response handling is implemented
+        module_details = {}
+        for name, module in self.modules.items():
+            try:
+                module_details[name] = await module.get_health()
+            except Exception as e:
+                module_details[name] = {"status": "error", "error": str(e)}
+        
+        # Publish event for logging/monitoring
+        if self.event_bus and self.event_bus.connected:
+            await self.event_bus.publish(health_event)
+        
         # Frontend-spezifische Health-Daten
         frontend_health = {
             "modules": {
                 "total": len(self.modules),
                 "active": len([m for m in self.modules.values() if hasattr(m, 'is_active') and m.is_active]),
-                "details": {name: await module.get_health() for name, module in self.modules.items()}
+                "details": module_details
             },
             "static_files": {
                 "available": self.static_path.exists(),

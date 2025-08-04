@@ -3,13 +3,15 @@ Intelligence Module für Intelligent-Core-Service
 Business Intelligence und Recommendation Engine
 """
 
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
 import sys
-sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
+sys.path.append('/opt/aktienanalyse-ökosystem')
+
+# Shared Library Import für Code-Duplikation-Eliminierung
+from shared.common_imports import (
+    datetime, timedelta, Dict, Any, List, Optional, structlog
+)
 from backend_base_module import BackendBaseModule
 from event_bus import EventType
-import structlog
 
 
 class IntelligenceModule(BackendBaseModule):

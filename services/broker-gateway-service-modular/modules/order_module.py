@@ -5,15 +5,16 @@ Order Management und Trade Execution
 
 import time
 import uuid
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
 from enum import Enum
 import sys
-sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
+sys.path.append('/opt/aktienanalyse-ökosystem')
+
+# Shared Library Import für Code-Duplikation-Eliminierung
+from shared.common_imports import (
+    datetime, timedelta, Dict, Any, List, Optional, BaseModel, Field, structlog
+)
 from backend_base_module import BackendBaseModule
 from event_bus import EventType
-import structlog
 
 
 class OrderSide(str, Enum):

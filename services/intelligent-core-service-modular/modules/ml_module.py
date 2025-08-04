@@ -3,21 +3,23 @@ ML Module für Intelligent-Core-Service
 Machine Learning Models und Predictions
 """
 
-import numpy as np
-import pandas as pd
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
-from datetime import datetime
-from typing import Dict, Any, Tuple, Optional
 import joblib
-import os
 import sys
-sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
+sys.path.append('/opt/aktienanalyse-ökosystem')
+
+# Shared Library Import für Code-Duplikation-Eliminierung
+from shared.common_imports import (
+    np, pd, datetime, Dict, Any, Optional, os, structlog
+)
 from backend_base_module import BackendBaseModule
 from event_bus import EventType
-import structlog
+
+# Typing import für sklearn-spezifische Types
+from typing import Tuple
 
 
 class MLModule(BackendBaseModule):

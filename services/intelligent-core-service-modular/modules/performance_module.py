@@ -3,15 +3,15 @@ Performance Module für Intelligent-Core-Service
 Performance Analytics und Risk-Metriken
 """
 
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
 import sys
-sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
+sys.path.append('/opt/aktienanalyse-ökosystem')
+
+# Shared Library Import für Code-Duplikation-Eliminierung
+from shared.common_imports import (
+    np, pd, datetime, timedelta, Dict, Any, List, Optional, structlog
+)
 from backend_base_module import BackendBaseModule
 from event_bus import EventType
-import structlog
 
 
 class PerformanceModule(BackendBaseModule):
