@@ -1,259 +1,180 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Centralized logging configuration for Aktienanalyse-Ökosystem
-Eliminates duplicate logging setup across services
+Centralized Logging Configuration für aktienanalyse-ökosystem
+Eliminiert Logging-Setup-Duplikation in Services
 """
 
 import os
 import sys
 import structlog
-from typing import Optional, Dict, Any
-import logging.config
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any
 
-
-class LoggingConfig:
-    """Centralized logging configuration"""
+# Standard-Log-Formatierung
+def setup_logging(service_name: str, log_level: str = None) -> structlog.stdlib.BoundLogger:
+    """
+    Zentrales Logging-Setup für alle Services
     
-    def __init__(self, service_name: str = "aktienanalyse-service"):
-        self.service_name = service_name
-        self.log_level = os.getenv("APP_LOG_LEVEL", "INFO").upper()
-        self.log_format = os.getenv("LOG_FORMAT", "json").lower()
-        self.log_retention_days = int(os.getenv("LOG_RETENTION_DAYS", "30"))
-        
-    def configure_structlog(self) -> None:
-        """Configure structlog with consistent settings"""
-        
-        # Choose processors based on format
-        if self.log_format == "json":
-            processors = [
-                structlog.stdlib.filter_by_level,
-                structlog.stdlib.add_logger_name,
-                structlog.stdlib.add_log_level,
-                structlog.stdlib.PositionalArgumentsFormatter(),
-                structlog.processors.TimeStamper(fmt="iso"),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.processors.UnicodeDecoder(),
-                self._add_service_info,
-                structlog.processors.JSONRenderer()
-            ]
-        else:
-            # Human-readable format for development
-            processors = [
-                structlog.stdlib.filter_by_level,
-                structlog.stdlib.add_logger_name,
-                structlog.stdlib.add_log_level,
-                structlog.stdlib.PositionalArgumentsFormatter(),
-                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.processors.UnicodeDecoder(),
-                self._add_service_info,
-                structlog.dev.ConsoleRenderer()
-            ]
-        
-        structlog.configure(
-            processors=processors,
-            context_class=dict,
-            logger_factory=structlog.stdlib.LoggerFactory(),
-            wrapper_class=structlog.stdlib.BoundLogger,
-            cache_logger_on_first_use=True,
-        )
-        
-        # Configure standard library logging
-        logging.basicConfig(
-            format="%(message)s",
-            stream=sys.stdout,
-            level=getattr(logging, self.log_level, logging.INFO),
-        )
+    Args:
+        service_name: Name des Services für Log-Context
+        log_level: Optional Log-Level (aus ENV wenn nicht gesetzt)
     
-    def _add_service_info(self, logger, name, event_dict):
-        """Add service information to log entries"""
-        event_dict["service"] = self.service_name
-        event_dict["version"] = os.getenv("APP_VERSION", "1.0.0")
-        event_dict["environment"] = os.getenv("APP_ENV", "development")
-        return event_dict
+    Returns:
+        Konfigurierter structlog Logger
+    """
     
-    def configure_uvicorn_logging(self) -> Dict[str, Any]:
-        """Configure uvicorn logging to match structlog"""
-        return {
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "default": {
-                    "()": "uvicorn.logging.DefaultFormatter",
-                    "fmt": "%(levelprefix)s %(message)s",
-                    "use_colors": None,
-                },
-                "access": {
-                    "()": "uvicorn.logging.AccessFormatter",
-                    "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
-                },
-            },
-            "handlers": {
-                "default": {
-                    "formatter": "default",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                },
-                "access": {
-                    "formatter": "access",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                },
-            },
-            "loggers": {
-                "uvicorn": {"handlers": ["default"], "level": self.log_level},
-                "uvicorn.error": {"level": self.log_level},
-                "uvicorn.access": {"handlers": ["access"], "level": self.log_level, "propagate": False},
-            },
-        }
+    # Log-Level aus Environment oder Parameter
+    if not log_level:
+        log_level = os.getenv('LOG_LEVEL', 'INFO')
+    
+    # Log-Verzeichnis sicherstellen
+    log_dir = Path('/opt/aktienanalyse-ökosystem/logs')
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Strukturiertes Logging konfigurieren
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso", utc=False),
+            structlog.stdlib.add_logger_name,
+            structlog.processors.JSONRenderer()
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+    
+    # Service-spezifischen Logger erstellen
+    logger = structlog.get_logger(service_name)
+    
+    # Service-Context hinzufügen
+    logger = logger.bind(
+        service=service_name,
+        environment="production",
+        version="1.0.0",
+        server="10.1.1.174"
+    )
+    
+    logger.info(f"Logging initialized for {service_name}", log_level=log_level)
+    
+    return logger
 
 
-class ServiceLogger:
-    """Service-specific logger with context"""
+def get_request_logger(service_name: str, request_id: str = None) -> structlog.stdlib.BoundLogger:
+    """
+    Request-spezifischen Logger erstellen
+    
+    Args:
+        service_name: Name des Services
+        request_id: Optional Request-ID für Tracing
+    
+    Returns:
+        Logger mit Request-Context
+    """
+    logger = structlog.get_logger(service_name)
+    
+    context = {
+        "service": service_name,
+        "request_type": "api_request"
+    }
+    
+    if request_id:
+        context["request_id"] = request_id
+    
+    return logger.bind(**context)
+
+
+def log_service_startup(logger: structlog.stdlib.BoundLogger, service_config: Dict[str, Any]):
+    """
+    Standard Service-Startup-Logging
+    
+    Args:
+        logger: Service Logger
+        service_config: Service-Konfiguration für Logging
+    """
+    logger.info(
+        "Service starting up",
+        **service_config,
+        startup_time=datetime.now().isoformat()
+    )
+
+
+def log_health_check(logger: structlog.stdlib.BoundLogger, health_data: Dict[str, Any]):
+    """
+    Standard Health-Check-Logging
+    
+    Args:
+        logger: Service Logger
+        health_data: Health-Check-Daten
+    """
+    logger.info(
+        "Health check performed",
+        **health_data
+    )
+
+
+def log_database_connection(logger: structlog.stdlib.BoundLogger, db_type: str, success: bool, error: str = None):
+    """
+    Standard Database-Connection-Logging
+    
+    Args:
+        logger: Service Logger
+        db_type: Typ der Datenbank (postgres, redis, rabbitmq)
+        success: Erfolgreich verbunden
+        error: Error-Message bei Fehlschlag
+    """
+    if success:
+        logger.info(f"{db_type} connection established", database=db_type, status="connected")
+    else:
+        logger.error(f"{db_type} connection failed", database=db_type, status="failed", error=error)
+
+
+def log_event_bus_activity(logger: structlog.stdlib.BoundLogger, event_type: str, event_data: Dict[str, Any]):
+    """
+    Standard Event-Bus-Activity-Logging
+    
+    Args:
+        logger: Service Logger
+        event_type: Typ des Events
+        event_data: Event-Daten
+    """
+    logger.info(
+        "Event bus activity",
+        event_type=event_type,
+        **event_data
+    )
+
+
+class LoggerMixin:
+    """
+    Mixin für Services mit Standard-Logging-Funktionalität
+    """
     
     def __init__(self, service_name: str):
         self.service_name = service_name
-        self.logger = structlog.get_logger(service_name)
-        
-    def info(self, message: str, **kwargs):
-        """Log info message with context"""
-        return self.logger.info(message, **kwargs)
+        self.logger = setup_logging(service_name)
     
-    def error(self, message: str, **kwargs):
-        """Log error message with context"""
-        return self.logger.error(message, **kwargs)
+    def log_startup(self, config: Dict[str, Any]):
+        """Service-Startup loggen"""
+        log_service_startup(self.logger, config)
     
-    def warning(self, message: str, **kwargs):
-        """Log warning message with context"""
-        return self.logger.warning(message, **kwargs)
+    def log_health(self, health_data: Dict[str, Any]):
+        """Health-Check loggen"""
+        log_health_check(self.logger, health_data)
     
-    def debug(self, message: str, **kwargs):
-        """Log debug message with context"""
-        return self.logger.debug(message, **kwargs)
+    def log_db_connection(self, db_type: str, success: bool, error: str = None):
+        """Database-Connection loggen"""
+        log_database_connection(self.logger, db_type, success, error)
     
-    def bind(self, **kwargs) -> 'ServiceLogger':
-        """Bind additional context to logger"""
-        bound_logger = self.logger.bind(**kwargs)
-        new_service_logger = ServiceLogger(self.service_name)
-        new_service_logger.logger = bound_logger
-        return new_service_logger
+    def log_event(self, event_type: str, event_data: Dict[str, Any]):
+        """Event-Bus-Activity loggen"""
+        log_event_bus_activity(self.logger, event_type, event_data)
 
 
-class SecurityLogger:
-    """Security-specific logging"""
-    
-    def __init__(self, service_name: str):
-        self.logger = ServiceLogger(f"{service_name}.security")
-    
-    def log_authentication_attempt(self, user_id: str, success: bool, ip_address: str):
-        """Log authentication attempt"""
-        self.logger.info(
-            "Authentication attempt",
-            user_id=user_id,
-            success=success,
-            ip_address=ip_address,
-            event_type="auth_attempt"
-        )
-    
-    def log_rate_limit_exceeded(self, client_id: str, ip_address: str, endpoint: str):
-        """Log rate limit exceeded"""
-        self.logger.warning(
-            "Rate limit exceeded",
-            client_id=client_id,
-            ip_address=ip_address,
-            endpoint=endpoint,
-            event_type="rate_limit_exceeded"
-        )
-    
-    def log_suspicious_activity(self, description: str, ip_address: str, **kwargs):
-        """Log suspicious activity"""
-        self.logger.error(
-            "Suspicious activity detected",
-            description=description,
-            ip_address=ip_address,
-            event_type="suspicious_activity",
-            **kwargs
-        )
-    
-    def log_input_validation_error(self, input_type: str, value: str, error: str, ip_address: str):
-        """Log input validation error"""
-        self.logger.warning(
-            "Input validation error",
-            input_type=input_type,
-            value=value[:100],  # Truncate for safety
-            error=error,
-            ip_address=ip_address,
-            event_type="input_validation_error"
-        )
-
-
-class PerformanceLogger:
-    """Performance and metrics logging"""
-    
-    def __init__(self, service_name: str):
-        self.logger = ServiceLogger(f"{service_name}.performance")
-    
-    def log_request_duration(self, endpoint: str, method: str, duration_ms: float, 
-                           status_code: int, user_id: str = None):
-        """Log request performance"""
-        self.logger.info(
-            "Request completed",
-            endpoint=endpoint,
-            method=method,
-            duration_ms=duration_ms,
-            status_code=status_code,
-            user_id=user_id,
-            event_type="request_performance"
-        )
-    
-    def log_database_query(self, query_type: str, duration_ms: float, row_count: int = None):
-        """Log database query performance"""
-        self.logger.debug(
-            "Database query executed",
-            query_type=query_type,
-            duration_ms=duration_ms,
-            row_count=row_count,
-            event_type="db_query_performance"
-        )
-    
-    def log_external_api_call(self, api_name: str, endpoint: str, duration_ms: float, 
-                            status_code: int, error: str = None):
-        """Log external API call performance"""
-        self.logger.info(
-            "External API call",
-            api_name=api_name,
-            endpoint=endpoint,
-            duration_ms=duration_ms,
-            status_code=status_code,
-            error=error,
-            event_type="external_api_performance"
-        )
-
-
-# Convenience functions for quick setup
-def setup_logging(service_name: str) -> ServiceLogger:
-    """Setup logging for a service"""
-    config = LoggingConfig(service_name)
-    config.configure_structlog()
-    return ServiceLogger(service_name)
-
-
-def setup_security_logging(service_name: str) -> SecurityLogger:
-    """Setup security logging for a service"""
-    config = LoggingConfig(service_name)
-    config.configure_structlog()
-    return SecurityLogger(service_name)
-
-
-def setup_performance_logging(service_name: str) -> PerformanceLogger:
-    """Setup performance logging for a service"""
-    config = LoggingConfig(service_name)
-    config.configure_structlog()
-    return PerformanceLogger(service_name)
-
-
-def get_uvicorn_log_config(service_name: str) -> Dict[str, Any]:
-    """Get uvicorn logging configuration"""
-    config = LoggingConfig(service_name)
-    return config.configure_uvicorn_logging()
+# Legacy-Support für bestehende Services
+def get_logger(service_name: str):
+    """Legacy-Funktion für Backwards Compatibility"""
+    return setup_logging(service_name)
