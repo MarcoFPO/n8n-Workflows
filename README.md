@@ -203,13 +203,15 @@ open https://10.1.1.174/api/diagnostic/docs
 - Real-time Market Data Processing
 - Intelligent Auto-Import (0 balance watchlist)
 
-### **🖥️ Enhanced Frontend (GUI v2.0):**
+### **🖥️ Enhanced Frontend (GUI v2.3.1):**
 - **Sidebar-Navigation**: 6-Bereich-Layout (Dashboard, Events, Monitoring, API, Gewinn-Vorhersage, Admin)
 - **Dynamic Content Loading**: SPA-Architektur mit `/api/content/{section}` 
 - **Bootstrap 5 + FontAwesome**: Modernes responsive Design
 - **Live-Metriken**: Real-time System-Status in der GUI
 - **Mobile-First**: Optimiert für alle Bildschirmgrößen
-- **ML-basierte Gewinn-Vorhersage**: Interaktive Charts und Tabellen mit 5 Zeiträumen (7D, 1M, 3M, 6M, 1Y)
+- **🆕 KI-Empfehlungen Inline-Tabelle**: Top 15 Aktien direkt auf Analysis-Seite (kein Modal)
+- **🆕 CORS-Middleware**: Eliminiert Browser-Fetch-Errors mit Proxy-Endpoint
+- **🆕 Professional Table Design**: Rang-Badges, Progress-Bars, Color-coded Recommendations
 
 ### **🔄 Cross-System Intelligence:**
 - Real-time Performance Correlation across all systems
@@ -231,14 +233,15 @@ POST /config/update/{domain}         # Configuration Updates
 GET  /analytics/dashboard            # Business Intelligence
 ```
 
-### **Frontend Content APIs (GUI v2.0):**
+### **Frontend Content APIs (GUI v2.3.1):**
 ```python
 GET  /api/content/dashboard          # Dashboard-Bereich mit Live-Metriken
 GET  /api/content/events             # Event-Bus Status und Dokumentation
 GET  /api/content/monitoring         # System-Monitoring Live-Daten
 GET  /api/content/api                # API-Dokumentation aller Services
-GET  /api/content/predictions        # ML-Gewinn-Vorhersage mit interaktiven Charts
+GET  /api/content/analysis           # 🆕 Analysis mit Inline KI-Empfehlungen Tabelle
 GET  /api/content/admin              # Administration und Konfiguration
+GET  /api/top-stocks                 # 🆕 CORS-freier Proxy für Top 15 Aktien-Daten
 ```
 
 ### **Diagnostic Service APIs (NEU):**
@@ -358,7 +361,7 @@ MIT License - siehe [LICENSE](LICENSE) für Details.
 
 ---
 
-## 🎯 **System-Status: PRODUCTION READY v2.1.0 FINAL**
+## 🎯 **System-Status: PRODUCTION READY v2.3.1 FINAL**
 
 ### **✅ Vollständig Optimiert & Production-Ready (August 2025)**
 ```yaml
@@ -370,15 +373,18 @@ MIT License - siehe [LICENSE](LICENSE) für Details.
 ✅ System-Stabilität:            100% Service-Verfügbarkeit (6/6 Services)
 ✅ Legacy-Code-Bereinigung:       100% Legacy-Konflikte eliminiert
 ✅ Performance-Optimierung:       Alle Bottlenecks behoben
+✅ KI-Empfehlungen Inline-UI:     100% CORS-Problem gelöst, Modal durch Tabelle ersetzt
 ```
 
-### **🔧 Final Optimized Features v2.1**
+### **🔧 Final Optimized Features v2.3.1**
 - **Event-Bus-Hybrid-Pattern** - 95% Event-Bus-Compliance erreicht
 - **Shared Libraries System** - 100% Code-Duplikation eliminiert
 - **Modulare Architektur** - 14 Module in 6 Services nach Implementierungsvorgaben
 - **Path-Standardisierung** - Einheitliche Import-Struktur systemweit
 - **Service-Stabilität** - Alle Legacy-Konflikte behoben, 6/6 Services aktiv
 - **Event-Store-Performance** - 0.12s Query-Performance mit PostgreSQL Views
+- **🆕 Inline KI-Tabelle** - Top 15 Aktien-Empfehlungen direkt auf der Seite (kein Modal)
+- **🆕 CORS-Problem gelöst** - Proxy-Endpoint eliminiert "Failed to fetch" Browser-Errors
 
 ### **📊 Final System Performance-Metriken**
 ```yaml
