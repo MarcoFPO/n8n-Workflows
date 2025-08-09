@@ -6,7 +6,7 @@ Verwendet shared libraries und eliminiert Code-Duplikation
 
 import sys
 import time
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Standard Library
 import asyncio
@@ -35,7 +35,7 @@ from backend_base_module import BackendModuleRegistry
 
 # Environment laden
 from dotenv import load_dotenv
-load_dotenv('/opt/aktienanalyse-ökosystem/.env')
+load_dotenv('/home/mdoehler/aktienanalyse-ökosystem/.env')
 
 
 class BitpandaCredentials(BaseModel):

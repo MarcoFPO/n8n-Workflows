@@ -5,7 +5,7 @@ Integriert Web-GUI Darstellungsanalyse und Qualitätskontrolle
 """
 
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Libraries Import
 from shared import (
@@ -25,7 +25,7 @@ from modules.gui_testing_module import GUITestingModule, GUITestSuite, GUITestRe
 
 # Environment laden
 from dotenv import load_dotenv
-load_dotenv('/opt/aktienanalyse-ökosystem/.env')
+load_dotenv('/home/mdoehler/aktienanalyse-ökosystem/.env')
 
 
 class DiagnosticTestRequest(BaseModel):

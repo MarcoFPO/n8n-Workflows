@@ -21,7 +21,7 @@ import structlog
 
 # Add shared module path
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem/shared')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
 
 from backend_base_module import BackendBaseModule
 from event_bus import EventBusConnector, EventType, Event

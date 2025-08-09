@@ -16,7 +16,7 @@ import os
 from collections import defaultdict, deque
 
 # Event-Bus System importieren
-sys.path.append('/opt/aktienanalyse-ökosystem/shared')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
 from event_bus import EventBusConnector, Event, EventType, EventBusConfig
 from backend_base_module import BackendBaseModule
 

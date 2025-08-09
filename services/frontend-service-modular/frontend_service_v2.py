@@ -6,7 +6,7 @@ Verwendet shared libraries und löst Import-Probleme
 
 import sys
 import time
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Libraries Import (eliminiert Code-Duplikation)
 from shared import (
@@ -33,7 +33,7 @@ from pathlib import Path
 
 # Environment laden
 from dotenv import load_dotenv
-load_dotenv('/opt/aktienanalyse-ökosystem/.env')
+load_dotenv('/home/mdoehler/aktienanalyse-ökosystem/.env')
 
 
 class FrontendModuleBase:

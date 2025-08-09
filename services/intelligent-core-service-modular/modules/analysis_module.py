@@ -6,7 +6,7 @@ Technische Indikatoren und Marktdaten-Analyse
 import yfinance as yf
 from security import StockAnalysisRequest, InputValidator, SecurityConfig
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Library Import für Code-Duplikation-Eliminierung
 from shared.common_imports import (

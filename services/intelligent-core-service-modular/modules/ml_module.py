@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import joblib
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Library Import für Code-Duplikation-Eliminierung
 from shared.common_imports import (
@@ -455,7 +455,7 @@ class MLModule(BackendBaseModule):
     async def _load_pretrained_models(self):
         """Load pre-trained models from disk if available"""
         try:
-            model_dir = "/opt/aktienanalyse-ökosystem/models"
+            model_dir = "/home/mdoehler/aktienanalyse-ökosystem/models"
             if not os.path.exists(model_dir):
                 self.logger.debug("No pre-trained models directory found")
                 return

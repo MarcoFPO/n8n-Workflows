@@ -5,7 +5,7 @@ Verwendet shared libraries und eliminiert Code-Duplikation
 """
 
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Libraries Import (eliminiert Code-Duplikation)
 from shared import (
@@ -28,7 +28,7 @@ from uuid import uuid4
 
 # Environment laden
 from dotenv import load_dotenv
-load_dotenv('/opt/aktienanalyse-ökosystem/.env')
+load_dotenv('/home/mdoehler/aktienanalyse-ökosystem/.env')
 
 
 class SystemMetrics(BaseModel):

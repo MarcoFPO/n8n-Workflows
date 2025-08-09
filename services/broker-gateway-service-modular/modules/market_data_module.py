@@ -5,7 +5,7 @@ Real-time Market Data und Price Feeds
 
 import aiohttp
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Library Import für Code-Duplikation-Eliminierung
 from shared.common_imports import (

@@ -5,7 +5,7 @@ Automatisierte Frontend-Validierung und Qualitätskontrolle
 """
 
 import sys
-sys.path.append('/opt/aktienanalyse-ökosystem')
+sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
 # Shared Libraries Import
 from shared import (
