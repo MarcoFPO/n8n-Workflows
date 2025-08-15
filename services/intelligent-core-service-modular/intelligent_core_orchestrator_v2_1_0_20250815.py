@@ -29,9 +29,9 @@ from security import StockAnalysisRequest, get_client_ip, create_security_header
 
 # Module imports
 from modules.analysis_orchestrator_v2 import AnalysisOrchestratorV2
-from modules.ml_module import MLModule
-from modules.performance_module import PerformanceModule
-from modules.intelligence_module import IntelligenceModule
+from modules.ml_module_v1_0_0_20250809 import MLModule
+from modules.performance_module_v1_1_0_20250810 import PerformanceModule
+from modules.intelligence_module_v1_2_0_20250811 import IntelligenceModule
 
 # Load environment variables
 from dotenv import load_dotenv

@@ -10,7 +10,7 @@ sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 from shared.common_imports import (
     datetime, timedelta, BaseModel, structlog
 )
-from modules.single_function_module_base import SingleFunctionModule
+from modules.single_function_module_base_v1_2_0_20250809 import SingleFunctionModule
 from shared.event_bus import Event, EventType
 
 

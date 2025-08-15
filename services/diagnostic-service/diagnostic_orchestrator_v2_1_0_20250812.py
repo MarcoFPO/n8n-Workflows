@@ -19,7 +19,7 @@ import os
 # Event-Bus und Diagnostic Module importieren
 sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
 from event_bus import EventBusConnector, EventBusConfig
-from diagnostic_module import DiagnosticModule
+from diagnostic_module_v2_1_0_20250812 import DiagnosticModule
 
 logger = structlog.get_logger(__name__)
 

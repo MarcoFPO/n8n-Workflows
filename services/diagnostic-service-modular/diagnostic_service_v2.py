@@ -21,7 +21,7 @@ from shared import (
 )
 
 # GUI-Testing Modul
-from modules.gui_testing_module import GUITestingModule, GUITestSuite, GUITestResult
+from modules.gui_testing_module_v1_0_1_20250810 import GUITestingModule, GUITestSuite, GUITestResult
 
 # Environment laden
 from dotenv import load_dotenv

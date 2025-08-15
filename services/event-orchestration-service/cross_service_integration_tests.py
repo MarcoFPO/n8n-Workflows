@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.append('/home/mdoehler/aktienanalyse-ökosystem')
 
-from event_orchestrator import EventOrchestrator, EventRoute
+from event_orchestrator_v1_5_0_20250809 import EventOrchestrator, EventRoute
 
 
 class MockEventBus:

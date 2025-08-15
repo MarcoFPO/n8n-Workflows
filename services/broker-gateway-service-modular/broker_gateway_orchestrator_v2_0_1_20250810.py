@@ -27,9 +27,9 @@ from event_bus import EventBusConnector, EventType
 from logging_config import setup_logging
 
 # Module imports
-from modules.market_data_module import MarketDataModule, MarketData
-from modules.order_module import OrderModule, OrderRequest, OrderResponse
-from modules.account_module import AccountModule, AccountBalance
+from modules.market_data_module_v1_2_0_20250810 import MarketDataModule, MarketData
+from modules.order_module_v1_1_0_20250809 import OrderModule, OrderRequest, OrderResponse
+from modules.account_module_v1_1_0_20250809 import AccountModule, AccountBalance
 
 # Load environment variables
 from dotenv import load_dotenv

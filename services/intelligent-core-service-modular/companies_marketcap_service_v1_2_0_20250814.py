@@ -13,7 +13,7 @@ sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared')
 
 from event_bus import EventBusConnector
 from logging_config import setup_logging
-from modules.companies_marketcap_connector import CompaniesMarketCapConnector
+from modules.companies_marketcap_connector_v1_2_0_20250814 import CompaniesMarketCapConnector
 
 # Load environment variables
 from dotenv import load_dotenv
