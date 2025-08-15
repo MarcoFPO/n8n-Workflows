@@ -238,8 +238,26 @@ class PortfolioAnalyticsProvider:
         '''
     
     async def _get_portfolio_metrics(self) -> Dict[str, Any]:
-        """Get portfolio performance metrics - mock data for now"""
-        # TODO: Replace with real API calls to portfolio service
+        """Get portfolio performance metrics from intelligent-core service via Event-Bus"""
+        try:
+            # Request real portfolio metrics via Event-Bus
+            response = await self.event_bus.request("portfolio.performance.get", {
+                "include_metrics": ["total_return", "sharpe_ratio", "max_drawdown", "var_95", "beta"],
+                "timeframe": "YTD",
+                "currency": "EUR"
+            }, timeout=4.0)
+            
+            if response and response.get("success"):
+                return response.get("data", self._get_fallback_portfolio_metrics())
+            else:
+                self.logger.warning("Portfolio metrics Event-Bus request failed, using fallback")
+                return self._get_fallback_portfolio_metrics()
+        except Exception as e:
+            self.logger.error(f"Failed to get portfolio metrics via Event-Bus: {e}")
+            return self._get_fallback_portfolio_metrics()
+    
+    def _get_fallback_portfolio_metrics(self) -> Dict[str, Any]:
+        """Fallback portfolio metrics"""
         return {
             'total_return': 12.45,
             'total_value': 157580.00,

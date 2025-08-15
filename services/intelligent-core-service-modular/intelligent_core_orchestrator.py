@@ -28,7 +28,7 @@ from logging_config import setup_logging
 from security import StockAnalysisRequest, get_client_ip, create_security_headers
 
 # Module imports
-from modules.analysis_module import AnalysisModule
+from modules.analysis_orchestrator_v2 import AnalysisOrchestratorV2
 from modules.ml_module import MLModule
 from modules.performance_module import PerformanceModule
 from modules.intelligence_module import IntelligenceModule
@@ -64,7 +64,7 @@ class IntelligentCoreOrchestrator:
         self.module_registry = BackendModuleRegistry("intelligent-core-modular", self.event_bus)
         
         # Initialize modules
-        self.analysis_module = AnalysisModule(self.event_bus)
+        self.analysis_module = AnalysisOrchestratorV2(self.event_bus)
         self.ml_module = MLModule(self.event_bus)
         self.performance_module = PerformanceModule(self.event_bus)
         self.intelligence_module = IntelligenceModule(self.event_bus)
@@ -134,11 +134,8 @@ class IntelligentCoreOrchestrator:
             
             logger.info("Starting coordinated stock analysis", symbol=request.symbol)
             
-            # Step 1: Technical Analysis
-            analysis_result = await self.analysis_module.process_business_logic({
-                'request': request,
-                'client_ip': client_ip
-            })
+            # Step 1: Technical Analysis (using new orchestrated approach)
+            analysis_result = await self.analysis_module.orchestrate_comprehensive_analysis(request)
             
             if not analysis_result.get('success', False):
                 raise HTTPException(status_code=500, detail=analysis_result.get('error', 'Analysis failed'))
@@ -380,10 +377,7 @@ async def get_service_metrics():
 async def technical_analysis_endpoint(request: StockAnalysisRequest):
     """Direct technical analysis endpoint"""
     try:
-        result = await orchestrator.analysis_module.process_business_logic({
-            'request': request,
-            'client_ip': '127.0.0.1'  # Internal call
-        })
+        result = await orchestrator.analysis_module.orchestrate_comprehensive_analysis(request)
         return result
     except Exception as e:
         logger.error("Error in technical analysis", error=str(e))

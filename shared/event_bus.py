@@ -6,7 +6,7 @@ Replaces Mock implementations with actual Redis + RabbitMQ integration
 import os
 import json
 import asyncio
-import aioredis
+import redis.asyncio as aioredis
 import aio_pika
 from typing import Dict, Any, Optional, Callable, List
 from datetime import datetime
@@ -160,9 +160,9 @@ class EventBusConnector:
     async def _connect_redis(self):
         """Connect to Redis"""
         try:
-            self.redis = await aioredis.create_redis_pool(
+            self.redis = aioredis.from_url(
                 self.config.redis_url,
-                encoding="utf-8"
+                decode_responses=True
             )
             
             # Test connection
@@ -210,9 +210,14 @@ class EventBusConnector:
     
     async def disconnect(self):
         """Disconnect from Redis and RabbitMQ"""
-        # Stop consumers
+        # Stop consumers safely
         for consumer in self.consumers:
-            await consumer.cancel()
+            try:
+                if hasattr(consumer, 'cancel'):
+                    await consumer.cancel()
+            except Exception as e:
+                logger.warning("Error cancelling consumer", 
+                              service=self.service_name, error=str(e))
         self.consumers.clear()
         
         # Close RabbitMQ
@@ -228,7 +233,29 @@ class EventBusConnector:
         self.connected = False
         logger.info("Event-Bus disconnected", service=self.service_name)
     
-    async def publish(self, event: Event) -> bool:
+    def is_connected(self) -> bool:
+        """Check if Event-Bus is connected"""
+        return self.connected
+    
+    async def publish(self, event_data) -> bool:
+        """Publish event - accepts both Event objects and dict-based events"""
+        if isinstance(event_data, dict):
+            # Convert dict to Event object for backwards compatibility
+            event = Event(
+                event_type=event_data.get('event_type', 'unknown'),
+                stream_id=event_data.get('stream_id', f"{self.service_name}-{datetime.now().timestamp()}"),
+                data=event_data.get('data', {}),
+                source=event_data.get('source', self.service_name),
+                timestamp=event_data.get('timestamp'),
+                correlation_id=event_data.get('correlation_id'),
+                metadata=event_data.get('metadata')
+            )
+        else:
+            event = event_data
+        
+        return await self._publish_event_object(event)
+    
+    async def _publish_event_object(self, event: Event) -> bool:
         """Publish event to both Redis and RabbitMQ"""
         if not self.connected:
             logger.error("Event-Bus not connected", service=self.service_name)

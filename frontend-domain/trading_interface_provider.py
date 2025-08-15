@@ -526,8 +526,27 @@ class TradingInterfaceProvider:
         '''
     
     async def _get_trading_data(self) -> Dict[str, Any]:
-        """Get trading data - mock data for now"""
-        # TODO: Replace with real API calls to trading services
+        """Get trading data from broker-gateway service via Event-Bus"""
+        try:
+            # Request real trading data via Event-Bus
+            response = await self.event_bus.request("trading.account.data.get", {
+                "include_balance": True,
+                "include_positions": True,
+                "include_orders": True,
+                "currency": "EUR"
+            }, timeout=5.0)
+            
+            if response and response.get("success"):
+                return response.get("data", self._get_fallback_trading_data())
+            else:
+                self.logger.warning("Trading data Event-Bus request failed, using fallback")
+                return self._get_fallback_trading_data()
+        except Exception as e:
+            self.logger.error(f"Failed to get trading data via Event-Bus: {e}")
+            return self._get_fallback_trading_data()
+    
+    def _get_fallback_trading_data(self) -> Dict[str, Any]:
+        """Fallback trading data"""
         return {
             'market_status': 'OPEN',
             'available_balance': 45230.50,

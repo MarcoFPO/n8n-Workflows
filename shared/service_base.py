@@ -55,7 +55,13 @@ class BaseService(ABC):
     def _setup_middleware(self):
         """Setup Standard-Middleware für alle Services"""
         # CORS Middleware mit Security Config
-        self.app.add_middleware(SecurityConfig.get_cors_middleware())
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=SecurityConfig.get_cors_origins(),
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+        )
         
         # Request Logging Middleware
         @self.app.middleware("http")

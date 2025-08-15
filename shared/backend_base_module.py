@@ -58,22 +58,56 @@ class BackendBaseModule(ABC):
     
     @abstractmethod
     async def _initialize_module(self) -> bool:
-        """Module-specific initialization logic"""
-        pass
+        """
+        Module-specific initialization logic.
+        Must be implemented by subclasses.
+        
+        Returns:
+            bool: True if initialization successful, False otherwise
+        """
+        raise NotImplementedError(f"Module {self.module_name} must implement _initialize_module()")
     
     @abstractmethod
     async def _subscribe_to_events(self):
-        """Subscribe to relevant events"""
-        pass
+        """
+        Subscribe to relevant events for this module.
+        Must be implemented by subclasses.
+        
+        Example:
+            await self.subscribe_to_event(EventType.ANALYSIS_STATE_CHANGED, self._handle_analysis_event)
+        """
+        raise NotImplementedError(f"Module {self.module_name} must implement _subscribe_to_events()")
     
     @abstractmethod
     async def process_business_logic(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Main business logic processing"""
-        pass
+        """
+        Main business logic processing for this module.
+        Must be implemented by subclasses.
+        
+        Args:
+            data: Input data for processing
+            
+        Returns:
+            Dict[str, Any]: Processed result data
+            
+        Raises:
+            NotImplementedError: If not implemented by subclass
+        """
+        raise NotImplementedError(f"Module {self.module_name} must implement process_business_logic()")
     
     async def _cleanup_module(self):
-        """Module-specific cleanup (override if needed)"""
-        pass
+        """
+        Module-specific cleanup (override if needed).
+        Default implementation clears cache and resets state.
+        """
+        try:
+            self.module_data_cache.clear()
+            self.subscribed_events.clear()
+            self.last_cache_update = None
+            self.logger.info("Module cleanup completed", module=self.module_name)
+        except Exception as e:
+            self.logger.warning("Error during module cleanup", 
+                              module=self.module_name, error=str(e))
     
     async def subscribe_to_event(self, event_type: EventType, handler):
         """Subscribe to a specific event type"""

@@ -1,0 +1,33 @@
+[Unit]
+Description=Aktienanalyse CompaniesMarketCap Service - Market Cap Data Integration
+After=network.target redis-server.service rabbitmq-server.service
+Wants=redis-server.service rabbitmq-server.service
+
+[Service]
+Type=simple
+User=mdoehler
+Group=mdoehler
+WorkingDirectory=/home/mdoehler/aktienanalyse-ökosystem/services/intelligent-core-service-modular
+ExecStart=/opt/aktienanalyse-ökosystem/venv-modular/bin/python companies_marketcap_service.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONPATH=/home/mdoehler/aktienanalyse-ökosystem
+Environment=PYTHONUNBUFFERED=1
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/mdoehler/aktienanalyse-ökosystem
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

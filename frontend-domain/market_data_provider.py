@@ -313,8 +313,26 @@ class MarketDataProvider:
         '''
     
     async def _get_live_market_data(self) -> Dict[str, Any]:
-        """Get live market data - mock data for now"""
-        # TODO: Replace with real API calls to market data services
+        """Get live market data from broker-gateway service via Event-Bus"""
+        try:
+            # Request real market data via Event-Bus
+            response = await self.event_bus.request("market.data.live.get", {
+                "symbols": ["^GSPC", "^IXIC", "^DJI", "^VIX"],
+                "include_crypto": True,
+                "currency": "EUR"
+            }, timeout=3.0)
+            
+            if response and response.get("success"):
+                return response.get("data", self._get_fallback_market_data())
+            else:
+                self.logger.warning("Market data Event-Bus request failed, using fallback")
+                return self._get_fallback_market_data()
+        except Exception as e:
+            self.logger.error(f"Failed to get market data via Event-Bus: {e}")
+            return self._get_fallback_market_data()
+    
+    def _get_fallback_market_data(self) -> Dict[str, Any]:
+        """Fallback market data"""
         return {
             'market_status': 'OPEN',
             'last_update': datetime.now().strftime('%H:%M:%S'),

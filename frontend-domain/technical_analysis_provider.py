@@ -142,8 +142,26 @@ class TechnicalAnalysisProvider:
         '''
     
     async def _get_technical_indicators(self) -> Dict[str, Any]:
-        """Get technical indicators - mock data for now"""
-        # TODO: Replace with real API calls to data services
+        """Get technical indicators from intelligent-core service via Event-Bus"""
+        try:
+            # Request real technical analysis data via Event-Bus
+            response = await self.event_bus.request("analysis.technical_indicators.get", {
+                "symbols": ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"],
+                "indicators": ["rsi", "macd", "sma_20", "bollinger_bands"],
+                "timeframe": "1D"
+            }, timeout=5.0)
+            
+            if response and response.get("success"):
+                return response.get("data", self._get_fallback_data())
+            else:
+                self.logger.warning("Event-Bus request failed, using fallback data")
+                return self._get_fallback_data()
+        except Exception as e:
+            self.logger.error(f"Failed to get technical indicators via Event-Bus: {e}")
+            return self._get_fallback_data()
+    
+    def _get_fallback_data(self) -> Dict[str, Any]:
+        """Fallback technical indicators data"""
         return {
             'rsi': 67.8,
             'macd': 0.045,

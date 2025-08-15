@@ -25,13 +25,13 @@ from shared import (
 )
 
 # Event-Bus Imports for Compliance
-from event_bus import EventBusConnector, Event, EventType
+from shared.event_bus import EventBusConnector, Event, EventType
 
 # Lokale Module
 from modules.market_data_module import MarketDataModule, MarketData
 from modules.order_module import OrderModule, OrderRequest, OrderResponse  
 from modules.account_module import AccountModule, AccountBalance
-from backend_base_module import BackendModuleRegistry
+from shared.backend_base_module import BackendModuleRegistry
 
 # Environment laden
 from dotenv import load_dotenv

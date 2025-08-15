@@ -561,8 +561,17 @@ class CompaniesMarketCapConnector(BackendBaseModule):
     
     async def _handle_marketcap_request(self, event):
         """Handle market cap data requests via Event-Bus"""
+        data = None
+        request_id = None
         try:
-            data = event.get('data', {})
+            # Robust event data extraction
+            if hasattr(event, 'data'):
+                data = event.data
+            elif hasattr(event, 'get'):
+                data = event.get('data', {})
+            else:
+                data = event if isinstance(event, dict) else {}
+            
             country = data.get('country', 'usa')
             limit = data.get('limit', 100)
             request_id = data.get('request_id')
@@ -575,7 +584,7 @@ class CompaniesMarketCapConnector(BackendBaseModule):
             
             # Publish response event
             await self.event_bus.publish({
-                'event_type': 'marketcap.data.retrieved',
+                'event_type': 'market.data.response',
                 'data': {
                     'request_id': request_id,
                     'success': True,
@@ -593,11 +602,11 @@ class CompaniesMarketCapConnector(BackendBaseModule):
         except Exception as e:
             self.logger.error("Error handling market cap request", error=str(e))
             
-            # Publish error event
+            # Publish error event with safe data access
             await self.publish_module_event(
                 EventType.SYSTEM_ALERT_RAISED,
                 {
-                    'request_id': data.get('request_id'),
+                    'request_id': request_id if request_id else 'unknown',
                     'success': False,
                     'error': str(e),
                     'source': 'companiesmarketcap.com'
@@ -606,8 +615,18 @@ class CompaniesMarketCapConnector(BackendBaseModule):
     
     async def _handle_company_lookup(self, event):
         """Handle individual company lookup requests"""
+        data = None
+        request_id = None
+        query = ''
         try:
-            data = event.get('data', {})
+            # Robust event data extraction
+            if hasattr(event, 'data'):
+                data = event.data
+            elif hasattr(event, 'get'):
+                data = event.get('data', {})
+            else:
+                data = event if isinstance(event, dict) else {}
+            
             query = data.get('query', '')
             request_id = data.get('request_id')
             
