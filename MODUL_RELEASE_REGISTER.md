@@ -23,7 +23,7 @@
 | **intelligent_core_orchestrator** | v2.1.0 | 2025-08-15 | CSV-Integration Support | ✅ AKTIV |
 | **broker_gateway_orchestrator** | v2.0.1 | 2025-08-10 | Event-Bus-First Implementation | ✅ AKTIV |
 | **data_processing_service** | v2.0.0 | 2025-08-15 | Vollständige CSV-Integration | ✅ AKTIV |
-| **frontend_service** | v4.1.0 | 2025-08-15 | CSV-UI + Zeitraum-Umschaltung | ✅ AKTIV |
+| **frontend_service** | v7.0.0 | 2025-08-16 | Clean Architecture + Vollständige GUI | ✅ AKTIV |
 | **event_bus_orchestrator** | v1.5.0 | 2025-08-09 | Redis Integration Enhancement | ✅ AKTIV |
 | **monitoring_orchestrator** | v2.0.0 | 2025-08-09 | Performance Testing Suite | ✅ AKTIV |
 | **diagnostic_service** | v2.1.0 | 2025-08-12 | Event-Bus Monitoring | ✅ AKTIV |

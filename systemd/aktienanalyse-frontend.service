@@ -1,0 +1,37 @@
+[Unit]
+Description=Aktienanalyse Frontend Service v7.0.0
+Documentation=file:///opt/aktienanalyse-ökosystem/README.md
+After=network.target multi-user.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/frontend-service-modular
+ExecStart=/usr/bin/python3 frontend_service_v7_0_0_20250816.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aktienanalyse-frontend
+
+# Resource limits
+MemoryMax=1G
+CPUQuota=50%
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/aktienanalyse-ökosystem/logs
+ReadWritePaths=/tmp
+
+# Environment
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=LOG_LEVEL=INFO
+
+[Install]
+WantedBy=multi-user.target
+Alias=frontend.service

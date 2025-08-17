@@ -216,6 +216,7 @@ class StockAnalysisRequest(BaseModel):
     """Validated stock analysis request"""
     symbol: str
     timeframe: str = "1D"
+    period: str = "1D"  # Alias for timeframe for backwards compatibility
     indicators: List[str] = ["RSI", "MACD", "SMA"]
     
     @validator('symbol')
@@ -229,6 +230,12 @@ class StockAnalysisRequest(BaseModel):
         if v not in allowed_timeframes:
             raise ValueError(f"Timeframe must be one of: {allowed_timeframes}")
         return v
+    
+    @validator('period')
+    def validate_and_sync_period(cls, v, values):
+        # Sync period with timeframe for backwards compatibility
+        timeframe = values.get('timeframe', '1D')
+        return timeframe
 
 
 class OrderRequest(BaseModel):
