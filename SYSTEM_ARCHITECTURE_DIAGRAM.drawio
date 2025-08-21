@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-08-21T08:00:00.000Z" agent="5.0" etag="draw.io-diagram" version="24.7.7">
+  <diagram name="Aktienanalyse-Oekosystem Architecture" id="architecture-overview">
+    <mxGraphModel dx="2074" dy="1181" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2339" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="Aktienanalyse-Oekosystem v5.1 Event-Driven Trading Intelligence System" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#2E3440;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="800" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Legend -->
+        <mxCell id="legend-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F4FD;strokeColor=#1E88E5;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="LEGENDE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="110" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-core" value="Core Services" style="text;html=1;strokeColor=none;fillColor=#4CAF50;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="30" y="150" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-data" value="Data Services" style="text;html=1;strokeColor=none;fillColor=#FF9800;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="30" y="180" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-infra" value="Infrastructure" style="text;html=1;strokeColor=none;fillColor=#607D8B;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="30" y="210" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-ml" value="ML Analytics" style="text;html=1;strokeColor=none;fillColor=#9C27B0;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=white;" vertex="1" parent="1">
+          <mxGeometry x="30" y="240" width="120" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Central Configuration Hub -->
+        <mxCell id="central-config" value="CENTRAL CONFIG central_config_v1_0_0_20250821.py Service URLs Ports Database Config Trading Limits Environment Detection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF8F00;strokeWidth=3;fontSize=10;fontStyle=1;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="720" y="120" width="180" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- Core Services Layer -->
+        <mxCell id="frontend-service" value="FRONTEND SERVICE frontend_service_v7_0_0_20250816.py Web Dashboard API Gateway User Interface Real-time Updates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#4CAF50;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="280" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="intelligent-core" value="INTELLIGENT CORE intelligent_core_orchestrator_v2_1_0_20250815.py Technical Analysis Intelligence Manager Trading Recommendations Risk Assessment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#4CAF50;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="520" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-gateway" value="BROKER GATEWAY broker_gateway_orchestrator_v2_0_1_20250810.py Order Management Account Management Trade Execution Portfolio Tracking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#4CAF50;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Services Layer -->
+        <mxCell id="data-processing" value="DATA PROCESSING data_processing_service_v2_0_0_20250815.py Market Data Ingestion Time-series Processing Data Validation Performance Analytics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF9800;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="280" y="480" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="prediction-tracking" value="PREDICTION TRACKING prediction_tracking_orchestrator.py Performance Analysis Accuracy Tracking Model Validation Backtesting Results" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF9800;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="520" y="480" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ml-analytics" value="ML ANALYTICS lxc_ml_analytics_service_v1_0_0_20250819.py LSTM Models Feature Engineering Predictive Analysis Model Training" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#9C27B0;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="480" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Infrastructure Layer -->
+        <mxCell id="event-bus" value="EVENT BUS simple_event_bus_v1_2_0_20250811.py Message Routing Event Distribution Async Communication Service Decoupling" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#607D8B;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="monitoring" value="MONITORING monitoring_orchestrator_v1_0_0_20250821.py Health Checks Performance Metrics Service Discovery Alerting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#607D8B;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="480" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="diagnostic" value="DIAGNOSTIC diagnostic_orchestrator_v2_1_0_20250812.py System Diagnostics Error Analysis Performance Testing Health Validation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#607D8B;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Shared Infrastructure -->
+        <mxCell id="import-manager" value="IMPORT MANAGER import_manager.py Path Management Environment Detection Clean Architecture Dependency Resolution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="280" y="660" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="service-registry" value="SERVICE REGISTRY service_registry.py Service Discovery Health Monitoring Load Balancing Auto-Registration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="520" y="660" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Consolidated Managers -->
+        <mxCell id="technical-analysis" value="TECHNICAL ANALYSIS consolidated_technical_analysis_v1_0_0_20250821.py RSI MACD Bollinger Moving Averages Trend Analysis Volume Analysis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57C00;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="660" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="intelligence-manager" value="INTELLIGENCE MANAGER consolidated_intelligence_manager_v1_0_0_20250821.py Risk Assessment Sentiment Analysis Recommendation Gen Decision History" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57C00;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="660" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="order-manager" value="ORDER MANAGER consolidated_order_manager_v1_0_0_20250821.py Order Execution Risk Validation Market Data Handler Status Tracking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57C00;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="660" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="account-manager" value="ACCOUNT MANAGER consolidated_account_manager_v1_0_0_20250821.py Balance Management Portfolio Summary Transaction History Risk Limits" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57C00;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="660" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Database Layer -->
+        <mxCell id="postgresql" value="POSTGRESQL Event Store Database Event Persistence Transaction Log Historical Data ACID Compliance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="520" y="840" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="redis" value="REDIS Event Cache Fast Event Access Session Storage Real-time Cache Pub/Sub Messages" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;strokeWidth=2;fontSize=10;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="840" width="180" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Communication Arrows -->
+        
+        <!-- Central Config to all services -->
+        <mxCell id="config-to-frontend" value="Config" style="endArrow=classic;html=1;rounded=0;strokeColor=#FF8F00;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="central-config" target="frontend-service">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="config-to-intelligent" value="Config" style="endArrow=classic;html=1;rounded=0;strokeColor=#FF8F00;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="central-config" target="intelligent-core">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="config-to-broker" value="Config" style="endArrow=classic;html=1;rounded=0;strokeColor=#FF8F00;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="central-config" target="broker-gateway">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Frontend to other services -->
+        <mxCell id="frontend-to-intelligent" value="API Calls" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="frontend-service" target="intelligent-core">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="frontend-to-broker" value="Trading Ops" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="frontend-service" target="broker-gateway">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="frontend-to-data" value="Data Req" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="frontend-service" target="data-processing">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Intelligent Core connections -->
+        <mxCell id="intelligent-to-technical" value="Analysis" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="intelligent-core" target="technical-analysis">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="intelligent-to-intelligence" value="Decisions" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="intelligent-core" target="intelligence-manager">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="intelligent-to-prediction" value="Results" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="intelligent-core" target="prediction-tracking">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Broker Gateway connections -->
+        <mxCell id="broker-to-order" value="Orders" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="broker-gateway" target="order-manager">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="broker-to-account" value="Accounts" style="endArrow=classic;html=1;rounded=0;strokeColor=#4CAF50;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="broker-gateway" target="account-manager">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Event Bus connections -->
+        <mxCell id="event-bus-to-all1" value="Events" style="endArrow=classic;html=1;rounded=0;strokeColor=#607D8B;strokeWidth=2;labelBackgroundColor=white;fontSize=8;dashed=1;" edge="1" parent="1" source="event-bus" target="frontend-service">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="event-bus-to-all2" value="Events" style="endArrow=classic;html=1;rounded=0;strokeColor=#607D8B;strokeWidth=2;labelBackgroundColor=white;fontSize=8;dashed=1;" edge="1" parent="1" source="event-bus" target="intelligent-core">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="event-bus-to-all3" value="Events" style="endArrow=classic;html=1;rounded=0;strokeColor=#607D8B;strokeWidth=2;labelBackgroundColor=white;fontSize=8;dashed=1;" edge="1" parent="1" source="event-bus" target="broker-gateway">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="event-bus-to-data" value="Events" style="endArrow=classic;html=1;rounded=0;strokeColor=#607D8B;strokeWidth=2;labelBackgroundColor=white;fontSize=8;dashed=1;" edge="1" parent="1" source="event-bus" target="data-processing">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Monitoring connections -->
+        <mxCell id="monitoring-to-registry" value="Discovery" style="endArrow=classic;html=1;rounded=0;strokeColor=#607D8B;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="monitoring" target="service-registry">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Database connections -->
+        <mxCell id="event-bus-to-postgres" value="Event Store" style="endArrow=classic;html=1;rounded=0;strokeColor=#D32F2F;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="event-bus" target="postgresql">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="event-bus-to-redis" value="Event Cache" style="endArrow=classic;html=1;rounded=0;strokeColor=#D32F2F;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="event-bus" target="redis">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="data-to-postgres" value="Data Store" style="endArrow=classic;html=1;rounded=0;strokeColor=#FF9800;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="data-processing" target="postgresql">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="ml-to-redis" value="ML Cache" style="endArrow=classic;html=1;rounded=0;strokeColor=#9C27B0;strokeWidth=2;labelBackgroundColor=white;fontSize=8;" edge="1" parent="1" source="ml-analytics" target="redis">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Import Manager connections (infrastructure) -->
+        <mxCell id="import-to-all" value="Import Paths" style="endArrow=classic;html=1;rounded=0;strokeColor=#0277BD;strokeWidth=2;labelBackgroundColor=white;fontSize=8;dashed=1;" edge="1" parent="1" source="import-manager" target="central-config">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Service Registry connections -->
+        <mxCell id="registry-discovery" value="Health Checks" style="endArrow=classic;html=1;rounded=0;strokeColor=#0277BD;strokeWidth=2;labelBackgroundColor=white;fontSize=8;dashed=1;" edge="1" parent="1" source="service-registry" target="intelligent-core">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="400" as="sourcePoint" />
+            <mxPoint x="650" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Architecture Layers -->
+        <mxCell id="layer-presentation" value="PRESENTATION LAYER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#4CAF50;strokeWidth=3;fontSize=12;fontStyle=1;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="250" y="280" width="720" height="140" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer-business" value="BUSINESS LOGIC LAYER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF9800;strokeWidth=3;fontSize=12;fontStyle=1;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="250" y="460" width="720" height="140" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer-infrastructure" value="INFRASTRUCTURE LAYER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#607D8B;strokeWidth=3;fontSize=12;fontStyle=1;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="250" y="640" width="1390" height="140" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="layer-data" value="DATA PERSISTENCE LAYER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#D32F2F;strokeWidth=3;fontSize=12;fontStyle=1;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="490" y="820" width="480" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- Deployment Information -->
+        <mxCell id="deployment-info" value="DEPLOYMENT INFO Production Server: 10.1.1.174 (LXC 174) Environment: Production-ready Clean Architecture Services: 8/9 Healthy Service Discovery Active Status: Phase 2 Complete - Ready for Phase 3 ML Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F4FD;strokeColor=#1E88E5;strokeWidth=2;fontSize=10;fontStyle=1;align=center;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="120" width="400" height="120" as="geometry" />
+        </mxCell>
+        
+        <!-- Performance Metrics -->
+        <mxCell id="metrics" value="SYSTEM METRICS 47 Over-Engineering Module to 4 Consolidated Manager 92% Code Reduction with Quality Increase Clean Architecture with SOLID Principles 13 Unit Tests - 100% Pass Rate Import Manager: 100+ sys.path eliminated Service Registry: Live Health Monitoring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#9C27B0;strokeWidth=2;fontSize=10;fontStyle=1;align=left;verticalAlign=top;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="480" width="380" height="120" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

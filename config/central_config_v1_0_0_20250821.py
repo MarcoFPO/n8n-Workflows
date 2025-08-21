@@ -47,7 +47,7 @@ class CentralConfig:
             },
             "diagnostic": {
                 "host": "localhost",
-                "port": 8016,
+                "port": 8013,
                 "health_endpoint": "/health"
             },
             "data_processing": {
@@ -58,6 +58,11 @@ class CentralConfig:
             "prediction_tracking": {
                 "host": "localhost",
                 "port": 8018,
+                "health_endpoint": "/health"
+            },
+            "health_monitor": {
+                "host": "localhost",
+                "port": 8090,
                 "health_endpoint": "/health"
             }
         }

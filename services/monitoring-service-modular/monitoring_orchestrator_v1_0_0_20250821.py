@@ -626,18 +626,22 @@ def main():
     """Main entry point"""
     orchestrator = MonitoringOrchestrator()
     
+    # Zentrale Konfiguration importieren
+    from config.central_config_v1_0_0_20250821 import config as central_config
+    monitoring_config = central_config.SERVICES["monitoring"]
+    
     # Uvicorn-Server konfiguration
     config = uvicorn.Config(
         app=orchestrator.app,
-        host="0.0.0.0",
-        port=8015,
+        host=monitoring_config["host"],
+        port=monitoring_config["port"],
         log_level="info",
         access_log=True
     )
     
     server = uvicorn.Server(config)
     
-    logger.info("Monitoring Service Modular starting on port 8015...")
+    logger.info(f"Monitoring Service Modular starting on port {monitoring_config['port']}...")
     
     try:
         server.run()

@@ -7,12 +7,13 @@ Clean Code - Keine hardcoded Pfade
 import sys
 from pathlib import Path
 
-# Zentrale Konfiguration verwenden
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Import Manager für Clean Architecture
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'shared'))
+from import_manager import setup_imports
+setup_imports()
 
 from config.central_config_v1_0_0_20250821 import config
-from frontend_service_v2 import FrontendService
+from frontend_service_v7_0_0_20250816 import FrontendService
 import uvicorn
 
 # Service direkt mit uvicorn starten

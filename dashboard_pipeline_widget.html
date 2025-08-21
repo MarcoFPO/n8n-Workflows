@@ -1,0 +1,107 @@
+<!-- Pipeline Status Widget für das Dashboard -->
+<script>
+// Pipeline Status laden und anzeigen
+async function loadPipelineStatus() {
+    try {
+        const response = await fetch('/api/pipeline/status');
+        const data = await response.json();
+        
+        let statusBadge = '';
+        let statusIcon = '';
+        let statusText = '';
+        
+        if (data.status === 'success') {
+            statusBadge = '<span class="badge bg-success">Erfolgreich</span>';
+            statusIcon = 'fas fa-check-circle text-success';
+            statusText = `Letzte Ausführung: ${data.last_execution || 'Unbekannt'}`;
+        } else if (data.status === 'failed') {
+            statusBadge = '<span class="badge bg-danger">Fehler</span>';
+            statusIcon = 'fas fa-exclamation-triangle text-danger';
+            statusText = `Letzter Fehler: ${data.last_execution || 'Unbekannt'}`;
+        } else {
+            statusBadge = '<span class="badge bg-warning">Unbekannt</span>';
+            statusIcon = 'fas fa-question-circle text-warning';
+            statusText = 'Status unbekannt';
+        }
+        
+        // Cron Status
+        let cronBadge = '';
+        if (data.cron_status === 'active') {
+            cronBadge = '<span class="badge bg-success">Aktiv</span>';
+        } else if (data.cron_status === 'inactive') {
+            cronBadge = '<span class="badge bg-warning">Inaktiv</span>';
+        } else {
+            cronBadge = '<span class="badge bg-danger">Fehler</span>';
+        }
+        
+        // Predictions Badge
+        let predictionsBadge = '';
+        if (data.recent_predictions > 10) {
+            predictionsBadge = `<span class="badge bg-success">${data.recent_predictions} Vorhersagen heute</span>`;
+        } else if (data.recent_predictions > 0) {
+            predictionsBadge = `<span class="badge bg-warning">${data.recent_predictions} Vorhersagen heute</span>`;
+        } else {
+            predictionsBadge = '<span class="badge bg-danger">Keine Vorhersagen heute</span>';
+        }
+        
+        const pipelineWidget = `
+            <div class="col-md-4 mb-3">
+                <div class="card status-card status-healthy">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="${statusIcon}"></i> Pipeline Automation
+                        </h6>
+                        <p class="card-text">${statusBadge}<br><small>${statusText}</small></p>
+                        <div class="mt-2">
+                            <strong>Cron Jobs:</strong> ${cronBadge}<br>
+                            <strong>Predictions:</strong> ${predictionsBadge}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Füge Widget zum Dashboard hinzu
+        const serviceStatusRow = document.querySelector('.row.mb-4:nth-of-type(2)');
+        if (serviceStatusRow) {
+            serviceStatusRow.innerHTML += pipelineWidget;
+        }
+        
+    } catch (error) {
+        console.error('Fehler beim Laden des Pipeline-Status:', error);
+        
+        const errorWidget = `
+            <div class="col-md-4 mb-3">
+                <div class="card status-card status-error">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-times-circle text-danger"></i> Pipeline Status
+                        </h6>
+                        <p class="card-text"><span class="badge bg-danger">Fehler beim Laden</span></p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const serviceStatusRow = document.querySelector('.row.mb-4:nth-of-type(2)');
+        if (serviceStatusRow) {
+            serviceStatusRow.innerHTML += errorWidget;
+        }
+    }
+}
+
+// Pipeline Status beim Laden der Seite aktivieren
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '' || window.location.hash === '#dashboard') {
+        loadPipelineStatus();
+    }
+});
+
+// Pipeline Status beim Seitenwechsel zu Dashboard aktivieren
+function loadSection(section) {
+    if (section === 'dashboard') {
+        // Original loadSection Funktion aufrufen
+        loadPipelineStatus();
+    }
+}
+</script>

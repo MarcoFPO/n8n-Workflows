@@ -14,6 +14,8 @@ import asyncio
 import aiohttp
 import logging
 import uvicorn
+import sys
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from fastapi import FastAPI, HTTPException
@@ -21,6 +23,13 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dataclasses import dataclass, asdict
 import json
+
+# Import Manager für Clean Architecture
+from shared.import_manager import setup_imports
+setup_imports()
+
+from config.central_config_v1_0_0_20250821 import config
+from shared.service_registry import service_registry, ServiceStatus
 
 # Logging Configuration
 logging.basicConfig(
@@ -49,23 +58,35 @@ class HealthStatus:
     error_message: Optional[str] = None
 
 class HealthMonitor:
-    """Centralized Health Monitoring Service"""
-    
-    # Service Registry
-    SERVICES = [
-        ServiceConfig("frontend", "http://localhost:8080", "/health"),
-        ServiceConfig("data-processing", "http://localhost:8017", "/health"),
-        ServiceConfig("csv-service", "http://localhost:8019", "/health"),
-        ServiceConfig("prediction-tracking", "http://localhost:8018", "/health"),
-        ServiceConfig("broker-gateway", "http://localhost:8011", "/health", critical=False),
-        ServiceConfig("intelligent-core", "http://localhost:8012", "/health", critical=False),
-        ServiceConfig("event-bus", "http://localhost:8013", "/health", critical=False),
-        ServiceConfig("monitoring", "http://localhost:8015", "/health", critical=False),
-    ]
+    """Centralized Health Monitoring Service - Clean Architecture"""
     
     def __init__(self):
         self.health_history: Dict[str, List[HealthStatus]] = {}
         self.last_check_time: Optional[datetime] = None
+        
+        # Service Registry aus zentraler Konfiguration
+        self.services = self._build_service_configs()
+    
+    def _build_service_configs(self) -> List[ServiceConfig]:
+        """Build service configurations from central config"""
+        services = []
+        
+        # Alle Services aus zentraler Konfiguration
+        for service_name, service_config in config.SERVICES.items():
+            service_url = config.get_service_url(service_name)
+            health_endpoint = service_config["health_endpoint"]
+            
+            # Kritische Services definieren
+            critical = service_name in ["frontend", "data_processing", "prediction_tracking"]
+            
+            services.append(ServiceConfig(
+                name=service_name,
+                url=service_url,
+                health_endpoint=health_endpoint,
+                critical=critical
+            ))
+        
+        return services
     
     async def check_service_health(self, service: ServiceConfig) -> HealthStatus:
         """Check individual service health with comprehensive error handling"""
@@ -136,13 +157,13 @@ class HealthMonitor:
     
     async def check_all_services(self) -> Dict[str, HealthStatus]:
         """Check all services concurrently"""
-        tasks = [self.check_service_health(service) for service in self.SERVICES]
+        tasks = [self.check_service_health(service) for service in self.services]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         health_results = {}
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                service = self.SERVICES[i]
+                service = self.services[i]
                 health_results[service.name] = HealthStatus(
                     service_name=service.name,
                     status="unknown",
@@ -247,7 +268,7 @@ async def check_all_services():
 @app.get("/health/service/{service_name}")
 async def check_specific_service(service_name: str):
     """Check specific service health"""
-    service_config = next((s for s in health_monitor.SERVICES if s.name == service_name), None)
+    service_config = next((s for s in health_monitor.services if s.name == service_name), None)
     
     if not service_config:
         raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found")
@@ -323,6 +344,53 @@ async def get_health_metrics():
         "generated_at": datetime.now().isoformat()
     }
 
+@app.get("/registry")
+async def get_service_registry():
+    """Get complete service registry with discovery"""
+    try:
+        # Update service registry with latest health checks
+        await service_registry.check_all_services()
+        
+        return {
+            "registry": service_registry.export_registry(),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting service registry: {e}")
+        raise HTTPException(status_code=500, detail=f"Registry access failed: {str(e)}")
+
+@app.get("/registry/healthy")
+async def get_healthy_services():
+    """Get only healthy services from registry"""
+    try:
+        healthy_services = service_registry.get_healthy_services()
+        
+        return {
+            "healthy_services": [
+                {
+                    "name": service.name,
+                    "url": service.url,
+                    "status": service.status.value,
+                    "response_time_ms": service.response_time_ms,
+                    "last_seen": service.last_seen.isoformat() if service.last_seen else None
+                }
+                for service in healthy_services
+            ],
+            "count": len(healthy_services),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting healthy services: {e}")
+        raise HTTPException(status_code=500, detail=f"Registry access failed: {str(e)}")
+
 if __name__ == "__main__":
     logger.info("Starting Health Monitor Service v1.0.0")
-    uvicorn.run(app, host="0.0.0.0", port=8090, log_level="info")
+    
+    # Zentrale Konfiguration verwenden
+    health_monitor_config = config.SERVICES["health_monitor"]
+    uvicorn.run(
+        app, 
+        host=health_monitor_config["host"], 
+        port=health_monitor_config["port"], 
+        log_level="info"
+    )

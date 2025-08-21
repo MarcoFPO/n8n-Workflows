@@ -1,0 +1,39 @@
+# Aktienanalyse-Ökosystem Pipeline Automation
+# Automatisierte Ausführung der ML-Datenpipeline
+
+# Arbeitszeiten: 3x täglich während Marktzeiten
+# 09:00 - Marktöffnung Europa
+# 15:30 - Marktöffnung USA  
+# 22:00 - Nachmarkt-Analyse
+
+# Vollständige Pipeline-Ausführung (Mo-Fr Marktzeiten)
+0 9 * * 1-5 /opt/aktienanalyse-ökosystem/automation/pipeline_automation.sh >> /opt/aktienanalyse-ökosystem/logs/cron_pipeline.log 2>&1
+30 15 * * 1-5 /opt/aktienanalyse-ökosystem/automation/pipeline_automation.sh >> /opt/aktienanalyse-ökosystem/logs/cron_pipeline.log 2>&1
+0 22 * * 1-5 /opt/aktienanalyse-ökosystem/automation/pipeline_automation.sh >> /opt/aktienanalyse-ökosystem/logs/cron_pipeline.log 2>&1
+
+# Wochenend-Update (Samstag 10:00 - weniger häufig)
+0 10 * * 6 /opt/aktienanalyse-ökosystem/automation/pipeline_automation.sh >> /opt/aktienanalyse-ökosystem/logs/cron_pipeline.log 2>&1
+
+# ML-Model Retraining (Sonntag 02:00 - wenig Load)
+0 2 * * 0 curl -s -X POST http://localhost:8021/api/v1/retraining/start >> /opt/aktienanalyse-ökosystem/logs/cron_ml_retrain.log 2>&1
+
+# Umfassendes System-Monitoring (alle 15 Minuten)
+*/15 * * * * /usr/bin/python3 /opt/aktienanalyse-ökosystem/automation/monitoring_alerting.py health >> /opt/aktienanalyse-ökosystem/logs/monitoring.log 2>&1
+
+# Service Health-Checks (alle 30 Minuten) - Legacy für Kompatibilität
+*/30 * * * * curl -s http://localhost:8011/health http://localhost:8021/health http://localhost:8017/health > /dev/null 2>&1 || echo "$(date): Service health check failed" >> /opt/aktienanalyse-ökosystem/logs/health_check.log
+
+# Täglich Health-Report (jeden Tag um 07:00)
+0 7 * * * /usr/bin/python3 /opt/aktienanalyse-ökosystem/automation/monitoring_alerting.py report > /opt/aktienanalyse-ökosystem/logs/daily_health_report.log 2>&1
+
+# Log-Rotation (täglich um 01:00)
+0 1 * * * find /opt/aktienanalyse-ökosystem/logs -name "*.log" -mtime +7 -delete
+
+# Database-Cleanup (täglich um 01:30 - alte Einträge löschen)
+30 1 * * * sqlite3 /opt/aktienanalyse-ökosystem/data/ki_recommendations.db "DELETE FROM ki_recommendations WHERE created_at < datetime('now', '-30 days');" >> /opt/aktienanalyse-ökosystem/logs/db_cleanup.log 2>&1
+
+# Duplicate Prevention (alle 4 Stunden)
+0 */4 * * * /usr/bin/python3 /opt/aktienanalyse-ökosystem/automation/duplicate_prevention.py fix >> /opt/aktienanalyse-ökosystem/logs/duplicate_prevention.log 2>&1
+
+# Event-Bus Health-Check (alle 2 Stunden)
+0 */2 * * * /usr/bin/python3 /opt/aktienanalyse-ökosystem/automation/event_bus_integration.py pipeline.health_check >> /opt/aktienanalyse-ökosystem/logs/eventbus_health.log 2>&1

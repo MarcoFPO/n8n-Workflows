@@ -16,6 +16,7 @@ import aiohttp
 import json
 import csv
 import io
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -28,6 +29,12 @@ import psycopg2
 import psycopg2.extras
 from contextlib import asynccontextmanager
 
+# Import Manager für Clean Architecture
+from shared.import_manager import setup_imports
+setup_imports()
+
+from config.central_config_v1_0_0_20250821 import config
+
 # Logging Setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,19 +45,13 @@ app = FastAPI(
     description="CSV-Generierung und Event-Store Integration für Aktienanalyse-Ökosystem"
 )
 
-# Service-Konfiguration
-EVENT_BUS_URL = "http://localhost:8010"
-INTELLIGENT_CORE_URL = "http://localhost:8001"
-CSV_OUTPUT_DIR = Path("/opt/aktienanalyse-ökosystem/services/data-processing-service-modular/output")
+# Service-Konfiguration aus zentraler Config
+EVENT_BUS_URL = config.get_service_url("event_bus")
+INTELLIGENT_CORE_URL = config.get_service_url("intelligent_core")
+CSV_OUTPUT_DIR = config.get_project_path("services", "data-processing-service-modular", "output")
 
-# PostgreSQL Event-Store Konfiguration
-DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'event_store_db',
-    'user': 'mdoehler',
-    'password': '',
-    'port': 5432
-}
+# PostgreSQL Event-Store Konfiguration aus zentraler Config
+DB_CONFIG = config.DATABASE_CONFIG["event_store"]
 
 # Datenmodelle
 class PerformanceData(BaseModel):
