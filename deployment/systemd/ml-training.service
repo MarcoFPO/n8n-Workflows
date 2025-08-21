@@ -1,0 +1,65 @@
+[Unit]
+Description=ML Training Service - Model Training für ML-Pipeline
+Documentation=file:///home/aktienanalyse/aktienanalyse-ökosystem/README.md
+After=network.target postgresql.service redis.service ml-analytics.service
+Wants=network.target
+Requires=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/home/aktienanalyse/aktienanalyse-ökosystem/services/ml-analytics-service-modular
+
+# Training Service ausführen
+ExecStart=/home/aktienanalyse/aktienanalyse-ökosystem/services/ml-analytics-service-modular/training_service_v1_0_0_20250817.py
+
+# Environment Variables
+Environment=PYTHONPATH=/home/aktienanalyse/aktienanalyse-ökosystem/services/ml-analytics-service-modular
+Environment=ML_SERVICE_NAME=ml-training
+Environment=ML_SERVICE_TRAINING_PORT=8020
+Environment=ML_DATABASE_HOST=localhost
+Environment=ML_DATABASE_PORT=5432
+Environment=ML_DATABASE_NAME=aktienanalyse
+Environment=ML_DATABASE_USER=ml_service
+Environment=ML_DATABASE_PASSWORD=ml_service_secure_2025
+Environment=ML_REDIS_URL=redis://localhost:6379/2
+Environment=ML_LOG_LEVEL=INFO
+Environment=ML_MODEL_STORAGE_PATH=/home/aktienanalyse/ml-models
+Environment=ML_ENABLE_GPU=false
+Environment=ML_MIXED_PRECISION=false
+Environment=ML_TRAINING_EPOCHS=50
+Environment=ML_TRAINING_BATCH_SIZE=32
+
+# Restart Policy (weniger aggressiv für Training)
+Restart=on-failure
+RestartSec=30
+StartLimitInterval=300
+StartLimitBurst=2
+
+# Process Management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=300
+SendSIGKILL=no
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/aktienanalyse/ml-models /home/aktienanalyse/aktienanalyse-ökosystem/logs /tmp
+
+# Resource Limits (höher für Training)
+LimitNOFILE=65536
+LimitNPROC=8192
+MemoryMax=8G
+CPUQuota=400%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ml-training
+
+[Install]
+WantedBy=multi-user.target

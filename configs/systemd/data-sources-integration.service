@@ -1,0 +1,33 @@
+[Unit]
+Description=Data Sources Integration Service
+After=network.target
+Wants=network-online.target
+Requires=alpha-vantage-smallcap.service finnhub-fundamentals.service ecb-macroeconomics.service dealroom-eu-startup.service iex-cloud-microcap.service
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/integration
+ExecStart=/usr/bin/python3 data_sources_integration.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/aktienanalyse-ökosystem/logs
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

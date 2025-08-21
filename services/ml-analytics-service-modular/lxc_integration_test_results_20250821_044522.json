@@ -1,0 +1,388 @@
+{
+  "suite_name": "LXC Integration Test Suite",
+  "container_ip": "10.1.1.174",
+  "execution_summary": {
+    "total_tests": 6,
+    "passed_tests": 5,
+    "failed_tests": 1,
+    "success_rate_percent": 83.33333333333334,
+    "total_execution_time_s": 31.5551176071167,
+    "total_memory_usage_mb": 4.234375
+  },
+  "individual_test_results": [
+    {
+      "test_name": "system_health_check",
+      "success": true,
+      "execution_time_ms": 1006.3812732696533,
+      "memory_usage_mb": 0.5,
+      "error_message": null,
+      "performance_metrics": {
+        "health_checks": {
+          "api_responsive": true,
+          "memory_within_limits": "True",
+          "cpu_within_limits": "True",
+          "container_operational": true
+        },
+        "container_metrics": {
+          "container_ip": "10.1.1.174",
+          "summary_period_hours": 1,
+          "metrics_count": 1,
+          "system_performance": {
+            "avg_memory_percent": 52.3,
+            "avg_cpu_percent": 2.5,
+            "max_memory_usage_mb": 71.5546875,
+            "min_available_memory_mb": 1953.33203125,
+            "current_load_average": [
+              1.4296875,
+              1.322265625,
+              1.21337890625
+            ]
+          },
+          "algorithm_performance": {},
+          "lxc_optimization_status": {
+            "monitoring_active": true,
+            "total_algorithms_benchmarked": 0,
+            "memory_optimization": "Active"
+          }
+        },
+        "response_time_ms": 1006.0250759124756
+      }
+    },
+    {
+      "test_name": "classical_enhanced_engine_status",
+      "success": true,
+      "execution_time_ms": 1.1982917785644531,
+      "memory_usage_mb": 0.0,
+      "error_message": null,
+      "performance_metrics": {
+        "status_response": {
+          "engine_status": {
+            "status": "operational",
+            "container_optimization": "lxc-optimized",
+            "num_enhanced_models": 3,
+            "num_enhanced_transformers": 1,
+            "num_algorithm_templates": 5
+          },
+          "lxc_performance": {
+            "container_ip": "10.1.1.174",
+            "system_performance": {
+              "avg_memory_percent": 35.37730325237336,
+              "avg_cpu_percent": 26.26395514357491
+            },
+            "lxc_optimization_status": {
+              "monitoring_active": true,
+              "memory_optimization": "Active"
+            }
+          },
+          "container_ip": "10.1.1.174",
+          "optimization_level": "LXC-Enhanced",
+          "_request_time_ms": 0.919342041015625
+        },
+        "response_time_ms": 0.919342041015625,
+        "required_fields_present": true
+      }
+    },
+    {
+      "test_name": "portfolio_optimization_scaling",
+      "success": true,
+      "execution_time_ms": 5.349397659301758,
+      "memory_usage_mb": 0.5,
+      "error_message": null,
+      "performance_metrics": {
+        "scaling_results": {
+          "portfolio_5": {
+            "success": true,
+            "execution_time_s": 0.001432180404663086,
+            "response_time_ms": 1.2454986572265625,
+            "memory_metrics": {
+              "memory_usage_mb": 101.84259703134246,
+              "lxc_optimized": true,
+              "computation_time_ms": 0.01811981201171875
+            },
+            "error": null,
+            "optimal_energy": -0.10124217645515893,
+            "classical_advantage": 0.39001161803385864
+          },
+          "portfolio_10": {
+            "success": true,
+            "execution_time_s": 0.001585245132446289,
+            "response_time_ms": 1.4243125915527344,
+            "memory_metrics": {
+              "memory_usage_mb": 143.46693575606395,
+              "lxc_optimized": true,
+              "computation_time_ms": 0.027894973754882812
+            },
+            "error": null,
+            "optimal_energy": -0.10594096112739432,
+            "classical_advantage": 0.6042688620343285
+          },
+          "portfolio_20": {
+            "success": true,
+            "execution_time_s": 0.0017397403717041016,
+            "response_time_ms": 1.5573501586914062,
+            "memory_metrics": {
+              "memory_usage_mb": 64.29485114401562,
+              "lxc_optimized": true,
+              "computation_time_ms": 0.0362396240234375
+            },
+            "error": null,
+            "optimal_energy": -0.09834011566494998,
+            "classical_advantage": 0.4700910325426092
+          }
+        },
+        "successful_tests": 3,
+        "total_tests": 3,
+        "reasonable_scaling": true
+      }
+    },
+    {
+      "test_name": "memory_efficient_operations",
+      "success": true,
+      "execution_time_ms": 441.6062831878662,
+      "memory_usage_mb": 4.125,
+      "error_message": null,
+      "performance_metrics": {
+        "optimization_result": {
+          "portfolio_optimization": {
+            "optimal_weights": "[0.00000000e+00 0.00000000e+00 4.75093656e-18 8.01619495e-18\n 7.44116457e-18 0.00000000e+00 2.46449083e-05 0.00000000e+00\n 5.13231231e-03 9.53051721e-03 6.91383530e-03 3.22403220e-03\n 1.37914871e-02 2.61944970e-19 5.78520478e-03 0.00000000e+00\n 4.36688684e-03 4.71852131e-04 2.33881424e-04 9.15032797e-03\n 7.37166882e-03 3.04732081e-02 5.10719831e-03 5.30708602e-03\n 8.63906415e-19 1.14880440e-02 1.52958521e-18 7.50124842e-03\n 7.73670585e-03 1.61779943e-02 1.33207957e-02 2.14102674e-02\n 1.11206856e-02 8.81877973e-03 2.40315517e-02 3.27754503e-03\n 2.09884358e-02 1.57741333e-02 1.87138410e-02 1.90374154e-02\n 2.76079630e-02 2.07359717e-02 1.01367724e-02 3.02031979e-02\n 3.25586441e-02 4.28086605e-02 2.26668040e-02 1.77337905e-02\n 4.39648283e-02 3.01497970e-02 2.91403313e-02 2.93721693e-02\n 3.51192487e-02 4.34921517e-02 3.64743871e-02 3.21001645e-02\n 5.66745769e-02 3.72404121e-02 5.09428827e-02 6.45956596e-02]",
+            "portfolio_return": 0.10681889955625937,
+            "portfolio_risk": 0.01660469983899294,
+            "sharpe_ratio": 6.433052123316059,
+            "optimization_success": "True",
+            "num_iterations": 11,
+            "memory_usage_mb": 0.5,
+            "memory_efficiency": {
+              "initial_memory_mb": 76.1796875,
+              "final_memory_mb": 76.6796875,
+              "peak_usage_mb": 76.6796875,
+              "memory_limit_mb": 500.0,
+              "within_limit": true
+            }
+          },
+          "correlation_analysis": {
+            "total_correlations": 0,
+            "strong_correlations": {},
+            "weak_correlations": {},
+            "avg_correlation": 0.0,
+            "max_correlation": 0.0,
+            "min_correlation": 0.0,
+            "memory_metrics": {
+              "final_memory_mb": 76.6796875,
+              "memory_limit_mb": 500.0,
+              "batch_size_used": 15
+            }
+          },
+          "memory_breakdown": {
+            "covariance_calculation_mb": 1.25,
+            "optimization_mb": 0.5,
+            "correlation_analysis_mb": 0.0,
+            "total_additional_mb": 1.75
+          },
+          "lxc_performance": {
+            "total_assets": 80,
+            "sparse_matrix_size": 3594,
+            "memory_efficiency_achieved": true,
+            "within_lxc_limits": true
+          },
+          "final_memory_metrics": {
+            "current_usage_mb": 76.6796875,
+            "peak_usage_mb": 76.6796875,
+            "utilization_percent": 15.3359375,
+            "within_limit": true
+          }
+        },
+        "optimization_time_s": 0.43880248069763184,
+        "portfolio_size": 80,
+        "memory_efficiency": {
+          "current_usage_mb": 76.6796875,
+          "peak_usage_mb": 76.6796875,
+          "utilization_percent": 15.3359375,
+          "within_limit": true
+        }
+      }
+    },
+    {
+      "test_name": "error_handling_recovery",
+      "success": false,
+      "execution_time_ms": 5.2814483642578125,
+      "memory_usage_mb": 0.125,
+      "error_message": null,
+      "performance_metrics": {
+        "error_tests": {
+          "invalid_input": {
+            "success": false,
+            "error_message": "No error returned",
+            "response_time_ms": 1.0836124420166016
+          },
+          "extreme_risk_tolerance": {
+            "success": false,
+            "error_message": "No error returned",
+            "response_time_ms": 0.9365081787109375
+          },
+          "large_portfolio": {
+            "handled_gracefully": true,
+            "result_type": "success",
+            "response_time_ms": 1.4605522155761719
+          },
+          "recovery_after_errors": {
+            "success": true,
+            "response_time_ms": 0.8513927459716797
+          }
+        },
+        "proper_error_handling": false,
+        "recovery_successful": true
+      }
+    },
+    {
+      "test_name": "performance_under_load",
+      "success": true,
+      "execution_time_ms": 30093.319177627563,
+      "memory_usage_mb": -1.015625,
+      "error_message": null,
+      "performance_metrics": {
+        "load_test_results": {
+          "total_requests": 75,
+          "successful_requests": 75,
+          "failed_requests": 0,
+          "response_times": [
+            2.4962425231933594,
+            2.8684139251708984,
+            2.2001266479492188,
+            2.747774124145508,
+            2.030611038208008,
+            3.4155845642089844,
+            2.413511276245117,
+            3.2966136932373047,
+            2.4175643920898438,
+            3.3349990844726562,
+            3.713846206665039,
+            4.199981689453125,
+            3.396749496459961,
+            4.014015197753906,
+            3.2787322998046875,
+            3.0994415283203125,
+            2.401113510131836,
+            2.8345584869384766,
+            2.225637435913086,
+            2.7256011962890625,
+            2.6633739471435547,
+            3.082275390625,
+            2.378225326538086,
+            2.949953079223633,
+            2.2652149200439453,
+            3.8602352142333984,
+            3.0426979064941406,
+            3.5941600799560547,
+            2.9532909393310547,
+            3.6063194274902344,
+            2.741098403930664,
+            3.431558609008789,
+            2.5184154510498047,
+            3.414630889892578,
+            2.5246143341064453,
+            3.442525863647461,
+            2.565622329711914,
+            3.270387649536133,
+            2.488374710083008,
+            3.3016204833984375,
+            2.7403831481933594,
+            3.4356117248535156,
+            2.5374889373779297,
+            3.4291744232177734,
+            2.532482147216797,
+            3.366708755493164,
+            2.6459693908691406,
+            3.132343292236328,
+            2.470731735229492,
+            3.0374526977539062,
+            3.5996437072753906,
+            2.7136802673339844,
+            3.408670425415039,
+            2.6183128356933594,
+            3.3178329467773438,
+            2.589702606201172,
+            3.0307769775390625,
+            2.3953914642333984,
+            2.8998851776123047,
+            2.218008041381836,
+            3.7631988525390625,
+            2.8700828552246094,
+            3.631114959716797,
+            2.8324127197265625,
+            3.6323070526123047,
+            2.7611255645751953,
+            3.4837722778320312,
+            2.540111541748047,
+            3.4813880920410156,
+            2.603769302368164,
+            3.131389617919922,
+            2.330780029296875,
+            2.8650760650634766,
+            2.1593570709228516,
+            2.7501583099365234
+          ],
+          "memory_usage_over_time": [
+            76.8046875,
+            76.8046875,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625,
+            75.7890625
+          ],
+          "errors": []
+        },
+        "success_rate": 1.0,
+        "avg_response_time_ms": 2.962160110473633,
+        "memory_growth_mb": 1.015625,
+        "performance_acceptable": true
+      }
+    }
+  ],
+  "lxc_performance_summary": {
+    "container_ip": "10.1.1.174",
+    "summary_period_hours": 1,
+    "metrics_count": 6,
+    "system_performance": {
+      "avg_memory_percent": 52.35,
+      "avg_cpu_percent": 4.933333333333334,
+      "max_memory_usage_mb": 75.7890625,
+      "min_available_memory_mb": 1940.45703125,
+      "current_load_average": [
+        1.38671875,
+        1.32275390625,
+        1.21630859375
+      ]
+    },
+    "algorithm_performance": {},
+    "lxc_optimization_status": {
+      "monitoring_active": true,
+      "total_algorithms_benchmarked": 0,
+      "memory_optimization": "Active"
+    }
+  },
+  "test_environment": {
+    "python_version": "3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0]",
+    "test_config": {
+      "memory_limit_mb": 1024,
+      "cpu_limit_percent": 90,
+      "test_timeout_seconds": 180,
+      "portfolio_sizes": [
+        5,
+        10,
+        20
+      ],
+      "stress_test_duration": 60
+    },
+    "container_ip": "10.1.1.174",
+    "test_timestamp": "2025-08-21T04:45:22.373773"
+  }
+}

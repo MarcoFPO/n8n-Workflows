@@ -1,0 +1,43 @@
+[Unit]
+Description=ML Analytics LXC Service v4.0 - Production Ready
+Documentation=man:systemd.service(5)
+After=network.target network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=mdoehler
+Group=mdoehler
+WorkingDirectory=/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service-modular
+ExecStart=/usr/bin/python3 minimal_lxc_service_v1_0_0_20250819.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+KillMode=mixed
+TimeoutStopSec=20
+
+# Environment
+Environment=PYTHONPATH=/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service-modular
+Environment=ML_SERVICE_PORT=8021
+Environment=LXC_CONTAINER_IP=10.1.1.174
+Environment=ML_LOG_LEVEL=INFO
+
+# Security & Resource Limits
+NoNewPrivileges=true
+
+# LXC Container Resource Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryAccounting=true
+MemoryMax=1G
+CPUAccounting=true
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ml-analytics-lxc
+
+[Install]
+WantedBy=multi-user.target

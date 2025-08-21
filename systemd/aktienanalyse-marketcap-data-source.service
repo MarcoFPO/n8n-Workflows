@@ -1,0 +1,29 @@
+[Unit]
+Description=Aktienanalyse MarketCap Data Source Service
+Documentation=file:///home/mdoehler/aktienanalyse-ökosystem/README.md
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/data-sources
+ExecStart=/usr/bin/python3 marketcap_data_source_v1_0_0_20250817.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=PYTHONUNBUFFERED=1
+
+# Resource limits (relaxed for testing)
+MemoryMax=1G
+
+# Security (relaxed for testing)
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

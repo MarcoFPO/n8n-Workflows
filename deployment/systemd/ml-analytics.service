@@ -1,0 +1,65 @@
+[Unit]
+Description=ML Analytics Service - Hauptservice für ML-Pipeline
+Documentation=file:///home/aktienanalyse/aktienanalyse-ökosystem/README.md
+After=network.target postgresql.service redis.service
+Wants=network.target
+Requires=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/ml-analytics-service-modular
+
+# Hauptservice ausführen
+ExecStart=/opt/aktienanalyse-ökosystem/services/ml-analytics-service-modular/venv/bin/python /opt/aktienanalyse-ökosystem/services/ml-analytics-service-modular/ml_analytics_orchestrator_v1_0_0_20250817.py
+
+# Environment Variables
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem/services/ml-analytics-service-modular
+Environment=ML_SERVICE_NAME=ml-analytics
+Environment=ML_SERVICE_PORT=8021
+Environment=ML_DATABASE_HOST=localhost
+Environment=ML_DATABASE_PORT=5432
+Environment=ML_DATABASE_NAME=aktienanalyse
+Environment=ML_DATABASE_USER=ml_service
+Environment=ML_DATABASE_PASSWORD=ml_service_secure_2025
+Environment=ML_REDIS_URL=redis://localhost:6379/2
+Environment=ML_LOG_LEVEL=INFO
+Environment=ML_MODEL_STORAGE_PATH=/opt/aktienanalyse-ökosystem/ml-models
+Environment=ML_ENABLE_GPU=false
+Environment=ML_MIXED_PRECISION=false
+Environment=PGSSLMODE=disable
+Environment=PGPASSFILE=
+
+# Restart Policy
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Process Management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+SendSIGKILL=no
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/aktienanalyse-ökosystem/ml-models /opt/aktienanalyse-ökosystem/logs /tmp
+
+# Resource Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=4G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ml-analytics
+
+[Install]
+WantedBy=multi-user.target

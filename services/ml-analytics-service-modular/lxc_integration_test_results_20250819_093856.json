@@ -1,0 +1,330 @@
+{
+  "suite_name": "LXC Integration Test Suite",
+  "container_ip": "10.1.1.174",
+  "execution_summary": {
+    "total_tests": 6,
+    "passed_tests": 1,
+    "failed_tests": 5,
+    "success_rate_percent": 16.666666666666664,
+    "total_execution_time_s": 31.604230642318726,
+    "total_memory_usage_mb": 6.734375
+  },
+  "individual_test_results": [
+    {
+      "test_name": "system_health_check",
+      "success": false,
+      "execution_time_ms": 1034.3847274780273,
+      "memory_usage_mb": 0.25,
+      "error_message": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+      "performance_metrics": null
+    },
+    {
+      "test_name": "classical_enhanced_engine_status",
+      "success": false,
+      "execution_time_ms": 0.8347034454345703,
+      "memory_usage_mb": 0.0,
+      "error_message": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+      "performance_metrics": null
+    },
+    {
+      "test_name": "portfolio_optimization_scaling",
+      "success": false,
+      "execution_time_ms": 22.727251052856445,
+      "memory_usage_mb": 2.75,
+      "error_message": "Some portfolio optimizations failed",
+      "performance_metrics": {
+        "scaling_results": {
+          "portfolio_10": {
+            "success": false,
+            "execution_time_s": 0.0008559226989746094,
+            "response_time_ms": 0.7946491241455078,
+            "memory_metrics": {},
+            "error": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "optimal_energy": null,
+            "classical_advantage": null
+          },
+          "portfolio_25": {
+            "success": false,
+            "execution_time_s": 0.0011315345764160156,
+            "response_time_ms": 1.0683536529541016,
+            "memory_metrics": {},
+            "error": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "optimal_energy": null,
+            "classical_advantage": null
+          },
+          "portfolio_50": {
+            "success": false,
+            "execution_time_s": 0.0023293495178222656,
+            "response_time_ms": 2.2802352905273438,
+            "memory_metrics": {},
+            "error": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "optimal_energy": null,
+            "classical_advantage": null
+          },
+          "portfolio_100": {
+            "success": false,
+            "execution_time_s": 0.01312875747680664,
+            "response_time_ms": 12.759208679199219,
+            "memory_metrics": {},
+            "error": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "optimal_energy": null,
+            "classical_advantage": null
+          }
+        },
+        "successful_tests": 0,
+        "total_tests": 4,
+        "reasonable_scaling": false
+      }
+    },
+    {
+      "test_name": "memory_efficient_operations",
+      "success": true,
+      "execution_time_ms": 458.1136703491211,
+      "memory_usage_mb": 2.75,
+      "error_message": null,
+      "performance_metrics": {
+        "optimization_result": {
+          "portfolio_optimization": {
+            "optimal_weights": "[0.00000000e+00 0.00000000e+00 4.75093656e-18 8.01619495e-18\n 7.44116457e-18 0.00000000e+00 2.46449083e-05 0.00000000e+00\n 5.13231231e-03 9.53051721e-03 6.91383530e-03 3.22403220e-03\n 1.37914871e-02 2.61944970e-19 5.78520478e-03 0.00000000e+00\n 4.36688684e-03 4.71852131e-04 2.33881424e-04 9.15032797e-03\n 7.37166882e-03 3.04732081e-02 5.10719831e-03 5.30708602e-03\n 8.63906415e-19 1.14880440e-02 1.52958521e-18 7.50124842e-03\n 7.73670585e-03 1.61779943e-02 1.33207957e-02 2.14102674e-02\n 1.11206856e-02 8.81877973e-03 2.40315517e-02 3.27754503e-03\n 2.09884358e-02 1.57741333e-02 1.87138410e-02 1.90374154e-02\n 2.76079630e-02 2.07359717e-02 1.01367724e-02 3.02031979e-02\n 3.25586441e-02 4.28086605e-02 2.26668040e-02 1.77337905e-02\n 4.39648283e-02 3.01497970e-02 2.91403313e-02 2.93721693e-02\n 3.51192487e-02 4.34921517e-02 3.64743871e-02 3.21001645e-02\n 5.66745769e-02 3.72404121e-02 5.09428827e-02 6.45956596e-02]",
+            "portfolio_return": 0.10681889955625937,
+            "portfolio_risk": 0.01660469983899294,
+            "sharpe_ratio": 6.433052123316059,
+            "optimization_success": "True",
+            "num_iterations": 11,
+            "memory_usage_mb": 0.125,
+            "memory_efficiency": {
+              "initial_memory_mb": 77.14453125,
+              "final_memory_mb": 77.26953125,
+              "peak_usage_mb": 77.26953125,
+              "memory_limit_mb": 500.0,
+              "within_limit": true
+            }
+          },
+          "correlation_analysis": {
+            "total_correlations": 0,
+            "strong_correlations": {},
+            "weak_correlations": {},
+            "avg_correlation": 0.0,
+            "max_correlation": 0.0,
+            "min_correlation": 0.0,
+            "memory_metrics": {
+              "final_memory_mb": 77.26953125,
+              "memory_limit_mb": 500.0,
+              "batch_size_used": 15
+            }
+          },
+          "memory_breakdown": {
+            "covariance_calculation_mb": 0.75,
+            "optimization_mb": 0.125,
+            "correlation_analysis_mb": 0.0,
+            "total_additional_mb": 0.875
+          },
+          "lxc_performance": {
+            "total_assets": 80,
+            "sparse_matrix_size": 3594,
+            "memory_efficiency_achieved": true,
+            "within_lxc_limits": true
+          },
+          "final_memory_metrics": {
+            "current_usage_mb": 77.26953125,
+            "peak_usage_mb": 77.26953125,
+            "utilization_percent": 15.45390625,
+            "within_limit": true
+          }
+        },
+        "optimization_time_s": 0.4537034034729004,
+        "portfolio_size": 80,
+        "memory_efficiency": {
+          "current_usage_mb": 77.26953125,
+          "peak_usage_mb": 77.26953125,
+          "utilization_percent": 15.45390625,
+          "within_limit": true
+        }
+      }
+    },
+    {
+      "test_name": "error_handling_recovery",
+      "success": false,
+      "execution_time_ms": 9.513616561889648,
+      "memory_usage_mb": 0.859375,
+      "error_message": null,
+      "performance_metrics": {
+        "error_tests": {
+          "invalid_input": {
+            "success": true,
+            "error_message": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "response_time_ms": 0.7898807525634766
+          },
+          "extreme_risk_tolerance": {
+            "success": true,
+            "error_message": "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "response_time_ms": 0.6237030029296875
+          },
+          "large_portfolio": {
+            "handled_gracefully": true,
+            "result_type": "error",
+            "response_time_ms": 6.574153900146484
+          },
+          "recovery_after_errors": {
+            "success": false,
+            "response_time_ms": 0.5877017974853516
+          }
+        },
+        "proper_error_handling": false,
+        "recovery_successful": false
+      }
+    },
+    {
+      "test_name": "performance_under_load",
+      "success": false,
+      "execution_time_ms": 30076.47156715393,
+      "memory_usage_mb": 0.125,
+      "error_message": null,
+      "performance_metrics": {
+        "load_test_results": {
+          "total_requests": 75,
+          "successful_requests": 0,
+          "failed_requests": 75,
+          "response_times": [],
+          "memory_usage_over_time": [
+            78.12890625,
+            78.12890625,
+            78.12890625,
+            78.12890625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625,
+            78.25390625
+          ],
+          "errors": [
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('::1', 8021, 0, 0)]",
+            "Cannot connect to host localhost:8021 ssl:default [Connect call failed ('127.0.0.1', 8021)]"
+          ]
+        },
+        "success_rate": 0.0,
+        "avg_response_time_ms": 0,
+        "memory_growth_mb": 0.125,
+        "performance_acceptable": false
+      }
+    }
+  ],
+  "lxc_performance_summary": {
+    "container_ip": "10.1.1.174",
+    "summary_period_hours": 1,
+    "metrics_count": 6,
+    "system_performance": {
+      "avg_memory_percent": 54.78333333333333,
+      "avg_cpu_percent": 5.133333333333334,
+      "max_memory_usage_mb": 78.25390625,
+      "min_available_memory_mb": 1710.453125,
+      "current_load_average": [
+        1.3818359375,
+        1.32421875,
+        1.27783203125
+      ]
+    },
+    "algorithm_performance": {},
+    "lxc_optimization_status": {
+      "monitoring_active": true,
+      "total_algorithms_benchmarked": 0,
+      "memory_optimization": "Active"
+    }
+  },
+  "test_environment": {
+    "python_version": "3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0]",
+    "test_config": {
+      "memory_limit_mb": 1024,
+      "cpu_limit_percent": 90,
+      "test_timeout_seconds": 180,
+      "portfolio_sizes": [
+        10,
+        25,
+        50,
+        100
+      ],
+      "stress_test_duration": 60
+    },
+    "container_ip": "10.1.1.174",
+    "test_timestamp": "2025-08-19T09:38:56.215997"
+  }
+}

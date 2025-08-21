@@ -1,0 +1,20 @@
+[Unit]
+Description=ML Scheduler Timer - Periodisches Model Training
+Documentation=file:///home/aktienanalyse/aktienanalyse-ökosystem/README.md
+Requires=ml-scheduler.service
+
+[Timer]
+# Täglich um 02:00 Uhr ausführen
+OnCalendar=*-*-* 02:00:00
+
+# Bei System-Start nach 1 Stunde ausführen
+OnBootSec=1h
+
+# Persistenz für verpasste Ausführungen
+Persistent=true
+
+# Randomisierung um Server-Last zu verteilen
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

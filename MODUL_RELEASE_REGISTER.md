@@ -16,6 +16,31 @@
 
 ---
 
+## 🛠️ **CODE-QUALITÄT REFACTORING v1.0.0 - 21.08.2025**
+
+### **KRITISCHE KORREKTUREN (CLAUDE.md Compliance):**
+
+#### **✅ Versioning Convention Fixes:**
+- `api_proxy_fix.py` → `api_proxy_fix_v1_0_0_20250821.py` (GELÖSCHT - Ersetzt durch proper Module)
+- `run_frontend_v2.py` → `run_frontend_v2_0_0_20250821.py`
+- `simple_profit_engine.py` → `simple_profit_engine_v1_0_0_20250821.py`
+- `simple_marketcap_service.py` → `simple_marketcap_service_v1_0_0_20250821.py`
+- `monitoring_orchestrator.py` → `monitoring_orchestrator_v1_0_0_20250821.py`
+- `monitoring_orchestrator_v2.py` → `monitoring_orchestrator_v2_0_0_20250821.py`
+
+#### **🏗️ Clean Architecture Implementations:**
+- `central_config_v1_0_0_20250821.py` - Zentrale Konfigurationsverwaltung
+- `api_gateway_module_v1_0_0_20250821.py` - Clean API Gateway (ersetzt Quick-Fix)
+- `consolidated_order_manager_v1_0_0_20250821.py` - 14 Module konsolidiert
+- `consolidated_account_manager_v1_0_0_20250821.py` - 13 Module konsolidiert
+
+#### **🗑️ Code-Duplikation Eliminiert:**
+- `frontend_service_v2.py` (GELÖSCHT)
+- `frontend_service_v4_1_0_20250815.py` (GELÖSCHT)
+- Behalten: `frontend_service_v7_0_0_20250816.py` (Neueste Version)
+
+---
+
 ## 🚀 **Service-Level Module (Orchestrators)**
 
 | Modul | Aktuelle Version | Release Datum | Letztes Upgrade | Status |

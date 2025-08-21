@@ -1,0 +1,38 @@
+[Unit]
+Description=EOD Historical Emerging Markets Service
+Documentation=man:eod-historical-emerging(8)
+After=network.target
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/data-sources
+ExecStart=/usr/bin/python3 eod_historical_emerging_service.py
+Restart=always
+RestartSec=15
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/aktienanalyse-ökosystem
+
+# Resource limits
+MemoryLimit=768M
+CPUQuota=60%
+TasksMax=60
+LimitNOFILE=65536
+
+# Environment
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=EODHD_API_KEY=demo_key_eod_historical
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=eod-historical-emerging
+
+[Install]
+WantedBy=multi-user.target

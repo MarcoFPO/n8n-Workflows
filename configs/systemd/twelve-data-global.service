@@ -1,0 +1,38 @@
+[Unit]
+Description=Twelve Data Global Markets Service
+Documentation=man:twelve-data-global(8)
+After=network.target
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/data-sources
+ExecStart=/usr/bin/python3 twelve_data_global_service.py
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/aktienanalyse-ökosystem
+
+# Resource limits
+MemoryLimit=512M
+CPUQuota=50%
+TasksMax=50
+LimitNOFILE=65536
+
+# Environment
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=TWELVE_DATA_API_KEY=demo_key_twelve_data_global
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=twelve-data-global
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,49 @@
+[Unit]
+Description=Event-Bus Global Integration Service
+Documentation=man:event-bus-global-integration(8)
+After=network.target
+After=twelve-data-global.service
+After=eod-historical-emerging.service
+After=marketstack-global-exchanges.service
+After=data-sources-integration.service
+Requires=network.target
+Wants=twelve-data-global.service eod-historical-emerging.service marketstack-global-exchanges.service data-sources-integration.service
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/integration
+ExecStart=/usr/bin/python3 event_bus_global_integration.py
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+EnvironmentFile=/opt/aktienanalyse-ökosystem/.env
+Restart=always
+RestartSec=10s
+StartLimitIntervalSec=300s
+StartLimitBurst=5
+
+# Resource Limits (Optimized for Event-Bus processing)
+MemoryMax=1.5G
+CPUQuota=90%
+TasksMax=1000
+
+# Security Settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/aktienanalyse-ökosystem /var/log/aktienanalyse
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# File Descriptor Limits
+LimitNOFILE=65536
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=event-bus-global-integration
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+[Unit]
+Description=Dealroom EU-Startup Data Source Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/data-sources
+ExecStart=/usr/bin/python3 dealroom_eu_startup_service.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=DEALROOM_API_KEY=demo
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/aktienanalyse-ökosystem/logs
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

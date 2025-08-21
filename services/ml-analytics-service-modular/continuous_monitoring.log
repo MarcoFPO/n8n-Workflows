@@ -1,0 +1,215 @@
+2025-08-21 05:01:35,343 - __main__ - INFO - Continuous Monitoring Service initialized für Container 10.1.1.174
+2025-08-21 05:01:35,343 - __main__ - INFO - Service URL: http://localhost:8021
+2025-08-21 05:01:35,343 - __main__ - INFO - Monitoring Interval: 30s
+2025-08-21 05:01:35,343 - __main__ - INFO - 🔍 Starting Continuous Monitoring für LXC Container 10.1.1.174
+2025-08-21 05:01:35,343 - __main__ - INFO - ============================================================
+2025-08-21 05:01:36,350 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:01:36,350 - __main__ - INFO -   Health: healthy
+2025-08-21 05:01:36,350 - __main__ - INFO -   CPU: 1.5%
+2025-08-21 05:01:36,350 - __main__ - INFO -   Memory: 49.4%
+2025-08-21 05:01:36,350 - __main__ - INFO -   Service: operational
+2025-08-21 05:01:36,350 - __main__ - INFO -   Response: 4.0ms
+2025-08-21 05:02:07,405 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:02:07,405 - __main__ - INFO -   Health: healthy
+2025-08-21 05:02:07,405 - __main__ - INFO -   CPU: 6.0%
+2025-08-21 05:02:07,405 - __main__ - INFO -   Memory: 49.5%
+2025-08-21 05:02:07,406 - __main__ - INFO -   Service: operational
+2025-08-21 05:02:07,406 - __main__ - INFO -   Response: 1.7ms
+2025-08-21 05:02:38,441 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:02:38,441 - __main__ - INFO -   Health: healthy
+2025-08-21 05:02:38,441 - __main__ - INFO -   CPU: 7.3%
+2025-08-21 05:02:38,441 - __main__ - INFO -   Memory: 49.5%
+2025-08-21 05:02:38,441 - __main__ - INFO -   Service: operational
+2025-08-21 05:02:38,441 - __main__ - INFO -   Response: 1.9ms
+2025-08-21 05:03:09,470 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:03:09,470 - __main__ - INFO -   Health: healthy
+2025-08-21 05:03:09,470 - __main__ - INFO -   CPU: 5.5%
+2025-08-21 05:03:09,470 - __main__ - INFO -   Memory: 49.5%
+2025-08-21 05:03:09,470 - __main__ - INFO -   Service: operational
+2025-08-21 05:03:09,470 - __main__ - INFO -   Response: 1.7ms
+2025-08-21 05:03:40,507 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:03:40,507 - __main__ - INFO -   Health: healthy
+2025-08-21 05:03:40,507 - __main__ - INFO -   CPU: 7.5%
+2025-08-21 05:03:40,507 - __main__ - INFO -   Memory: 49.8%
+2025-08-21 05:03:40,507 - __main__ - INFO -   Service: operational
+2025-08-21 05:03:40,508 - __main__ - INFO -   Response: 1.6ms
+2025-08-21 05:04:11,537 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:04:11,537 - __main__ - INFO -   Health: healthy
+2025-08-21 05:04:11,537 - __main__ - INFO -   CPU: 0.8%
+2025-08-21 05:04:11,537 - __main__ - INFO -   Memory: 49.8%
+2025-08-21 05:04:11,537 - __main__ - INFO -   Service: operational
+2025-08-21 05:04:11,537 - __main__ - INFO -   Response: 1.6ms
+2025-08-21 05:04:42,572 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:04:42,572 - __main__ - INFO -   Health: healthy
+2025-08-21 05:04:42,572 - __main__ - INFO -   CPU: 0.8%
+2025-08-21 05:04:42,572 - __main__ - INFO -   Memory: 44.3%
+2025-08-21 05:04:42,572 - __main__ - INFO -   Service: operational
+2025-08-21 05:04:42,572 - __main__ - INFO -   Response: 1.6ms
+2025-08-21 05:05:13,589 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:05:13,589 - __main__ - INFO -   Health: healthy
+2025-08-21 05:05:13,589 - __main__ - INFO -   CPU: 4.0%
+2025-08-21 05:05:13,589 - __main__ - INFO -   Memory: 46.0%
+2025-08-21 05:05:13,589 - __main__ - INFO -   Service: operational
+2025-08-21 05:05:13,589 - __main__ - INFO -   Response: 1.7ms
+2025-08-21 05:05:44,624 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:05:44,624 - __main__ - INFO -   Health: healthy
+2025-08-21 05:05:44,624 - __main__ - INFO -   CPU: 1.3%
+2025-08-21 05:05:44,624 - __main__ - INFO -   Memory: 46.2%
+2025-08-21 05:05:44,624 - __main__ - INFO -   Service: operational
+2025-08-21 05:05:44,624 - __main__ - INFO -   Response: 1.5ms
+2025-08-21 05:06:15,658 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:06:15,658 - __main__ - INFO -   Health: healthy
+2025-08-21 05:06:15,658 - __main__ - INFO -   CPU: 2.0%
+2025-08-21 05:06:15,658 - __main__ - INFO -   Memory: 46.2%
+2025-08-21 05:06:15,658 - __main__ - INFO -   Service: operational
+2025-08-21 05:06:15,658 - __main__ - INFO -   Response: 1.7ms
+2025-08-21 05:06:46,692 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:06:46,692 - __main__ - INFO -   Health: healthy
+2025-08-21 05:06:46,692 - __main__ - INFO -   CPU: 3.0%
+2025-08-21 05:06:46,693 - __main__ - INFO -   Memory: 47.2%
+2025-08-21 05:06:46,693 - __main__ - INFO -   Service: operational
+2025-08-21 05:06:46,693 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:07:17,712 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:07:17,712 - __main__ - INFO -   Health: healthy
+2025-08-21 05:07:17,712 - __main__ - INFO -   CPU: 9.5%
+2025-08-21 05:07:17,712 - __main__ - INFO -   Memory: 48.6%
+2025-08-21 05:07:17,712 - __main__ - INFO -   Service: operational
+2025-08-21 05:07:17,712 - __main__ - INFO -   Response: 1.7ms
+2025-08-21 05:07:48,746 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:07:48,746 - __main__ - INFO -   Health: healthy
+2025-08-21 05:07:48,747 - __main__ - INFO -   CPU: 4.5%
+2025-08-21 05:07:48,747 - __main__ - INFO -   Memory: 48.7%
+2025-08-21 05:07:48,747 - __main__ - INFO -   Service: operational
+2025-08-21 05:07:48,747 - __main__ - INFO -   Response: 1.6ms
+2025-08-21 05:08:19,779 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:08:19,779 - __main__ - INFO -   Health: healthy
+2025-08-21 05:08:19,779 - __main__ - INFO -   CPU: 11.0%
+2025-08-21 05:08:19,779 - __main__ - INFO -   Memory: 48.7%
+2025-08-21 05:08:19,779 - __main__ - INFO -   Service: operational
+2025-08-21 05:08:19,779 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:08:50,813 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:08:50,813 - __main__ - INFO -   Health: healthy
+2025-08-21 05:08:50,813 - __main__ - INFO -   CPU: 2.5%
+2025-08-21 05:08:50,813 - __main__ - INFO -   Memory: 48.8%
+2025-08-21 05:08:50,813 - __main__ - INFO -   Service: operational
+2025-08-21 05:08:50,813 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:09:21,849 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:09:21,849 - __main__ - INFO -   Health: healthy
+2025-08-21 05:09:21,850 - __main__ - INFO -   CPU: 5.2%
+2025-08-21 05:09:21,850 - __main__ - INFO -   Memory: 49.2%
+2025-08-21 05:09:21,850 - __main__ - INFO -   Service: operational
+2025-08-21 05:09:21,850 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:09:52,884 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:09:52,884 - __main__ - INFO -   Health: healthy
+2025-08-21 05:09:52,884 - __main__ - INFO -   CPU: 11.5%
+2025-08-21 05:09:52,884 - __main__ - INFO -   Memory: 50.6%
+2025-08-21 05:09:52,884 - __main__ - INFO -   Service: operational
+2025-08-21 05:09:52,884 - __main__ - INFO -   Response: 1.5ms
+2025-08-21 05:10:23,918 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:10:23,918 - __main__ - INFO -   Health: healthy
+2025-08-21 05:10:23,918 - __main__ - INFO -   CPU: 2.8%
+2025-08-21 05:10:23,918 - __main__ - INFO -   Memory: 50.6%
+2025-08-21 05:10:23,918 - __main__ - INFO -   Service: operational
+2025-08-21 05:10:23,918 - __main__ - INFO -   Response: 1.6ms
+2025-08-21 05:10:54,949 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:10:54,949 - __main__ - INFO -   Health: healthy
+2025-08-21 05:10:54,949 - __main__ - INFO -   CPU: 0.5%
+2025-08-21 05:10:54,949 - __main__ - INFO -   Memory: 50.6%
+2025-08-21 05:10:54,949 - __main__ - INFO -   Service: operational
+2025-08-21 05:10:54,949 - __main__ - INFO -   Response: 1.3ms
+2025-08-21 05:11:25,984 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:11:25,984 - __main__ - INFO -   Health: healthy
+2025-08-21 05:11:25,985 - __main__ - INFO -   CPU: 1.0%
+2025-08-21 05:11:25,985 - __main__ - INFO -   Memory: 44.4%
+2025-08-21 05:11:25,985 - __main__ - INFO -   Service: operational
+2025-08-21 05:11:25,985 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:11:57,020 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:11:57,020 - __main__ - INFO -   Health: healthy
+2025-08-21 05:11:57,020 - __main__ - INFO -   CPU: 1.5%
+2025-08-21 05:11:57,020 - __main__ - INFO -   Memory: 44.4%
+2025-08-21 05:11:57,020 - __main__ - INFO -   Service: operational
+2025-08-21 05:11:57,020 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:12:28,044 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:12:28,044 - __main__ - INFO -   Health: healthy
+2025-08-21 05:12:28,044 - __main__ - INFO -   CPU: 2.3%
+2025-08-21 05:12:28,044 - __main__ - INFO -   Memory: 44.4%
+2025-08-21 05:12:28,044 - __main__ - INFO -   Service: operational
+2025-08-21 05:12:28,044 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:12:59,078 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:12:59,078 - __main__ - INFO -   Health: healthy
+2025-08-21 05:12:59,078 - __main__ - INFO -   CPU: 1.5%
+2025-08-21 05:12:59,078 - __main__ - INFO -   Memory: 44.4%
+2025-08-21 05:12:59,078 - __main__ - INFO -   Service: operational
+2025-08-21 05:12:59,078 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:13:30,107 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:13:30,107 - __main__ - INFO -   Health: healthy
+2025-08-21 05:13:30,107 - __main__ - INFO -   CPU: 0.8%
+2025-08-21 05:13:30,107 - __main__ - INFO -   Memory: 44.4%
+2025-08-21 05:13:30,107 - __main__ - INFO -   Service: operational
+2025-08-21 05:13:30,107 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:14:01,112 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:14:01,112 - __main__ - INFO -   Health: healthy
+2025-08-21 05:14:01,112 - __main__ - INFO -   CPU: 2.7%
+2025-08-21 05:14:01,112 - __main__ - INFO -   Memory: 44.4%
+2025-08-21 05:14:01,112 - __main__ - INFO -   Service: operational
+2025-08-21 05:14:01,112 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:14:32,147 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:14:32,147 - __main__ - INFO -   Health: healthy
+2025-08-21 05:14:32,147 - __main__ - INFO -   CPU: 5.1%
+2025-08-21 05:14:32,147 - __main__ - INFO -   Memory: 44.5%
+2025-08-21 05:14:32,147 - __main__ - INFO -   Service: operational
+2025-08-21 05:14:32,147 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:15:03,181 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:15:03,181 - __main__ - INFO -   Health: healthy
+2025-08-21 05:15:03,181 - __main__ - INFO -   CPU: 7.8%
+2025-08-21 05:15:03,181 - __main__ - INFO -   Memory: 46.7%
+2025-08-21 05:15:03,182 - __main__ - INFO -   Service: operational
+2025-08-21 05:15:03,182 - __main__ - INFO -   Response: 1.7ms
+2025-08-21 05:15:34,216 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:15:34,216 - __main__ - INFO -   Health: healthy
+2025-08-21 05:15:34,216 - __main__ - INFO -   CPU: 9.5%
+2025-08-21 05:15:34,216 - __main__ - INFO -   Memory: 47.9%
+2025-08-21 05:15:34,216 - __main__ - INFO -   Service: operational
+2025-08-21 05:15:34,216 - __main__ - INFO -   Response: 1.5ms
+2025-08-21 05:16:05,251 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:16:05,251 - __main__ - INFO -   Health: healthy
+2025-08-21 05:16:05,251 - __main__ - INFO -   CPU: 2.5%
+2025-08-21 05:16:05,251 - __main__ - INFO -   Memory: 49.4%
+2025-08-21 05:16:05,251 - __main__ - INFO -   Service: operational
+2025-08-21 05:16:05,251 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:16:36,276 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:16:36,276 - __main__ - INFO -   Health: healthy
+2025-08-21 05:16:36,276 - __main__ - INFO -   CPU: 4.7%
+2025-08-21 05:16:36,276 - __main__ - INFO -   Memory: 49.8%
+2025-08-21 05:16:36,276 - __main__ - INFO -   Service: operational
+2025-08-21 05:16:36,277 - __main__ - INFO -   Response: 1.3ms
+2025-08-21 05:17:07,311 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:17:07,311 - __main__ - INFO -   Health: healthy
+2025-08-21 05:17:07,311 - __main__ - INFO -   CPU: 2.3%
+2025-08-21 05:17:07,311 - __main__ - INFO -   Memory: 51.0%
+2025-08-21 05:17:07,311 - __main__ - INFO -   Service: operational
+2025-08-21 05:17:07,311 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:17:38,346 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:17:38,346 - __main__ - INFO -   Health: healthy
+2025-08-21 05:17:38,346 - __main__ - INFO -   CPU: 6.2%
+2025-08-21 05:17:38,346 - __main__ - INFO -   Memory: 50.9%
+2025-08-21 05:17:38,346 - __main__ - INFO -   Service: operational
+2025-08-21 05:17:38,346 - __main__ - INFO -   Response: 1.5ms
+2025-08-21 05:18:09,380 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:18:09,380 - __main__ - INFO -   Health: healthy
+2025-08-21 05:18:09,380 - __main__ - INFO -   CPU: 4.7%
+2025-08-21 05:18:09,380 - __main__ - INFO -   Memory: 51.0%
+2025-08-21 05:18:09,380 - __main__ - INFO -   Service: operational
+2025-08-21 05:18:09,380 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:18:40,414 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:18:40,414 - __main__ - INFO -   Health: healthy
+2025-08-21 05:18:40,414 - __main__ - INFO -   CPU: 4.5%
+2025-08-21 05:18:40,414 - __main__ - INFO -   Memory: 51.0%
+2025-08-21 05:18:40,414 - __main__ - INFO -   Service: operational
+2025-08-21 05:18:40,414 - __main__ - INFO -   Response: 1.4ms
+2025-08-21 05:19:11,437 - __main__ - INFO - Monitoring Cycle Complete:
+2025-08-21 05:19:11,437 - __main__ - INFO -   Health: healthy
+2025-08-21 05:19:11,437 - __main__ - INFO -   CPU: 6.3%
+2025-08-21 05:19:11,437 - __main__ - INFO -   Memory: 51.0%
+2025-08-21 05:19:11,437 - __main__ - INFO -   Service: operational
+2025-08-21 05:19:11,437 - __main__ - INFO -   Response: 1.4ms

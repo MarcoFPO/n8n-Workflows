@@ -1,0 +1,29 @@
+[Unit]
+Description=Aktienanalyse Profit Calculation Engine Service
+Documentation=file:///home/mdoehler/aktienanalyse-ökosystem/README.md
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/calculation-engine
+ExecStart=/usr/bin/python3 profit_calculation_engine_v1_0_0_20250817.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=PYTHONUNBUFFERED=1
+
+# Resource limits (relaxed for testing)
+MemoryMax=2G
+
+# Security (relaxed for testing)
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

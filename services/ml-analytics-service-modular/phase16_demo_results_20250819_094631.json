@@ -1,0 +1,99 @@
+{
+  "phase": 16,
+  "demo_name": "Classical-Enhanced ML Models f\u00fcr LXC 10.1.1.174",
+  "start_time": "2025-08-19T09:46:21.526359",
+  "container_ip": "10.1.1.174",
+  "optimization_level": "LXC-Optimized",
+  "tests": {
+    "classical_enhanced_status": {
+      "engine_status": {
+        "status": "operational",
+        "container_optimization": "lxc-optimized",
+        "num_enhanced_models": 3,
+        "num_enhanced_transformers": 1,
+        "num_algorithm_templates": 5
+      },
+      "lxc_performance": {
+        "container_ip": "10.1.1.174",
+        "system_performance": {
+          "avg_memory_percent": 47.604001139798726,
+          "avg_cpu_percent": 26.89104126548567
+        },
+        "lxc_optimization_status": {
+          "monitoring_active": true,
+          "memory_optimization": "Active"
+        }
+      },
+      "container_ip": "10.1.1.174",
+      "optimization_level": "LXC-Enhanced"
+    },
+    "vce_portfolio_optimization": {
+      "optimal_energy": -0.09747603648181728,
+      "portfolio_weights": [
+        0.26694391084623426,
+        0.21246264584531344,
+        0.1877282253343464,
+        0.18524051659939078,
+        0.14762470137471517
+      ],
+      "classical_advantage": 0.07093633521808147,
+      "num_iterations": 32,
+      "risk_metrics": {
+        "portfolio_return": 0.09747603648181728,
+        "portfolio_risk": 0.6870670452747812,
+        "sharpe_ratio": 0.14187267043616295
+      },
+      "lxc_performance_metrics": {
+        "memory_usage_mb": 92.83982689972039,
+        "lxc_optimized": true,
+        "computation_time_ms": 0.012159347534179688
+      }
+    },
+    "qiaoa_optimization": {
+      "optimal_value": 0.0,
+      "optimal_bitstring": "000001",
+      "quantum_inspired_speedup": 2.2336662275852457,
+      "convergence_achieved": true,
+      "beta_parameters": [
+        3.2784345495236296,
+        3.6468726416796726,
+        3.4467720578887775
+      ],
+      "gamma_parameters": [
+        2.927534171522875,
+        1.7507877209456426,
+        1.0609079592946293
+      ],
+      "probability_distribution": {
+        "110010": 0.20597268933670812,
+        "111101": 0.18343169414620877,
+        "010100": 0.15120766158029253,
+        "110101": 0.10997302269766668,
+        "101000": 0.27518863234309543,
+        "010011": 0.0136612411860875,
+        "100100": 0.2655875407628875,
+        "000011": 0.24158350851994964,
+        "001111": 0.18462021409630247,
+        "000001": 0.3751886323430954
+      },
+      "lxc_performance_metrics": {
+        "memory_usage_mb": 35.92670834183099,
+        "matrix_size": 6,
+        "lxc_optimized": true,
+        "computation_time_ms": 1.379251480102539
+      }
+    },
+    "classical_enhanced_neural_network_training": {
+      "error": "HTTP 404: {\"error\": \"Endpoint not found\", \"path\": \"/api/v1/classical-enhanced/neural-network/train\"}"
+    },
+    "classical_enhanced_attention": {
+      "error": "HTTP 404: {\"error\": \"Endpoint not found\", \"path\": \"/api/v1/quantum/attention/apply\"}"
+    }
+  },
+  "end_time": "2025-08-19T09:46:31.563379",
+  "duration_seconds": 10.03702,
+  "total_tests": 5,
+  "successful_tests": 5,
+  "failed_tests": 0,
+  "success_rate": 100.0
+}
