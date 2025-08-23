@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System-Monitoring Dashboard Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8f9fc;
+        }
+
+        .dashboard-card {
+            background: #ffffff;
+            border: 1px solid #e3e6f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-0.125rem);
+            box-shadow: 0 0.25rem 2rem 0 rgba(58, 59, 69, 0.2);
+        }
+
+        .chart-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .percentage {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        #connectionStatus.bg-danger {
+            background-color: #dc3545 !important;
+        }
+
+        #connectionStatus.bg-warning {
+            background-color: #ffc107 !important;
+        }
+
+        .card-footer {
+            background: rgba(0,0,0,0.03);
+            border-top: 1px solid rgba(0,0,0,0.125);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-1">System-Monitoring Dashboard Test</h2>
+                        <p class="text-muted mb-0">Realtime System-Auslastung mit Kreisdiagrammen</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div id="connectionStatus" class="badge bg-success">
+                            <i class="fas fa-circle me-1"></i>
+                            Online
+                        </div>
+                        <small class="text-muted">Letztes Update: <span id="lastUpdate">-</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System-Monitoring Dashboard Content wird hier eingefügt -->
+        <div id="monitoring-content">
+            <!-- Monitoring Dashboard wird hier geladen -->
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Lade System-Monitoring Dashboard Content
+        async function loadMonitoringContent() {
+            try {
+                const response = await fetch('./dashboard-components/system_monitoring_dashboard.html');
+                if (response.ok) {
+                    const content = await response.text();
+                    document.getElementById('monitoring-content').innerHTML = content;
+                    console.log('✅ System-Monitoring Dashboard content loaded');
+                } else {
+                    throw new Error(`Failed to load content: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Error loading monitoring content:', error);
+                document.getElementById('monitoring-content').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4><i class="fas fa-exclamation-triangle me-2"></i>Fehler beim Laden</h4>
+                        <p><strong>System-Monitoring Dashboard konnte nicht geladen werden:</strong></p>
+                        <p><code>${error.message}</code></p>
+                        
+                        <hr>
+                        
+                        <div class="mb-3">
+                            <h6>Direkte API-Tests:</h6>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="testSystemAPI()">
+                                <i class="fas fa-play me-1"></i> Test System API
+                            </button>
+                            <button class="btn btn-sm btn-outline-info me-2" onclick="testWebSocket()">
+                                <i class="fas fa-wifi me-1"></i> Test WebSocket
+                            </button>
+                        </div>
+                        
+                        <div id="apiTestResults"></div>
+                    </div>
+                `;
+            }
+        }
+
+        async function testSystemAPI() {
+            const resultsDiv = document.getElementById('apiTestResults');
+            resultsDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Testing API...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8020/api/v1/system/quick');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✅ System API Test erfolgreich:</strong><br>
+                            CPU: ${data.cpu}%, RAM: ${data.ram}%, Disk: ${data.disk}%
+                            <br><small>Timestamp: ${data.timestamp}</small>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`API returned status: ${response.status}`);
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>❌ System API Test fehlgeschlagen:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function testWebSocket() {
+            const resultsDiv = document.getElementById('apiTestResults');
+            resultsDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Testing WebSocket...';
+            
+            try {
+                const ws = new WebSocket('ws://127.0.0.1:8020/ws/system-stats');
+                
+                ws.onopen = () => {
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✅ WebSocket Verbindung erfolgreich</strong><br>
+                            Warte auf Daten...
+                        </div>
+                    `;
+                };
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✅ WebSocket Test erfolgreich:</strong><br>
+                            CPU: ${data.cpu_percent}%, RAM: ${data.ram_percent}%, Disk: ${data.disk_percent}%
+                            <br><small>Realtime Update empfangen!</small>
+                        </div>
+                    `;
+                    ws.close();
+                };
+                
+                ws.onerror = (error) => {
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>❌ WebSocket Test fehlgeschlagen:</strong><br>
+                            Verbindung konnte nicht hergestellt werden
+                        </div>
+                    `;
+                };
+                
+                // Timeout nach 10 Sekunden
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        ws.close();
+                        resultsDiv.innerHTML = `
+                            <div class="alert alert-warning">
+                                <strong>⚠️ WebSocket Timeout:</strong><br>
+                                Verbindung konnte nicht innerhalb von 10 Sekunden hergestellt werden
+                            </div>
+                        `;
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>❌ WebSocket Test Fehler:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Lade Content beim Seitenaufruf
+        document.addEventListener('DOMContentLoaded', loadMonitoringContent);
+    </script>
+</body>
+</html>

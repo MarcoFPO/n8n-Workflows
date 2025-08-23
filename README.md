@@ -9,7 +9,7 @@
 
 ## 📈 **System Overview**
 
-Event-getriebenes Trading Intelligence System mit **8 Microservices**, PostgreSQL Event-Store, Redis Event-Cache und optimierter GUI mit strukturierter CSV-Datenintegration.
+Event-getriebenes Trading Intelligence System mit **9 Microservices**, PostgreSQL Event-Store, Redis Event-Cache und optimierter GUI mit strukturierter CSV-Datenintegration.
 
 ### 🎯 **Kern-Features:**
 - **Event-Driven Architecture** mit 0.12s Response Time
@@ -22,19 +22,22 @@ Event-getriebenes Trading Intelligence System mit **8 Microservices**, PostgreSQ
 
 ---
 
-## 🏗️ **Service-Architektur (8 Services)**
+## 🏗️ **Service-Architektur (11 Services)**
 
 ### **Core Services:**
 | Service | Port | Status | Beschreibung |
 |---------|------|--------|--------------|
 | 🧠 **Intelligent Core** | 8001 | ✅ Running | AI Analytics & ML Engine |
-| 📡 **Broker Gateway** | 8002 | ✅ Running | Trading API Integration |
+| 📡 **Broker Gateway** | 8012 | ✅ Running | Trading API Integration |
 | 🎨 **Frontend Service** | 8080 | ✅ Running | Web UI v7.0.1 Enhanced |
 | 🚌 **Event Bus** | 8014 | ✅ Running | Event-Driven Communication |
 | 🔍 **Monitoring** | 8015 | ✅ Running | System Health & Metrics |
-| 🔧 **Diagnostic** | 8016 | ✅ Running | System Diagnostics |
+| 🔧 **Diagnostic** | 8013 | ✅ Running | System Diagnostics |
 | 📈 **Data Processing** | 8017 | ✅ Running | CSV Middleware v4.2.0 |
 | 🎯 **Prediction Tracking** | 8018 | ✅ Running | SOLL-IST Analysis |
+| 💰 **Unified Profit Engine** | 8025 | ✅ Running | Konsolidierte Gewinnanalyse v3.0.0 |
+| 🤖 **ML Analytics Service** | 8021 | ✅ Running | Advanced ML Pipeline & Model Versioning |
+| 📊 **MarketCap Service** | 8011 | ✅ Running | Market Capitalization Data Provider |
 
 ---
 
@@ -155,6 +158,7 @@ systemctl restart aktienanalyse-event-bus-modular.service
 curl http://localhost:8001/health  # Intelligent-Core
 curl http://localhost:8017/health  # Data-Processing  
 curl http://localhost:8018/health  # Prediction-Tracking
+curl http://localhost:8025/api/v1/profit/health  # Unified-Profit-Engine
 ```
 
 ---

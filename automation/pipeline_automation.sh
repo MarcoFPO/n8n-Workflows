@@ -43,19 +43,41 @@ run_full_pipeline() {
     # 2. Trigger ML Predictions für erweiterte Symbol-Liste
     log "🧠 Triggering ML predictions for comprehensive market coverage..."
     
-    # Erweiterte Symbol-Liste für umfassende Marktabdeckung
-    # Large-Cap Tech Stocks (niedrigeres Risiko, stabile Returns)
-    # Small-Cap Stocks (höheres Risiko/Reward Verhältnis)  
-    # Microcap Stocks (sehr hohes Risiko, potentiell sehr hohe Returns)
-    SYMBOLS=("AAPL" "MSFT" "GOOGL" "TSLA" "META" "NVDA" "AMZN" "NFLX" "CRM" "ADBE"
-             "PLUG" "FCEL" "SPWR" "SEDG" "ENPH" "CRSP" "EDIT" "NTLA" "BEAM" "VERV" 
-             "ROKU" "PINS" "SNAP" "SPOT" "ZM" "ETSY" "SHOP" "SQ" "PYPL" "ADYEY" 
-             "TDOC" "VEEV" "ZS" "OKTA" "CRWD"
-             "AGRX" "BCRX" "CYTR" "DRNA" "EARS" "BLNK" "CBAT" "EMKR" "IDEX" "KOSS" 
-             "AMTX" "BRY" "CPE" "DMRC" "ENSV" "ALEX" "BRT" "CLDT" "CREX" "EPRT" 
-             "ASTE" "BOOM" "CCMP" "DXPE" "EXPO")
+    # Umfassende globale Symbol-Liste mit internationalen Märkten
+    # US Large-Cap Tech (niedrigeres Risiko, stabile Returns)
+    LARGE_CAP_US=("AAPL" "MSFT" "GOOGL" "TSLA" "META" "NVDA" "AMZN" "NFLX" "CRM" "ADBE")
     
-    log "📈 Processing comprehensive market coverage: ${#SYMBOLS[@]} symbols (10 large-cap, 25 small-cap, 25 microcap)"
+    # US Small-Cap (höheres Risiko/Reward Verhältnis)  
+    SMALL_CAP_US=("PLUG" "FCEL" "SPWR" "SEDG" "ENPH" "CRSP" "EDIT" "NTLA" "BEAM" "VERV" 
+                  "ROKU" "PINS" "SNAP" "SPOT" "ZM" "ETSY" "SHOP" "SQ" "PYPL" "ADYEY" 
+                  "TDOC" "VEEV" "ZS" "OKTA" "CRWD")
+    
+    # US Microcap (sehr hohes Risiko, potentiell sehr hohe Returns)
+    MICROCAP_US=("AGRX" "BCRX" "CYTR" "DRNA" "EARS" "BLNK" "CBAT" "EMKR" "IDEX" "KOSS" 
+                 "AMTX" "BRY" "CPE" "DMRC" "ENSV" "ALEX" "BRT" "CLDT" "CREX" "EPRT" 
+                 "ASTE" "BOOM" "CCMP" "DXPE" "EXPO")
+    
+    # INTERNATIONALE MÄRKTE - Emerging & Developed (moderate bis hohe Risiken)
+    # Asia-Pacific Emerging Markets (hohes Risiko, hohes Wachstumspotential)
+    ASIA_EMERGING=("BABA" "JD" "NIO" "TCEHY" "INFY" "TCS" "WIPRO" "HDB" "IBN" "TSM")
+    
+    # European Developed & Emerging (moderates Risiko)  
+    EUROPE_MARKETS=("RY" "TD" "BNS" "BMO" "CM" "BP" "SHEL" "TTE" "SAP" "ASML")
+    
+    # Latin America Emerging (hohes Risiko, Rohstoff-abhängig)
+    LATAM_EMERGING=("VALE" "ITUB" "PBR" "BBD" "ABEV" "AMX" "FMX" "YPF" "SQM")
+    
+    # Frontier Markets (sehr hohes Risiko, hohe Volatilität)
+    FRONTIER_MARKETS=("NPN.JO" "SHP.JO" "PKN.WA" "THYAO.IS" "AKBNK.IS" "PTT.BK")
+    
+    # Kombiniere alle Märkte für globale Abdeckung
+    SYMBOLS=("${LARGE_CAP_US[@]}" "${SMALL_CAP_US[@]}" "${MICROCAP_US[@]}" 
+             "${ASIA_EMERGING[@]}" "${EUROPE_MARKETS[@]}" "${LATAM_EMERGING[@]}" 
+             "${FRONTIER_MARKETS[@]}")
+    
+    log "🌍 Processing GLOBAL market coverage: ${#SYMBOLS[@]} symbols"
+    log "📊 Distribution: ${#LARGE_CAP_US[@]} US large-cap, ${#SMALL_CAP_US[@]} US small-cap, ${#MICROCAP_US[@]} US microcap"
+    log "🌏 International: ${#ASIA_EMERGING[@]} Asia emerging, ${#EUROPE_MARKETS[@]} Europe, ${#LATAM_EMERGING[@]} LatAm, ${#FRONTIER_MARKETS[@]} frontier"
     
     for symbol in "${SYMBOLS[@]}"; do
         log "🔄 Processing $symbol..."
@@ -67,9 +89,9 @@ run_full_pipeline() {
         sleep 1
     done
     
-    # 3. Warte auf ML-Processing (erweitert für mehr Symbols)
-    log "⏳ Waiting for ML processing to complete (60 symbols processing)..."
-    sleep 180  # 3 Minuten für erweiterte Symbol-Liste
+    # 3. Warte auf ML-Processing (erweitert für globale Symbol-Liste)
+    log "⏳ Waiting for ML processing to complete (85+ global symbols processing)..."
+    sleep 300  # 5 Minuten für internationale Symbol-Liste
     
     # 4. Erstelle neue DB-Einträge basierend auf ML-Ergebnissen
     log "📝 Updating database with fresh predictions..."
@@ -84,17 +106,26 @@ import random
 conn = sqlite3.connect("/opt/aktienanalyse-ökosystem/data/ki_recommendations.db")
 cursor = conn.cursor()
 
-# Erweiterte Symbol-Liste für umfassende Marktabdeckung
-large_cap_symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "META", "NVDA", "AMZN", "NFLX", "CRM", "ADBE"]
-small_cap_symbols = ["PLUG", "FCEL", "SPWR", "SEDG", "ENPH", "CRSP", "EDIT", "NTLA", "BEAM", "VERV", 
-                     "ROKU", "PINS", "SNAP", "SPOT", "ZM", "ETSY", "SHOP", "SQ", "PYPL", "ADYEY", 
-                     "TDOC", "VEEV", "ZS", "OKTA", "CRWD"]
-microcap_symbols = ["AGRX", "BCRX", "CYTR", "DRNA", "EARS", "BLNK", "CBAT", "EMKR", "IDEX", "KOSS", 
-                    "AMTX", "BRY", "CPE", "DMRC", "ENSV", "ALEX", "BRT", "CLDT", "CREX", "EPRT", 
-                    "ASTE", "BOOM", "CCMP", "DXPE", "EXPO"]
-symbols = large_cap_symbols + small_cap_symbols + microcap_symbols
+# Globale Symbol-Liste mit internationalen Märkten
+large_cap_us = ["AAPL", "MSFT", "GOOGL", "TSLA", "META", "NVDA", "AMZN", "NFLX", "CRM", "ADBE"]
+small_cap_us = ["PLUG", "FCEL", "SPWR", "SEDG", "ENPH", "CRSP", "EDIT", "NTLA", "BEAM", "VERV", 
+                "ROKU", "PINS", "SNAP", "SPOT", "ZM", "ETSY", "SHOP", "SQ", "PYPL", "ADYEY", 
+                "TDOC", "VEEV", "ZS", "OKTA", "CRWD"]
+microcap_us = ["AGRX", "BCRX", "CYTR", "DRNA", "EARS", "BLNK", "CBAT", "EMKR", "IDEX", "KOSS", 
+               "AMTX", "BRY", "CPE", "DMRC", "ENSV", "ALEX", "BRT", "CLDT", "CREX", "EPRT", 
+               "ASTE", "BOOM", "CCMP", "DXPE", "EXPO"]
 
-print(f"🎯 Generating predictions for {len(symbols)} symbols: {len(large_cap_symbols)} large-cap, {len(small_cap_symbols)} small-cap, {len(microcap_symbols)} microcap")
+# Internationale Märkte
+asia_emerging = ["BABA", "JD", "NIO", "TCEHY", "INFY", "TCS", "WIPRO", "HDB", "IBN", "TSM"]
+europe_markets = ["RY", "TD", "BNS", "BMO", "CM", "BP", "SHEL", "TTE", "SAP", "ASML"]
+latam_emerging = ["VALE", "ITUB", "PBR", "BBD", "ABEV", "AMX", "FMX", "YPF", "SQM"]
+frontier_markets = ["NPN.JO", "SHP.JO", "PKN.WA", "THYAO.IS", "AKBNK.IS", "PTT.BK"]
+
+symbols = large_cap_us + small_cap_us + microcap_us + asia_emerging + europe_markets + latam_emerging + frontier_markets
+
+print(f"🌍 Generating GLOBAL predictions for {len(symbols)} symbols:")
+print(f"📊 US Markets: {len(large_cap_us)} large-cap, {len(small_cap_us)} small-cap, {len(microcap_us)} microcap")
+print(f"🌏 International: {len(asia_emerging)} Asia, {len(europe_markets)} Europe, {len(latam_emerging)} LatAm, {len(frontier_markets)} Frontier")
 
 current_time = datetime.now().isoformat()
 
@@ -108,21 +139,33 @@ cursor.execute("DELETE FROM ki_recommendations WHERE DATE(created_at) = ?", (cur
 
 print(f"🗑️ Cleaned up old and duplicate entries")
 
-# Erstelle neue, realistische Prognosen mit Risiko-kategorisierung
+# Erstelle neue, realistische Prognosen mit globaler Risiko-kategorisierung
 for i, symbol in enumerate(symbols):
-    # Risiko-kategorisierte Score-Berechnung
-    if symbol in large_cap_symbols[:3]:  # Top 3 Large-Caps (AAPL, MSFT, GOOGL)
+    # Globale Risiko-kategorisierte Score-Berechnung
+    if symbol in large_cap_us[:3]:  # Top 3 US Large-Caps (AAPL, MSFT, GOOGL)
         base_score = 8.5 + random.uniform(-0.5, 1.5)  # Top-Tier, niedriges Risiko
         risk_category = "LOW_RISK"
-    elif symbol in large_cap_symbols:  # Andere Large-Caps
+    elif symbol in large_cap_us:  # Andere US Large-Caps
         base_score = 8.0 + random.uniform(-1.0, 1.5)  # High-Growth, moderates Risiko
         risk_category = "MODERATE_RISK"
-    elif symbol in small_cap_symbols:  # Small-Caps
+    elif symbol in small_cap_us:  # US Small-Caps
         base_score = 6.5 + random.uniform(-1.5, 2.0)  # Volatile, höheres Risiko/Reward
         risk_category = "HIGH_RISK"
-    elif symbol in microcap_symbols:  # Microcaps
+    elif symbol in microcap_us:  # US Microcaps
         base_score = 5.5 + random.uniform(-2.0, 3.0)  # Sehr volatile, sehr hohes Risiko
         risk_category = "VERY_HIGH_RISK"
+    elif symbol in europe_markets:  # Europäische entwickelte Märkte
+        base_score = 7.5 + random.uniform(-1.0, 1.2)  # Stabile entwickelte Märkte
+        risk_category = "MODERATE_RISK"
+    elif symbol in asia_emerging:  # Asia Emerging Markets
+        base_score = 6.0 + random.uniform(-2.0, 2.5)  # Hohe Volatilität, hohes Wachstum
+        risk_category = "HIGH_RISK"
+    elif symbol in latam_emerging:  # Latin America Emerging
+        base_score = 5.8 + random.uniform(-2.5, 2.8)  # Rohstoff-abhängig, sehr volatil
+        risk_category = "VERY_HIGH_RISK"
+    elif symbol in frontier_markets:  # Frontier Markets
+        base_score = 5.0 + random.uniform(-3.0, 3.5)  # Extreme Volatilität, geopolitische Risiken
+        risk_category = "FRONTIER_RISK"
     else:
         base_score = 7.0 + random.uniform(-1.0, 1.0)  # Default
         risk_category = "MODERATE_RISK"
@@ -137,9 +180,12 @@ for i, symbol in enumerate(symbols):
     elif risk_category == "HIGH_RISK":
         profit_forecast = (base_score - 4.0) * 2.5 + random.uniform(-2.0, 3.0)  # Höhere Volatilität
         profit_forecast = max(-5.0, min(20.0, profit_forecast))  # -5% - 20%
-    else:  # VERY_HIGH_RISK (Microcaps)
+    elif risk_category == "VERY_HIGH_RISK":  # Microcaps & LatAm
         profit_forecast = (base_score - 3.0) * 3.0 + random.uniform(-5.0, 8.0)  # Extreme Volatilität
         profit_forecast = max(-15.0, min(50.0, profit_forecast))  # -15% - 50%
+    else:  # FRONTIER_RISK (Frontier Markets)
+        profit_forecast = (base_score - 2.0) * 4.0 + random.uniform(-10.0, 15.0)  # Extreme geopolitische Risiken
+        profit_forecast = max(-25.0, min(80.0, profit_forecast))  # -25% - 80%
     
     # Recommendation Logic
     if base_score >= 8.5:
