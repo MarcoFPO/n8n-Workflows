@@ -1,5 +1,5 @@
 [Unit]
-Description=Aktienanalyse Frontend Service v7.0.0
+Description=Aktienanalyse Frontend Service v8.0.1
 Documentation=file:///opt/aktienanalyse-ökosystem/README.md
 After=network.target multi-user.target
 Wants=network.target
@@ -9,7 +9,7 @@ Type=simple
 User=aktienanalyse
 Group=aktienanalyse
 WorkingDirectory=/opt/aktienanalyse-ökosystem/services/frontend-service-modular
-ExecStart=/usr/bin/python3 frontend_service_v7_0_0_20250816.py
+ExecStart=/usr/bin/python3 frontend_service_v8_0_1_20250823_fixed.py
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10

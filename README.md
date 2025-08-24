@@ -1,9 +1,16 @@
-# 🚀 Event-Driven Trading Intelligence System v5.1 FINAL
+# 🚀 Event-Driven Trading Intelligence System v8.0 CONSOLIDATED
 
-**Status**: ✅ PRODUCTION READY - GUI Enhanced  
+**Status**: ✅ PRODUCTION READY - Frontend Tables Fixed  
 **Deployed**: 10.1.1.174 (LXC 174)  
 **Performance**: 95% Optimierung durch Event-Driven Architecture  
-**Last Updated**: 17. August 2025  
+**Last Updated**: 24. August 2025  
+
+## 🔧 **Aktuelle Fixes v8.0:**
+- ✅ **KI-Prognosen Tabellen** - Vollständig funktionsfähig
+- ✅ **SOLL-IST Vergleich Tabellen** - Vollständig funktionsfähig  
+- ✅ **CSV-zu-JSON Parsing** - Backend-Integration behoben
+- ✅ **Menü-Vereinheitlichung** - Identisches Design und Verhalten
+- ✅ **4 Zeitrahmen synchron** - 1W, 1M, 3M, 1Y in beiden Menüs  
 
 ---
 
@@ -25,19 +32,19 @@ Event-getriebenes Trading Intelligence System mit **9 Microservices**, PostgreSQ
 ## 🏗️ **Service-Architektur (11 Services)**
 
 ### **Core Services:**
-| Service | Port | Status | Beschreibung |
-|---------|------|--------|--------------|
-| 🧠 **Intelligent Core** | 8001 | ✅ Running | AI Analytics & ML Engine |
-| 📡 **Broker Gateway** | 8012 | ✅ Running | Trading API Integration |
-| 🎨 **Frontend Service** | 8080 | ✅ Running | Web UI v7.0.1 Enhanced |
-| 🚌 **Event Bus** | 8014 | ✅ Running | Event-Driven Communication |
-| 🔍 **Monitoring** | 8015 | ✅ Running | System Health & Metrics |
-| 🔧 **Diagnostic** | 8013 | ✅ Running | System Diagnostics |
-| 📈 **Data Processing** | 8017 | ✅ Running | CSV Middleware v4.2.0 |
-| 🎯 **Prediction Tracking** | 8018 | ✅ Running | SOLL-IST Analysis |
-| 💰 **Unified Profit Engine** | 8025 | ✅ Running | Konsolidierte Gewinnanalyse v3.0.0 |
-| 🤖 **ML Analytics Service** | 8021 | ✅ Running | Advanced ML Pipeline & Model Versioning |
-| 📊 **MarketCap Service** | 8011 | ✅ Running | Market Capitalization Data Provider |
+| Service                         | Port | Status     | Beschreibung                              |
+|---------------------------------|------|------------|-------------------------------------------|
+| 🧠 **Intelligent Core**         | 8001 | ✅ Running | AI Analytics & ML Engine                  |
+| 📡 **Broker Gateway**           | 8012 | ✅ Running | Trading API Integration                   |
+| 🎨 **Frontend Service**         | 8080 | ✅ Running | Web UI v8.0.1 Tables Fixed                |
+| 🚌 **Event Bus**                | 8014 | ✅ Running | Event-Driven Communication                |
+| 🔍 **Monitoring**               | 8015 | ✅ Running | System Health & Metrics                   |
+| 🔧 **Diagnostic**               | 8013 | ✅ Running | System Diagnostics                        |
+| 📈 **Data Processing**          | 8017 | ✅ Running | CSV Middleware v4.2.0                     |
+| 🎯 **Prediction Tracking**      | 8018 | ✅ Running | SOLL-IST Analysis                         |
+| 💰 **Unified Profit Engine**    | 8025 | ✅ Running | Konsolidierte Gewinnanalyse v3.0.0        |
+| 🤖 **ML Analytics Service**     | 8021 | ✅ Running | Advanced ML Pipeline & Model Versioning   |
+| 📊 **MarketCap Service**        | 8011 | ✅ Running | Market Capitalization Data Provider       |
 
 ---
 
@@ -45,13 +52,13 @@ Event-getriebenes Trading Intelligence System mit **9 Microservices**, PostgreSQ
 
 ### **Neue CSV-Tabelle mit 5 Spalten:**
 
-| Spalte | Datenquelle | Format | Beschreibung |
-|--------|-------------|--------|--------------|
-| **📅 Datum** | CSV Timestamp | YYYY-MM-DD | Prognosedatum |
-| **🏷️ Symbol** | CSV Symbol | Badge | Aktien-Ticker |
-| **🏢 Company** | CSV Company | Text | Vollständiger Firmenname |
-| **📈 Voraussichtlicher Gewinn** | CSV Prediction_% | +/- % | Farbkodierte Gewinnprognose |
-| **🛡️ Risiko** | Calculated from Confidence | Badge | Niedrig/Mittel/Hoch |
+| Spalte                            | Datenquelle                | Format     | Beschreibung                |
+|-----------------------------------|----------------------------|------------|-----------------------------|
+| **📅 Datum**                      | CSV Timestamp              | YYYY-MM-DD | Prognosedatum               |
+| **🏷️ Symbol**                     | CSV Symbol                 | Badge      | Aktien-Ticker               |
+| **🏢 Company**                    | CSV Company                | Text       | Vollständiger Firmenname    |
+| **📈 Voraussichtlicher Gewinn**   | CSV Prediction_%           | +/- %      | Farbkodierte Gewinnprognose |
+| **🛡️ Risiko**                     | Calculated from Confidence | Badge      | Niedrig/Mittel/Hoch         |
 
 ### **Risiko-Bewertung:**
 - **🟢 Niedrig**: Confidence ≥ 80% (Grüner Badge)
@@ -283,4 +290,4 @@ git push origin main  # Automated via this documentation update
 
 ---
 
-*Last Updated: 17. August 2025 - Production Ready v5.1 FINAL*
+*Last Updated: 24. August 2025 - Production Ready v8.0 CONSOLIDATED - Frontend Tables Fixed*

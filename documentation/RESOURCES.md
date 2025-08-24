@@ -9,19 +9,19 @@
 ## 🔌 **Port-Konfiguration**
 
 ### 📊 **Service-Port-Mapping**
-| Service | Port | Protokoll | Status | Beschreibung |
-|---------|------|-----------|--------|--------------|
-| **🧠 Intelligent Core** | 8001 | HTTP/WS | ✅ Active | AI Analytics & Event Processing |
-| **📊 MarketCap Service** | 8011 | HTTP | ✅ Active | Market Capitalization Data Provider |
-| **📡 Broker Gateway** | 8012 | HTTP | ✅ Active | Trading API Integration |
-| **🔧 Diagnostic** | 8013 | HTTP | ✅ Active | System Diagnostics |
-| **🚌 Event Bus** | 8014 | HTTP | ✅ Active | Event-Driven Communication |
-| **🔍 Monitoring** | 8015 | HTTP | ✅ Active | System Health & Metrics |
-| **📈 Data Processing** | 8017 | HTTP | ✅ Active | CSV Middleware |
-| **🎯 Prediction Tracking** | 8018 | HTTP | ✅ Active | SOLL-IST Analysis |
-| **🤖 ML Analytics** | 8021 | HTTP | ✅ Active | Advanced ML Pipeline |
-| **💰 Unified Profit Engine** | 8025 | HTTP | ⚠️ Config | Profit Calculation |
-| **🎨 Frontend Service** | 8080 | HTTP/WS | ✅ Active | Bootstrap 5 Web UI |
+| Service                      | Port | Protokoll | Status     | Beschreibung                        |
+|------------------------------|------|-----------|------------|-------------------------------------|
+| **🧠 Intelligent Core**      | 8001 | HTTP/WS   | ✅ Active  | AI Analytics & Event Processing     |
+| **📊 MarketCap Service**     | 8011 | HTTP      | ✅ Active  | Market Capitalization Data Provider |
+| **📡 Broker Gateway**        | 8012 | HTTP      | ✅ Active  | Trading API Integration             |
+| **🔧 Diagnostic**            | 8013 | HTTP      | ✅ Active  | System Diagnostics                  |
+| **🚌 Event Bus**             | 8014 | HTTP      | ✅ Active  | Event-Driven Communication          |
+| **🔍 Monitoring**            | 8015 | HTTP      | ✅ Active  | System Health & Metrics             |
+| **📈 Data Processing**       | 8017 | HTTP      | ✅ Active  | CSV Middleware                      |
+| **🎯 Prediction Tracking**   | 8018 | HTTP      | ✅ Active  | SOLL-IST Analysis                   |
+| **🤖 ML Analytics**          | 8021 | HTTP      | ✅ Active  | Advanced ML Pipeline                |
+| **💰 Unified Profit Engine** | 8025 | HTTP      | ⚠️ Config | Profit Calculation                   |
+| **🎨 Frontend Service**      | 8080 | HTTP/WS   | ✅ Active  | Bootstrap 5 Web UI                  |
 
 ### 🌐 **Netzwerk-Konfiguration**
 ```yaml
@@ -31,22 +31,22 @@ container_type: "LXC Container 174"
 reverse_proxy: "Nginx (HTTPS Termination)"
 
 internal_endpoints:
-  - "http://10.1.1.174:8001"  # Intelligent Core
-  - "http://10.1.1.174:8011"  # MarketCap Service
-  - "http://10.1.1.174:8012"  # Broker Gateway
-  - "http://10.1.1.174:8013"  # Diagnostic
-  - "http://10.1.1.174:8014"  # Event Bus
-  - "http://10.1.1.174:8015"  # Monitoring
-  - "http://10.1.1.174:8017"  # Data Processing
-  - "http://10.1.1.174:8018"  # Prediction Tracking
-  - "http://10.1.1.174:8021"  # ML Analytics
-  - "http://10.1.1.174:8025"  # Unified Profit Engine
-  - "http://10.1.1.174:8080"  # Frontend Service
+  - "http://10.1.1.174:8001"         # Intelligent Core
+  - "http://10.1.1.174:8011"         # MarketCap Service
+  - "http://10.1.1.174:8012"         # Broker Gateway
+  - "http://10.1.1.174:8013"         # Diagnostic
+  - "http://10.1.1.174:8014"         # Event Bus
+  - "http://10.1.1.174:8015"         # Monitoring
+  - "http://10.1.1.174:8017"         # Data Processing
+  - "http://10.1.1.174:8018"         # Prediction Tracking
+  - "http://10.1.1.174:8021"         # ML Analytics
+  - "http://10.1.1.174:8025"         # Unified Profit Engine
+  - "http://10.1.1.174:8080"         # Frontend Service
 
 external_endpoints:
-  - "https://10.1.1.174"       # Main Web Interface
-  - "http://10.1.1.174:8021/docs"  # ML Analytics Swagger
-  - "http://10.1.1.174:8015/health" # System Health
+  - "https://10.1.1.174"             # Main Web Interface
+  - "http://10.1.1.174:8021/docs"    # ML Analytics Swagger
+  - "http://10.1.1.174:8015/health"  # System Health
 ```
 
 ### 🔒 **Firewall & Security**

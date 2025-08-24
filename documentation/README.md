@@ -27,35 +27,35 @@
 - **Qualität**: Professionelle technische Dokumentation
 
 ### 📚 **Erstellte Hauptdokumente**
-| Dokument | Status | Umfang | Beschreibung |
-|----------|--------|--------|--------------|
-| **README.md** | ✅ Fertig | Navigation | Dokumentations-Übersicht |
-| **REQUIREMENTS.md** | ✅ Fertig | 40+ Anforderungen | Funktionale & Non-funktionale Anforderungen |
-| **SYSTEM_OVERVIEW.md** | ✅ Fertig | Vollständig | Systemarchitektur mit Visual Diagrams |
-| **HLD.md** | ✅ Fertig | Service-Design | High-Level Design & Event-Flows |
-| **LLD.md** | ✅ Fertig | Implementierung | Low-Level Design & Code-Details |
-| **COMMUNICATION.md** | ✅ Fertig | APIs & Events | Kommunikationspfade & Endpoints |
-| **RESOURCES.md** | ✅ Fertig | Konfiguration | Ports, Datenbanken & Systemressourcen |
-| **MODULES.md** | ✅ Fertig | 11 Services | Service-Module & Funktionsbeschreibungen |
-| **TESTING.md** | ✅ Fertig | QS-Framework | Test-Strategien & Qualitätssicherung |
+| Dokument                     | Status    | Umfang            | Beschreibung                                |
+|------------------------------|-----------|-------------------|---------------------------------------------|
+| **README.md**                | ✅ Fertig | Navigation        | Dokumentations-Übersicht                    |
+| **REQUIREMENTS.md**          | ✅ Fertig | 40+ Anforderungen | Funktionale & Non-funktionale Anforderungen |
+| **SYSTEM_OVERVIEW.md**       | ✅ Fertig | Vollständig       | Systemarchitektur mit Visual Diagrams       |
+| **HLD.md**                   | ✅ Fertig | Service-Design    | High-Level Design & Event-Flows             |
+| **LLD.md**                   | ✅ Fertig | Implementierung   | Low-Level Design & Code-Details             |
+| **COMMUNICATION.md**         | ✅ Fertig | APIs & Events     | Kommunikationspfade & Endpoints             |
+| **RESOURCES.md**             | ✅ Fertig | Konfiguration     | Ports, Datenbanken & Systemressourcen       |
+| **MODULES.md**               | ✅ Fertig | 11 Services       | Service-Module & Funktionsbeschreibungen    |
+| **TESTING.md**               | ✅ Fertig | QS-Framework      | Test-Strategien & Qualitätssicherung        |
 
 ---
 
 ## 📊 **System-Status: PRODUCTION READY v5.1**
 
-| Komponente | Status | Version | Beschreibung |
-|------------|--------|---------|--------------|
-| **🧠 Intelligent Core** | ✅ Active | 1.1.0 | AI Analytics & Event Processing |
-| **📡 Broker Gateway** | ✅ Active | 2.0.1 | Trading API Integration |
-| **🎨 Frontend Service** | ✅ Active | 7.0.1 | Bootstrap 5 Web UI |
-| **🚌 Event Bus** | ✅ Active | 1.1.0 | Event-Driven Communication |
-| **🔍 Monitoring** | ✅ Active | 2.0.0 | System Health & Metrics |
-| **🔧 Diagnostic** | ✅ Active | 2.0.0 | System Diagnostics |
-| **📈 Data Processing** | ✅ Active | 4.2.0 | CSV Middleware |
-| **🎯 Prediction Tracking** | ✅ Active | 1.0.1 | SOLL-IST Analysis |
-| **🤖 ML Analytics** | ✅ Active | 1.0.0 | Advanced ML Pipeline |
-| **📊 MarketCap Service** | ✅ Active | 1.0.0 | Market Data Provider |
-| **💰 Unified Profit Engine** | ⚠️ Config | 3.0.0 | Profit Calculation (Needs Config) |
+| Komponente                   | Status    | Version           | Beschreibung                                |
+|------------------------------|-----------|-------------------|---------------------------------------------|
+| **🧠 Intelligent Core**      | ✅ Active | 1.1.0             | AI Analytics & Event Processing             |
+| **📡 Broker Gateway**        | ✅ Active | 2.0.1             | Trading API Integration                     |
+| **🎨 Frontend Service**      | ✅ Active | 7.0.1             | Bootstrap 5 Web UI                          |
+| **🚌 Event Bus**             | ✅ Active | 1.1.0             | Event-Driven Communication                  |
+| **🔍 Monitoring**            | ✅ Active | 2.0.0             | System Health & Metrics                     |
+| **🔧 Diagnostic**            | ✅ Active | 2.0.0             | System Diagnostics                          |
+| **📈 Data Processing**       | ✅ Active | 4.2.0             | CSV Middleware                              |
+| **🎯 Prediction Tracking**   | ✅ Active | 1.0.1             | SOLL-IST Analysis                           |
+| **🤖 ML Analytics**          | ✅ Active | 1.0.0             | Advanced ML Pipeline                        |
+| **📊 MarketCap Service**     | ✅ Active | 1.0.0             | Market Data Provider                        |
+| **💰 Unified Profit Engine** | ⚠️ Config | 3.0.0             | Profit Calculation (Needs Config)           |
 
 **Total Services**: 11 von 11 dokumentiert | **Running**: 10 von 11
 

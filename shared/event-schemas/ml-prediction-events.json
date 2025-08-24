@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ML Prediction Events Schema",
+  "description": "Event schemas for ML model predictions and ensemble results",
+  "version": "1.0.0",
+  "definitions": {
+    "base_event": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string", "format": "uuid" },
+        "event_type": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "correlation_id": { "type": "string", "format": "uuid" },
+        "source_service": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "required": ["event_id", "event_type", "timestamp", "source_service", "version"]
+    },
+    "individual_model_prediction": {
+      "type": "object",
+      "properties": {
+        "model_type": { 
+          "type": "string", 
+          "enum": ["technical", "sentiment", "fundamental", "meta"] 
+        },
+        "model_version": { "type": "string" },
+        "prediction_values": {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "volatility_estimate": { "type": "number", "minimum": 0 },
+        "feature_importance": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "horizon_days": { "type": "integer", "minimum": 1 },
+        "prediction_timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["model_type", "model_version", "prediction_values", "confidence_score", "horizon_days"]
+    }
+  },
+  "events": {
+    "ml_individual_prediction_generated": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "properties": {
+            "event_type": { "const": "ml.individual.prediction.generated" },
+            "data": {
+              "type": "object",
+              "properties": {
+                "symbol": { "type": "string", "minLength": 1 },
+                "prediction": { "$ref": "#/definitions/individual_model_prediction" }
+              },
+              "required": ["symbol", "prediction"]
+            }
+          }
+        }
+      ]
+    },
+    "ml_ensemble_prediction_completed": {
+      "type": "object", 
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "properties": {
+            "event_type": { "const": "ml.ensemble.prediction.completed" },
+            "data": {
+              "type": "object",
+              "properties": {
+                "symbol": { "type": "string", "minLength": 1 },
+                "ensemble_id": { "type": "string", "format": "uuid" },
+                "individual_predictions": {
+                  "type": "object",
+                  "properties": {
+                    "technical": { "$ref": "#/definitions/individual_model_prediction" },
+                    "sentiment": { "$ref": "#/definitions/individual_model_prediction" },
+                    "fundamental": { "$ref": "#/definitions/individual_model_prediction" },
+                    "meta": { "$ref": "#/definitions/individual_model_prediction" }
+                  }
+                },
+                "final_prediction": {
+                  "type": "object",
+                  "properties": {
+                    "profit_forecast": { "type": "number" },
+                    "confidence_level": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "recommendation": { 
+                      "type": "string", 
+                      "enum": ["STRONG_BUY", "BUY", "HOLD", "SELL", "STRONG_SELL"] 
+                    },
+                    "risk_assessment": {
+                      "type": "string",
+                      "enum": ["NIEDRIG", "MODERAT", "HOCH", "SEHR_HOCH"]
+                    },
+                    "ensemble_method": { "type": "string" },
+                    "model_weights": {
+                      "type": "object",
+                      "additionalProperties": { "type": "number" }
+                    }
+                  },
+                  "required": ["profit_forecast", "confidence_level", "recommendation", "risk_assessment"]
+                },
+                "forecast_period_days": { "type": "integer", "minimum": 1 },
+                "target_date": { "type": "string", "format": "date-time" }
+              },
+              "required": ["symbol", "ensemble_id", "individual_predictions", "final_prediction", "forecast_period_days", "target_date"]
+            }
+          }
+        }
+      ]
+    },
+    "ml_prediction_storage_requested": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "properties": {
+            "event_type": { "const": "ml.prediction.storage.requested" },
+            "data": {
+              "type": "object", 
+              "properties": {
+                "prediction_data": {
+                  "type": "object",
+                  "properties": {
+                    "symbol": { "type": "string" },
+                    "company_name": { "type": "string" },
+                    "individual_models": {
+                      "type": "object",
+                      "additionalProperties": { "$ref": "#/definitions/individual_model_prediction" }
+                    },
+                    "ensemble_prediction": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": ["symbol", "individual_models", "ensemble_prediction"]
+                }
+              },
+              "required": ["prediction_data"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
