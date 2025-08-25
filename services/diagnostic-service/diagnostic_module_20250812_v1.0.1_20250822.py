@@ -18,7 +18,7 @@ from collections import defaultdict, deque
 # Event-Bus System importieren
 
 # Import Management - CLEAN ARCHITECTURE
-from shared.import_manager_20250822_v1.0.1_20250822 import setup_aktienanalyse_imports
+from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
 setup_aktienanalyse_imports()  # Replaces all sys.path.append statements
 
 # FIXED: sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared') -> Import Manager

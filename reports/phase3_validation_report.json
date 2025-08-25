@@ -1,0 +1,722 @@
+{
+  "validation_timestamp": "2025-08-25T08:07:48.671353+00:00",
+  "total_services": 5,
+  "summary": {
+    "passed": 0,
+    "failed": 1,
+    "errors": 4
+  },
+  "services": {
+    "prediction-tracking-service": {
+      "version": "6.1.0",
+      "overall_status": "error",
+      "success_rate": 64.28571428571429,
+      "statistics": {
+        "total_tests": 14,
+        "passed_tests": 9,
+        "failed_tests": 2,
+        "error_tests": 3,
+        "skipped_tests": 0
+      },
+      "test_results": [
+        {
+          "test_name": "Directory Structure",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.07486343383789062,
+          "message": "Clean Architecture directory structure is valid",
+          "details": {}
+        },
+        {
+          "test_name": "Layer Separation",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.011920928955078125,
+          "message": "Layer separation is properly maintained",
+          "details": {}
+        },
+        {
+          "test_name": "Dependency Direction",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.01049041748046875,
+          "message": "Dependency direction validation completed",
+          "details": {
+            "violations": []
+          }
+        },
+        {
+          "test_name": "Container Pattern",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.9357929229736328,
+          "message": "Container pattern implemented: 1 files",
+          "details": {
+            "container_files": [
+              "/home/mdoehler/aktienanalyse-\u00f6kosystem/services/prediction-tracking-service/infrastructure/container_v6_1_0.py"
+            ]
+          }
+        },
+        {
+          "test_name": "Database Manager Import",
+          "status": "passed",
+          "severity": "critical",
+          "duration_ms": 15.322208404541016,
+          "message": "Database Manager successfully imported",
+          "details": {}
+        },
+        {
+          "test_name": "Connection Pool Health",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.0,
+          "message": "Connection pool validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Schema Validation",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0002384185791015625,
+          "message": "Schema validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Health Endpoint",
+          "status": "error",
+          "severity": "critical",
+          "duration_ms": 3.432750701904297,
+          "message": "Health endpoint test failed: Cannot connect to host localhost:8015 ssl:default [Connect call failed ('127.0.0.1', 8015)]",
+          "details": {}
+        },
+        {
+          "test_name": "Status Endpoint",
+          "status": "error",
+          "severity": "high",
+          "duration_ms": 0.8988380432128906,
+          "message": "Status endpoint test failed: Cannot connect to host localhost:8015 ssl:default [Connect call failed ('127.0.0.1', 8015)]",
+          "details": {}
+        },
+        {
+          "test_name": "API Documentation",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 0.8528232574462891,
+          "message": "API documentation test failed: Cannot connect to host localhost:8015 ssl:default [Connect call failed ('127.0.0.1', 8015)]",
+          "details": {}
+        },
+        {
+          "test_name": "Response Format",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0,
+          "message": "Response format validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Response Times",
+          "status": "error",
+          "severity": "medium",
+          "duration_ms": 1.8208026885986328,
+          "message": "Response time test failed: Cannot connect to host localhost:8015 ssl:default [Connect call failed ('127.0.0.1', 8015)]",
+          "details": {}
+        },
+        {
+          "test_name": "Memory Usage",
+          "status": "passed",
+          "severity": "low",
+          "duration_ms": 0.5314350128173828,
+          "message": "Memory usage acceptable: 34.43MB",
+          "details": {
+            "memory_mb": 34.4296875,
+            "memory_bytes": 36102144
+          }
+        },
+        {
+          "test_name": "Concurrent Requests",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 3.50189208984375,
+          "message": "Only 0/5 concurrent requests successful",
+          "details": {
+            "concurrent_requests": 5,
+            "success_count": 0
+          }
+        }
+      ],
+      "performance_metrics": {}
+    },
+    "diagnostic-service": {
+      "version": "6.1.0",
+      "overall_status": "error",
+      "success_rate": 64.28571428571429,
+      "statistics": {
+        "total_tests": 14,
+        "passed_tests": 9,
+        "failed_tests": 2,
+        "error_tests": 3,
+        "skipped_tests": 0
+      },
+      "test_results": [
+        {
+          "test_name": "Directory Structure",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.062465667724609375,
+          "message": "Clean Architecture directory structure is valid",
+          "details": {}
+        },
+        {
+          "test_name": "Layer Separation",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.01049041748046875,
+          "message": "Layer separation is properly maintained",
+          "details": {}
+        },
+        {
+          "test_name": "Dependency Direction",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.009298324584960938,
+          "message": "Dependency direction validation completed",
+          "details": {
+            "violations": []
+          }
+        },
+        {
+          "test_name": "Container Pattern",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.48065185546875,
+          "message": "Container pattern implemented: 1 files",
+          "details": {
+            "container_files": [
+              "/home/mdoehler/aktienanalyse-\u00f6kosystem/services/diagnostic-service/infrastructure/container_v6_1_0.py"
+            ]
+          }
+        },
+        {
+          "test_name": "Database Manager Import",
+          "status": "passed",
+          "severity": "critical",
+          "duration_ms": 0.0045299530029296875,
+          "message": "Database Manager successfully imported",
+          "details": {}
+        },
+        {
+          "test_name": "Connection Pool Health",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.0002384185791015625,
+          "message": "Connection pool validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Schema Validation",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.000476837158203125,
+          "message": "Schema validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Health Endpoint",
+          "status": "error",
+          "severity": "critical",
+          "duration_ms": 0.7624626159667969,
+          "message": "Health endpoint test failed: Cannot connect to host localhost:8013 ssl:default [Connect call failed ('127.0.0.1', 8013)]",
+          "details": {}
+        },
+        {
+          "test_name": "Status Endpoint",
+          "status": "error",
+          "severity": "high",
+          "duration_ms": 0.7658004760742188,
+          "message": "Status endpoint test failed: Cannot connect to host localhost:8013 ssl:default [Connect call failed ('127.0.0.1', 8013)]",
+          "details": {}
+        },
+        {
+          "test_name": "API Documentation",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 0.7448196411132812,
+          "message": "API documentation test failed: Cannot connect to host localhost:8013 ssl:default [Connect call failed ('127.0.0.1', 8013)]",
+          "details": {}
+        },
+        {
+          "test_name": "Response Format",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0,
+          "message": "Response format validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Response Times",
+          "status": "error",
+          "severity": "medium",
+          "duration_ms": 0.7257461547851562,
+          "message": "Response time test failed: Cannot connect to host localhost:8013 ssl:default [Connect call failed ('127.0.0.1', 8013)]",
+          "details": {}
+        },
+        {
+          "test_name": "Memory Usage",
+          "status": "passed",
+          "severity": "low",
+          "duration_ms": 0.08440017700195312,
+          "message": "Memory usage acceptable: 34.80MB",
+          "details": {
+            "memory_mb": 34.8046875,
+            "memory_bytes": 36495360
+          }
+        },
+        {
+          "test_name": "Concurrent Requests",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 2.9718875885009766,
+          "message": "Only 0/5 concurrent requests successful",
+          "details": {
+            "concurrent_requests": 5,
+            "success_count": 0
+          }
+        }
+      ],
+      "performance_metrics": {}
+    },
+    "data-processing-service": {
+      "version": "6.1.0",
+      "overall_status": "error",
+      "success_rate": 64.28571428571429,
+      "statistics": {
+        "total_tests": 14,
+        "passed_tests": 9,
+        "failed_tests": 2,
+        "error_tests": 3,
+        "skipped_tests": 0
+      },
+      "test_results": [
+        {
+          "test_name": "Directory Structure",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.046253204345703125,
+          "message": "Clean Architecture directory structure is valid",
+          "details": {}
+        },
+        {
+          "test_name": "Layer Separation",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.010013580322265625,
+          "message": "Layer separation is properly maintained",
+          "details": {}
+        },
+        {
+          "test_name": "Dependency Direction",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.00858306884765625,
+          "message": "Dependency direction validation completed",
+          "details": {
+            "violations": []
+          }
+        },
+        {
+          "test_name": "Container Pattern",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.606536865234375,
+          "message": "Container pattern implemented: 1 files",
+          "details": {
+            "container_files": [
+              "/home/mdoehler/aktienanalyse-\u00f6kosystem/services/data-processing-service/infrastructure/container_v6_1_0.py"
+            ]
+          }
+        },
+        {
+          "test_name": "Database Manager Import",
+          "status": "passed",
+          "severity": "critical",
+          "duration_ms": 0.0040531158447265625,
+          "message": "Database Manager successfully imported",
+          "details": {}
+        },
+        {
+          "test_name": "Connection Pool Health",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.0,
+          "message": "Connection pool validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Schema Validation",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0,
+          "message": "Schema validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Health Endpoint",
+          "status": "error",
+          "severity": "critical",
+          "duration_ms": 0.7653236389160156,
+          "message": "Health endpoint test failed: Cannot connect to host localhost:8012 ssl:default [Connect call failed ('127.0.0.1', 8012)]",
+          "details": {}
+        },
+        {
+          "test_name": "Status Endpoint",
+          "status": "error",
+          "severity": "high",
+          "duration_ms": 0.7328987121582031,
+          "message": "Status endpoint test failed: Cannot connect to host localhost:8012 ssl:default [Connect call failed ('127.0.0.1', 8012)]",
+          "details": {}
+        },
+        {
+          "test_name": "API Documentation",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 0.7121562957763672,
+          "message": "API documentation test failed: Cannot connect to host localhost:8012 ssl:default [Connect call failed ('127.0.0.1', 8012)]",
+          "details": {}
+        },
+        {
+          "test_name": "Response Format",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0002384185791015625,
+          "message": "Response format validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Response Times",
+          "status": "error",
+          "severity": "medium",
+          "duration_ms": 0.69427490234375,
+          "message": "Response time test failed: Cannot connect to host localhost:8012 ssl:default [Connect call failed ('127.0.0.1', 8012)]",
+          "details": {}
+        },
+        {
+          "test_name": "Memory Usage",
+          "status": "passed",
+          "severity": "low",
+          "duration_ms": 0.09131431579589844,
+          "message": "Memory usage acceptable: 34.80MB",
+          "details": {
+            "memory_mb": 34.8046875,
+            "memory_bytes": 36495360
+          }
+        },
+        {
+          "test_name": "Concurrent Requests",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 2.8922557830810547,
+          "message": "Only 0/5 concurrent requests successful",
+          "details": {
+            "concurrent_requests": 5,
+            "success_count": 0
+          }
+        }
+      ],
+      "performance_metrics": {}
+    },
+    "marketcap-service": {
+      "version": "6.1.0",
+      "overall_status": "failed",
+      "success_rate": 92.85714285714286,
+      "statistics": {
+        "total_tests": 14,
+        "passed_tests": 13,
+        "failed_tests": 1,
+        "error_tests": 0,
+        "skipped_tests": 0
+      },
+      "test_results": [
+        {
+          "test_name": "Directory Structure",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.04887580871582031,
+          "message": "Clean Architecture directory structure is valid",
+          "details": {}
+        },
+        {
+          "test_name": "Layer Separation",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.01049041748046875,
+          "message": "Layer separation is properly maintained",
+          "details": {}
+        },
+        {
+          "test_name": "Dependency Direction",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.008821487426757812,
+          "message": "Dependency direction validation completed",
+          "details": {
+            "violations": []
+          }
+        },
+        {
+          "test_name": "Container Pattern",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.8022785186767578,
+          "message": "Container pattern implemented: 1 files",
+          "details": {
+            "container_files": [
+              "/home/mdoehler/aktienanalyse-\u00f6kosystem/services/marketcap-service/infrastructure/container_v6_1_0.py"
+            ]
+          }
+        },
+        {
+          "test_name": "Database Manager Import",
+          "status": "passed",
+          "severity": "critical",
+          "duration_ms": 0.003814697265625,
+          "message": "Database Manager successfully imported",
+          "details": {}
+        },
+        {
+          "test_name": "Connection Pool Health",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.0,
+          "message": "Connection pool validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Schema Validation",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0002384185791015625,
+          "message": "Schema validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Health Endpoint",
+          "status": "passed",
+          "severity": "critical",
+          "duration_ms": 7.227182388305664,
+          "message": "Health endpoint is functional",
+          "details": {
+            "response": {
+              "status": "healthy",
+              "service": "intelligent-core",
+              "version": "2.1.0",
+              "features": [
+                "top_15_stocks",
+                "analysis",
+                "intelligence"
+              ],
+              "timestamp": "2025-08-25T08:07:48.634173"
+            }
+          }
+        },
+        {
+          "test_name": "Status Endpoint",
+          "status": "failed",
+          "severity": "high",
+          "duration_ms": 4.794597625732422,
+          "message": "Status endpoint returned status 404",
+          "details": {}
+        },
+        {
+          "test_name": "API Documentation",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 2.548694610595703,
+          "message": "OpenAPI documentation is accessible",
+          "details": {}
+        },
+        {
+          "test_name": "Response Format",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0002384185791015625,
+          "message": "Response format validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Response Times",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 14.879941940307617,
+          "message": "Response times acceptable: avg 1.41ms, p95 1.98ms",
+          "details": {
+            "average_response_time_ms": 1.4108896255493164,
+            "p95_response_time_ms": 1.9816398620605469,
+            "sample_count": 10
+          }
+        },
+        {
+          "test_name": "Memory Usage",
+          "status": "passed",
+          "severity": "low",
+          "duration_ms": 0.10657310485839844,
+          "message": "Memory usage acceptable: 34.93MB",
+          "details": {
+            "memory_mb": 34.9296875,
+            "memory_bytes": 36626432
+          }
+        },
+        {
+          "test_name": "Concurrent Requests",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 5.3920745849609375,
+          "message": "All 5 concurrent requests successful",
+          "details": {
+            "concurrent_requests": 5,
+            "success_count": 5
+          }
+        }
+      ],
+      "performance_metrics": {}
+    },
+    "ml-analytics-service": {
+      "version": "6.1.1",
+      "overall_status": "error",
+      "success_rate": 64.28571428571429,
+      "statistics": {
+        "total_tests": 14,
+        "passed_tests": 9,
+        "failed_tests": 2,
+        "error_tests": 3,
+        "skipped_tests": 0
+      },
+      "test_results": [
+        {
+          "test_name": "Directory Structure",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.055789947509765625,
+          "message": "Clean Architecture directory structure is valid",
+          "details": {}
+        },
+        {
+          "test_name": "Layer Separation",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.021219253540039062,
+          "message": "Layer separation is properly maintained",
+          "details": {}
+        },
+        {
+          "test_name": "Dependency Direction",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.010251998901367188,
+          "message": "Dependency direction validation completed",
+          "details": {
+            "violations": []
+          }
+        },
+        {
+          "test_name": "Container Pattern",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.3857612609863281,
+          "message": "Container pattern implemented: 1 files",
+          "details": {
+            "container_files": [
+              "/home/mdoehler/aktienanalyse-\u00f6kosystem/services/ml-analytics-service/infrastructure/container_v6_1_0.py"
+            ]
+          }
+        },
+        {
+          "test_name": "Database Manager Import",
+          "status": "passed",
+          "severity": "critical",
+          "duration_ms": 0.0057220458984375,
+          "message": "Database Manager successfully imported",
+          "details": {}
+        },
+        {
+          "test_name": "Connection Pool Health",
+          "status": "passed",
+          "severity": "high",
+          "duration_ms": 0.0002384185791015625,
+          "message": "Connection pool validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Schema Validation",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0,
+          "message": "Schema validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Health Endpoint",
+          "status": "error",
+          "severity": "critical",
+          "duration_ms": 0.8373260498046875,
+          "message": "Health endpoint test failed: Cannot connect to host localhost:8016 ssl:default [Connect call failed ('127.0.0.1', 8016)]",
+          "details": {}
+        },
+        {
+          "test_name": "Status Endpoint",
+          "status": "error",
+          "severity": "high",
+          "duration_ms": 0.7419586181640625,
+          "message": "Status endpoint test failed: Cannot connect to host localhost:8016 ssl:default [Connect call failed ('127.0.0.1', 8016)]",
+          "details": {}
+        },
+        {
+          "test_name": "API Documentation",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 0.7178783416748047,
+          "message": "API documentation test failed: Cannot connect to host localhost:8016 ssl:default [Connect call failed ('127.0.0.1', 8016)]",
+          "details": {}
+        },
+        {
+          "test_name": "Response Format",
+          "status": "passed",
+          "severity": "medium",
+          "duration_ms": 0.0,
+          "message": "Response format validation completed",
+          "details": {}
+        },
+        {
+          "test_name": "Response Times",
+          "status": "error",
+          "severity": "medium",
+          "duration_ms": 0.7600784301757812,
+          "message": "Response time test failed: Cannot connect to host localhost:8016 ssl:default [Connect call failed ('127.0.0.1', 8016)]",
+          "details": {}
+        },
+        {
+          "test_name": "Memory Usage",
+          "status": "passed",
+          "severity": "low",
+          "duration_ms": 0.09107589721679688,
+          "message": "Memory usage acceptable: 34.93MB",
+          "details": {
+            "memory_mb": 34.9296875,
+            "memory_bytes": 36626432
+          }
+        },
+        {
+          "test_name": "Concurrent Requests",
+          "status": "failed",
+          "severity": "medium",
+          "duration_ms": 3.2951831817626953,
+          "message": "Only 0/5 concurrent requests successful",
+          "details": {
+            "concurrent_requests": 5,
+            "success_count": 0
+          }
+        }
+      ],
+      "performance_metrics": {}
+    }
+  }
+}

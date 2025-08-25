@@ -1,0 +1,56 @@
+# Diagnostic Service Requirements v6.1.0
+# PostgreSQL Migration - Central Database Manager Integration
+
+# Core Framework
+fastapi==0.109.2
+uvicorn[standard]==0.25.0
+pydantic==2.5.3
+python-multipart==0.0.6
+
+# PostgreSQL Database (Migration from SQLite)
+asyncpg==0.29.0
+# Removed: aiosqlite==0.19.0 (migrated to PostgreSQL)
+
+# HTTP Client and External Services
+aiohttp==3.9.1
+httpx==0.26.0
+
+# Date and Time Utilities
+python-dateutil==2.8.2
+
+# Logging and Configuration
+python-json-logger==2.0.4
+
+# Development and Testing
+pytest==7.4.4
+pytest-asyncio==0.23.2
+pytest-cov==4.0.0
+
+# Environment and Configuration
+python-dotenv==1.0.0
+
+# Type Checking and Code Quality
+mypy==1.8.0
+black==23.12.1
+isort==5.13.2
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.5.3
+
+# Performance and Monitoring
+psutil==5.9.7
+
+# Migration Notes:
+# v6.0.0 → v6.1.0 Changes:
+# + asyncpg: PostgreSQL async driver for database operations
+# - aiosqlite: Removed SQLite dependency (migrated to PostgreSQL)
+# + Central Database Connection Manager dependency (shared module)
+# 
+# Database Architecture Migration:
+# - FROM: SQLite file-based storage (diagnostic_events.db, diagnostic_tests.db, etc.)
+# - TO: PostgreSQL with centralized connection pooling
+# - Database Host: 10.1.1.174 (Production deployment)
+# - Connection Pool: 5-25 connections managed centrally
+# - Multi-Schema: diagnostic_events, diagnostic_tests, system_health, module_communication
+# - Schema: Auto-initialized with optimized indexes

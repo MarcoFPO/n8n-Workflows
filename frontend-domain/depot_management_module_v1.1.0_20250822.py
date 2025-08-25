@@ -12,10 +12,11 @@ import json
 import uuid
 from dataclasses import dataclass, asdict
 
+# Import Management - Clean Architecture
+from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
+setup_aktienanalyse_imports()  # Replaces sys.path.append(str(Path(__file__).parent.parent))
+
 # Import des zentralen Fallback-Systems
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
 from core.unified_fallback_provider import fallback_provider
 
 

@@ -372,7 +372,8 @@ asyncio.run(test())
         cd /opt/aktienanalyse-ökosystem/services/integration
         time python3 -c '
 import asyncio, sys
-sys.path.append(\"/opt/aktienanalyse-ökosystem/services/data-sources\")
+from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
+setup_aktienanalyse_imports()  # Replaces sys.path.append(\"/opt/aktienanalyse-ökosystem/services/data-sources\")
 from data_sources_integration import DataSourcesIntegration
 async def test():
     integration = DataSourcesIntegration()

@@ -81,9 +81,8 @@ test_integration_service() {
         
         echo 'Testing Event-Bus Integration imports...'
         python3 -c '
-import sys
-sys.path.append(\"/opt/aktienanalyse-ökosystem/services/data-sources\")
-sys.path.append(\"/opt/aktienanalyse-ökosystem/services/integration\")
+from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
+setup_aktienanalyse_imports()  # Replaces all sys.path.append statements
 from event_bus_global_integration import EventBusGlobalIntegration
 print(\"Event-Bus Integration imports successful\")
 '
@@ -111,9 +110,8 @@ import json
 import sys
 from datetime import datetime
 
-sys.path.append('/opt/aktienanalyse-ökosystem/services/integration')
-sys.path.append('/opt/aktienanalyse-ökosystem/services/data-sources')
-sys.path.append('/opt/aktienanalyse-ökosystem/shared')
+from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
+setup_aktienanalyse_imports()  # Replaces all sys.path.append statements
 
 from event_bus_global_integration import EventBusGlobalIntegration
 

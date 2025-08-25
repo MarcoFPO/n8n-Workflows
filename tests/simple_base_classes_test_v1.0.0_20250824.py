@@ -15,8 +15,9 @@ import os
 import inspect
 from pathlib import Path
 
-# Add project to path
-sys.path.insert(0, '/home/mdoehler/aktienanalyse-ökosystem')
+# Import Management - Clean Architecture
+from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
+setup_aktienanalyse_imports()  # Replaces sys.path.insert(0, '/home/mdoehler/aktienanalyse-ökosystem')
 
 def test_file_exists_and_structure():
     """Test dass alle Base-Class-Dateien existieren und korrekt strukturiert sind"""

@@ -1,0 +1,43 @@
+[Unit]
+Description=Portfolio Management Service Enhanced v6.0.0 - Clean Architecture Portfolio Management with Rebalancing
+After=network.target redis-server.service postgresql.service event-bus-service.service market-data-service.service
+Requires=network.target
+Wants=redis-server.service postgresql.service event-bus-service.service market-data-service.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/portfolio-management-service
+ExecStart=/opt/aktienanalyse-ökosystem/services/portfolio-management-service/venv/bin/python portfolio_management_service_v6_0_0_20250824.py
+Restart=always
+RestartSec=10
+StartLimitBurst=3
+
+# Environment Variables
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=SERVICE_HOST=0.0.0.0
+Environment=SERVICE_PORT=8004
+Environment=LOG_LEVEL=INFO
+Environment=REDIS_HOST=localhost
+Environment=REDIS_PORT=6379
+Environment=POSTGRES_HOST=localhost
+Environment=POSTGRES_PORT=5432
+Environment=POSTGRES_DB=aktienanalyse_ecosystem
+Environment=POSTGRES_USER=aktienanalyse_user
+Environment=POSTGRES_PASSWORD=secure_password_2024
+Environment=EVENT_BUS_URL=http://localhost:8014
+Environment=MARKET_DATA_SERVICE_URL=http://localhost:8002
+Environment=ML_PIPELINE_SERVICE_URL=http://localhost:8003
+
+# Resource Limits
+LimitNOFILE=65536
+LimitCORE=0
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=portfolio-management-service
+
+[Install]
+WantedBy=multi-user.target
+Alias=portfolio-management.service

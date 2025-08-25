@@ -1,0 +1,1 @@
+"""MarketCap Service - Domain Entities"""

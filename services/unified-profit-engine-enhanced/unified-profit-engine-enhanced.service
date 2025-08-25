@@ -1,0 +1,46 @@
+[Unit]
+Description=Unified Profit Engine Enhanced v6.0.0 - Multi-Horizon SOLL-IST Tracking
+Documentation=https://github.com/aktienanalyse-ökosystem/services/unified-profit-engine-enhanced
+After=network.target redis-server.service event-bus-service.service
+Requires=network.target
+Wants=redis-server.service event-bus-service.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/unified-profit-engine-enhanced
+ExecStart=/opt/aktienanalyse-ökosystem/services/unified-profit-engine-enhanced/venv/bin/python unified_profit_engine_minimal_v6_0_0_20250824.py
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Environment Variables
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=SERVICE_HOST=0.0.0.0
+Environment=SERVICE_PORT=8025
+Environment=LOG_LEVEL=INFO
+Environment=REDIS_HOST=localhost
+Environment=REDIS_PORT=6379
+Environment=EVENT_BUS_URL=http://localhost:8014
+
+# Security Settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/aktienanalyse-ökosystem/services/unified-profit-engine-enhanced
+ReadWritePaths=/tmp
+
+# Resource Limits
+LimitNOFILE=65536
+LimitCORE=0
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=unified-profit-engine-enhanced
+
+[Install]
+WantedBy=multi-user.target
+Alias=profit-engine.service
