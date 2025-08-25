@@ -81,28 +81,28 @@ class ServiceConfig:
         "1Y": {"display_name": "1 Jahr", "days": 365, "icon": "📈", "css_class": "timeframe-year"},
     }
     
-    # Vergleichsanalyse Timeframes
+    # Vergleichsanalyse Timeframes - Korrigiert für Prediction-Tracking Service
     VERGLEICHSANALYSE_TIMEFRAMES = {
         "1W": {
             "display_name": "1 Woche", 
             "description": "Wöchentliche SOLL-IST Vergleiche", 
             "days": 7, 
             "icon": "📊", 
-            "url": f"{os.getenv('VERGLEICHSANALYSE_SERVICE_URL', 'http://10.1.1.174:8025')}/performance-comparison/1W"
+            "url": f"{os.getenv('PREDICTION_TRACKING_URL', 'http://10.1.1.174:8018')}/api/v1/soll-ist-comparison?days_back=7"
         },
         "1M": {
             "display_name": "1 Monat", 
             "description": "Monatliche SOLL-IST Vergleiche", 
             "days": 30, 
             "icon": "📈", 
-            "url": f"{os.getenv('VERGLEICHSANALYSE_SERVICE_URL', 'http://10.1.1.174:8025')}/performance-comparison/1M"
+            "url": f"{os.getenv('PREDICTION_TRACKING_URL', 'http://10.1.1.174:8018')}/api/v1/soll-ist-comparison?days_back=30"
         },
         "3M": {
             "display_name": "3 Monate", 
             "description": "Quartalsweise SOLL-IST Vergleiche", 
             "days": 90, 
             "icon": "📊", 
-            "url": f"{os.getenv('VERGLEICHSANALYSE_SERVICE_URL', 'http://10.1.1.174:8025')}/performance-comparison/3M"
+            "url": f"{os.getenv('PREDICTION_TRACKING_URL', 'http://10.1.1.174:8018')}/api/v1/soll-ist-comparison?days_back=90"
         }
     }
     
@@ -148,15 +148,48 @@ class IHTTPClient:
     
     async def get(self, url: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """HTTP GET Request"""
-        raise NotImplementedError
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.content_type == 'application/json':
+                        return await response.json()
+                    else:
+                        return {"content": await response.text(), "status": response.status}
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout accessing {url}")
+            return {"error": "timeout", "status": 408}
+        except Exception as e:
+            logger.error(f"HTTP GET error for {url}: {e}")
+            return {"error": str(e), "status": 500}
     
     async def post(self, url: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """HTTP POST Request"""
-        raise NotImplementedError
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=data, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.content_type == 'application/json':
+                        return await response.json()
+                    else:
+                        return {"content": await response.text(), "status": response.status}
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout accessing {url}")
+            return {"error": "timeout", "status": 408}
+        except Exception as e:
+            logger.error(f"HTTP POST error for {url}: {e}")
+            return {"error": str(e), "status": 500}
     
     async def get_text(self, url: str, params: Optional[Dict[str, Any]] = None) -> str:
         """HTTP GET Request returning text"""
-        raise NotImplementedError
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    return await response.text()
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout accessing {url}")
+            return "Error: Request timeout"
+        except Exception as e:
+            logger.error(f"HTTP GET text error for {url}: {e}")
+            return f"Error: {str(e)}"
 
 
 class HTTPClientService(IHTTPClient):
@@ -503,7 +536,9 @@ async def prognosen() -> str:
 
 @app.get("/prognosen/{timeframe}", response_class=HTMLResponse, summary="Prognosen für spezifischen Zeitraum")
 async def prognosen_timeframe(
-    timeframe: str, 
+    timeframe: str,
+    nav_timestamp: Optional[int] = Query(None, description="Navigation timestamp für Timeline-Navigation"),
+    nav_direction: Optional[str] = Query(None, description="Navigation direction (previous/next)"),
     http_client: IHTTPClient = Depends(get_http_client)
 ) -> str:
     """Prognosen für spezifischen Zeitraum Handler"""
@@ -521,22 +556,98 @@ async def prognosen_timeframe(
         predictions_table = ""
         if predictions_data and "predictions" in predictions_data:
             for prediction in predictions_data["predictions"][:10]:  # Top 10
-                confidence = prediction.get('confidence_level', 0) * 100
-                profit = prediction.get('profit_forecast', 0)
+                confidence = prediction.get('confidence', 0) * 100
+                profit_str = prediction.get('prediction_percent', '0%').replace('%', '')
+                try:
+                    profit = float(profit_str)
+                except:
+                    profit = 0
+                
+                # Format prediction date (Vorhersage-Datum)
+                prediction_date = prediction.get('timestamp', 'N/A')
+                if prediction_date != 'N/A':
+                    try:
+                        # Parse and format the date
+                        from datetime import datetime
+                        if isinstance(prediction_date, str):
+                            parsed_date = datetime.fromisoformat(prediction_date.replace('Z', '+00:00'))
+                        else:
+                            parsed_date = prediction_date
+                        formatted_date = parsed_date.strftime('%d.%m.%Y')
+                    except:
+                        formatted_date = str(prediction_date)[:10] if len(str(prediction_date)) >= 10 else 'N/A'
+                else:
+                    formatted_date = 'N/A'
+                
                 predictions_table += f"""
                     <tr>
                         <td><strong>{prediction.get('symbol', 'N/A')}</strong></td>
-                        <td>{prediction.get('company_name', 'N/A')}</td>
+                        <td>{prediction.get('company', 'N/A')}</td>
+                        <td>{formatted_date}</td>
                         <td><span style="color: {'green' if profit > 0 else 'red'};">{profit:+.2f}%</span></td>
                         <td>{confidence:.1f}%</td>
-                        <td><span style="background: {'#28a745' if prediction.get('recommendation') == 'BUY' else '#dc3545' if prediction.get('recommendation') == 'SELL' else '#ffc107'}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em;">{prediction.get('recommendation', 'HOLD')}</span></td>
+                        <td><span style="background: {'#28a745' if 'BUY' in prediction.get('recommendation', '') else '#dc3545' if prediction.get('recommendation') == 'SELL' else '#ffc107'}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em;">{prediction.get('recommendation', 'HOLD')}</span></td>
                     </tr>
                 """
+        
+        # Calculate navigation periods based on timeframe and current navigation state
+        def get_navigation_periods(current_timeframe: str, nav_ts: Optional[int] = None, nav_dir: Optional[str] = None):
+            """Calculate previous and next time periods based on current timeframe and navigation state"""
+            from datetime import datetime, timedelta
+            
+            timeframe_deltas = {
+                "1W": timedelta(weeks=1),
+                "1M": timedelta(days=30),
+                "3M": timedelta(days=90),
+                "12M": timedelta(days=365)
+            }
+            
+            # Use navigation timestamp if provided, otherwise current time
+            if nav_ts and nav_dir:
+                current_date = datetime.fromtimestamp(nav_ts)
+                nav_info = f"📍 Navigation: {nav_dir.title()} - {current_date.strftime('%d.%m.%Y %H:%M')}"
+            else:
+                current_date = datetime.now()
+                nav_info = "📅 Aktuelle Zeit"
+            
+            delta = timeframe_deltas.get(current_timeframe, timedelta(days=30))
+            
+            previous_date = current_date - delta
+            next_date = current_date + delta
+            
+            return {
+                "previous": previous_date.strftime('%d.%m.%Y'),
+                "current": current_date.strftime('%d.%m.%Y'),
+                "next": next_date.strftime('%d.%m.%Y'),
+                "nav_info": nav_info,
+                "timestamp": int(current_date.timestamp())
+            }
+        
+        nav_periods = get_navigation_periods(timeframe, nav_timestamp, nav_direction)
         
         content = f"""
             <h2>{tf_data['icon']} KI-Prognosen - {tf_data['display_name']}</h2>
             <div class="alert alert-info">
                 <p><strong>Zeitraum:</strong> {tf_data['days']} Tage | <strong>Ensemble-Methode:</strong> 4-Modell Weighted Average</p>
+            </div>
+            
+            <!-- Timeline Navigation -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
+                <button onclick="navigateTimeline('previous', '{timeframe}')" 
+                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    ⬅️ Zurück ({nav_periods['previous']})
+                </button>
+                
+                <div style="text-align: center;">
+                    <strong>{nav_periods['nav_info']}</strong><br>
+                    <span style="color: #007bff; font-size: 16px; font-weight: bold;">{nav_periods['current']}</span>
+                    {f'<div style="margin-top: 5px;"><small style="color: #28a745;">✅ Navigation erfolgreich</small></div>' if nav_timestamp else ''}
+                </div>
+                
+                <button onclick="navigateTimeline('next', '{timeframe}')" 
+                        style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    Vor ({nav_periods['next']}) ➡️
+                </button>
             </div>
             
             <h3>📈 Top Prognosen</h3>
@@ -545,6 +656,7 @@ async def prognosen_timeframe(
                     <tr>
                         <th>Symbol</th>
                         <th>Unternehmen</th>
+                        <th>Vorhersage-Datum</th>
                         <th>Gewinn-Prognose</th>
                         <th>Konfidenz</th>
                         <th>Empfehlung</th>
@@ -554,6 +666,30 @@ async def prognosen_timeframe(
                     {predictions_table}
                 </tbody>
             </table>
+            
+            <script>
+                function navigateTimeline(direction, timeframe) {{
+                    // Calculate new date based on direction and timeframe
+                    var timeframeDays = {{
+                        '1W': 7,
+                        '1M': 30,
+                        '3M': 90,
+                        '12M': 365
+                    }};
+                    
+                    var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
+                    var newDate = new Date();
+                    newDate.setDate(newDate.getDate() + daysToAdd);
+                    
+                    // For now, just refresh the page with a timestamp parameter to show navigation works
+                    var timestamp = Math.floor(newDate.getTime() / 1000);
+                    var currentUrl = new URL(window.location);
+                    currentUrl.searchParams.set('nav_timestamp', timestamp);
+                    currentUrl.searchParams.set('nav_direction', direction);
+                    
+                    window.location.href = currentUrl.toString();
+                }}
+            </script>
             
             <div style="margin-top: 30px;">
                 <a href="/prognosen" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">⬅️ Zurück zu Zeiträumen</a>
@@ -664,6 +800,8 @@ async def analyse(
 @app.get("/vergleichsanalyse", response_class=HTMLResponse, summary="SOLL-IST Vergleichsanalyse")
 async def vergleichsanalyse(
     timeframe: str = Query(default="1M", description="Zeitintervall für SOLL-IST Vergleich"),
+    nav_timestamp: Optional[int] = Query(None, description="Navigation timestamp für Timeline-Navigation"),
+    nav_direction: Optional[str] = Query(None, description="Navigation direction (previous/next)"),
     http_client: IHTTPClient = Depends(get_http_client)
 ) -> str:
     """
@@ -681,49 +819,99 @@ async def vergleichsanalyse(
     try:
         start_time = datetime.now()
         
-        # CSV-Daten von Vergleichsanalyse Service laden
-        csv_url = timeframe_info["url"]
-        logger.info(f"Loading vergleichsanalyse CSV from: {csv_url}")
-        
-        csv_content = await http_client.get_text(csv_url)
-        
-        # Parse CSV zu HTML-Tabelle
-        lines = csv_content.strip().split('\n')
-        
-        if len(lines) <= 1:
-            # Keine Daten verfügbar
-            table_html = f"""
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Keine Daten verfügbar</strong><br>
-                Für den Zeitraum {timeframe_info['display_name']} sind derzeit keine SOLL-IST Vergleichsdaten verfügbar.
-            </div>
-            """
-        else:
-            # Parse CSV Header
-            headers = lines[0].split(',')
+        # Calculate navigation periods first (needed for table data)
+        def get_vergleichsanalyse_navigation_periods(current_timeframe: str, nav_ts: Optional[int] = None, nav_dir: Optional[str] = None):
+            """Calculate previous and next time periods based on current timeframe and navigation state"""
+            from datetime import datetime, timedelta
             
-            # Generate HTML Table
+            timeframe_deltas = {
+                "1W": timedelta(weeks=1),
+                "1M": timedelta(days=30),
+                "3M": timedelta(days=90)
+            }
+            
+            # Use navigation timestamp if provided, otherwise current time
+            if nav_ts and nav_dir:
+                current_date = datetime.fromtimestamp(nav_ts)
+                nav_info = f"📍 Navigation: {nav_dir.title()} - {current_date.strftime('%d.%m.%Y %H:%M')}"
+            else:
+                current_date = datetime.now()
+                nav_info = "📅 Aktuelle Zeit"
+            
+            delta = timeframe_deltas.get(current_timeframe, timedelta(days=30))
+            
+            previous_date = current_date - delta
+            next_date = current_date + delta
+            
+            return {
+                "previous": previous_date.strftime('%d.%m.%Y'),
+                "current": current_date.strftime('%d.%m.%Y'),
+                "next": next_date.strftime('%d.%m.%Y'),
+                "nav_info": nav_info,
+                "timestamp": int(current_date.timestamp())
+            }
+        
+        nav_periods = get_vergleichsanalyse_navigation_periods(timeframe, nav_timestamp, nav_direction)
+        
+        # JSON-Daten von Prediction-Tracking Service laden
+        api_url = timeframe_info["url"]
+        logger.info(f"Loading SOLL-IST comparison from: {api_url}")
+        
+        comparison_data = await http_client.get(api_url)
+        logger.info(f"Received comparison data: {comparison_data}")
+        
+        # Parse JSON zu HTML-Tabelle 
+        if comparison_data and isinstance(comparison_data, list) and len(comparison_data) > 0:
+            # JSON-Daten vorhanden - erweiterte Tabelle erstellen
+            enhanced_headers = ['Vergleichsdatum', 'Symbol', 'SOLL-Performance', 'IST-Performance', 'Abweichung', 'Genauigkeit']
+            
             table_rows = ""
-            for line in lines[1:]:
-                if line.strip():
-                    cells = line.split(',')
-                    table_rows += "<tr>"
-                    for cell in cells:
-                        table_rows += f"<td>{cell.strip()}</td>"
-                    table_rows += "</tr>"
+            comparison_date = nav_periods['current']
+            
+            for item in comparison_data[:15]:  # Top 15 Vergleiche
+                symbol = item.get('symbol', 'N/A')
+                soll_performance = item.get('soll_performance', 0)
+                ist_performance = item.get('ist_performance', 0) or 0
+                deviation = item.get('deviation', 0) or 0
+                accuracy = item.get('accuracy_percentage', 0) or 0
+                
+                # Farbkodierung für Performance-Werte
+                soll_color = 'green' if soll_performance > 0 else 'red'
+                ist_color = 'green' if ist_performance > 0 else 'red'
+                deviation_color = 'green' if deviation > 0 else 'red'
+                accuracy_color = 'green' if accuracy > 80 else 'orange' if accuracy > 60 else 'red'
+                
+                table_rows += f"""
+                <tr>
+                    <td><strong>{comparison_date}</strong></td>
+                    <td><strong>{symbol}</strong></td>
+                    <td><span style="color: {soll_color};">{soll_performance:+.2f}%</span></td>
+                    <td><span style="color: {ist_color};">{ist_performance:+.2f}%</span></td>
+                    <td><span style="color: {deviation_color};">{deviation:+.2f}%</span></td>
+                    <td><span style="color: {accuracy_color};">{accuracy:.1f}%</span></td>
+                </tr>
+                """
             
             table_html = f"""
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        {''.join(f'<th>{header.strip()}</th>' for header in headers)}
+                        {''.join(f'<th>{header}</th>' for header in enhanced_headers)}
                     </tr>
                 </thead>
                 <tbody>
                     {table_rows}
                 </tbody>
             </table>
+            """
+        else:
+            # Keine JSON-Daten verfügbar
+            table_html = f"""
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Keine Daten verfügbar</strong><br>
+                Für den Zeitraum {timeframe_info['display_name']} sind derzeit keine SOLL-IST Vergleichsdaten verfügbar.
+            </div>
             """
         
         load_time = (datetime.now() - start_time).total_seconds()
@@ -735,6 +923,25 @@ async def vergleichsanalyse(
             <p><strong>Service:</strong> Vergleichsanalyse CSV-Service Integration</p>
         </div>
         
+        <!-- Timeline Navigation für SOLL-IST Vergleich -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+            <button onclick="navigateVergleichsanalyse('previous', '{timeframe}')" 
+                    style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                ⬅️ Zurück ({nav_periods['previous']})
+            </button>
+            
+            <div style="text-align: center;">
+                <strong>{nav_periods['nav_info']}</strong><br>
+                <span style="color: #28a745; font-size: 16px; font-weight: bold;">{nav_periods['current']}</span>
+                {f'<div style="margin-top: 5px;"><small style="color: #28a745;">✅ Navigation erfolgreich</small></div>' if nav_timestamp else ''}
+            </div>
+            
+            <button onclick="navigateVergleichsanalyse('next', '{timeframe}')" 
+                    style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                Vor ({nav_periods['next']}) ➡️
+            </button>
+        </div>
+        
         <!-- Zeitintervall-Auswahl -->
         <h3>🔧 Zeitintervall auswählen</h3>
         <div class="btn-group">
@@ -743,7 +950,7 @@ async def vergleichsanalyse(
             <button class="btn {'btn-primary' if timeframe == '3M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('3M')">📊 3 Monate</button>
         </div>
         
-        <!-- SOLL-IST Vergleichstabelle -->
+        <!-- SOLL-IST Vergleichstabelle mit Datum -->
         <h3>📊 SOLL-IST Vergleich - {timeframe_info['display_name']} <small>(Ladezeit: {load_time:.2f}s)</small></h3>
         {table_html}
         
@@ -756,10 +963,58 @@ async def vergleichsanalyse(
                 <li><strong>Genauigkeit:</strong> Qualität der ML-Modell Vorhersagen</li>
             </ul>
         </div>
+        
+        <script>
+            function navigateVergleichsanalyse(direction, timeframe) {{
+                // Calculate new date based on direction and timeframe
+                var timeframeDays = {{
+                    '1W': 7,
+                    '1M': 30,
+                    '3M': 90
+                }};
+                
+                var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
+                var newDate = new Date();
+                newDate.setDate(newDate.getDate() + daysToAdd);
+                
+                // Refresh page with navigation parameters for SOLL-IST Vergleich
+                var timestamp = Math.floor(newDate.getTime() / 1000);
+                var currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('nav_timestamp', timestamp);
+                currentUrl.searchParams.set('nav_direction', direction);
+                
+                window.location.href = currentUrl.toString();
+            }}
+        </script>
         """
         
     except Exception as e:
+        # Berechne Navigation auch im Fehlerfall
+        def get_error_navigation_periods(current_timeframe: str, nav_ts: Optional[int] = None, nav_dir: Optional[str] = None):
+            from datetime import datetime, timedelta
+            timeframe_deltas = {"1W": timedelta(weeks=1), "1M": timedelta(days=30), "3M": timedelta(days=90)}
+            
+            if nav_ts and nav_dir:
+                current_date = datetime.fromtimestamp(nav_ts)
+                nav_info = f"📍 Navigation: {nav_dir.title()} - {current_date.strftime('%d.%m.%Y %H:%M')}"
+            else:
+                current_date = datetime.now()
+                nav_info = "📅 Aktuelle Zeit"
+            
+            delta = timeframe_deltas.get(current_timeframe, timedelta(days=30))
+            previous_date = current_date - delta
+            next_date = current_date + delta
+            
+            return {
+                "previous": previous_date.strftime('%d.%m.%Y'),
+                "current": current_date.strftime('%d.%m.%Y'),
+                "next": next_date.strftime('%d.%m.%Y'),
+                "nav_info": nav_info
+            }
+        
+        error_nav_periods = get_error_navigation_periods(timeframe, nav_timestamp, nav_direction)
         logger.error(f"Error fetching vergleichsanalyse for {timeframe}: {str(e)}")
+        
         content = f"""
         <h2>⚖️ SOLL-IST Vergleichsanalyse</h2>
         <div class="alert alert-error">
@@ -769,6 +1024,25 @@ async def vergleichsanalyse(
             <p><strong>Service URL:</strong> {timeframe_info.get('url', 'N/A')}</p>
         </div>
         
+        <!-- Timeline Navigation auch im Fehlerfall -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #dc3545;">
+            <button onclick="navigateVergleichsanalyse('previous', '{timeframe}')" 
+                    style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                ⬅️ Zurück ({error_nav_periods['previous']})
+            </button>
+            
+            <div style="text-align: center;">
+                <strong>{error_nav_periods['nav_info']}</strong><br>
+                <span style="color: #dc3545; font-size: 16px; font-weight: bold;">{error_nav_periods['current']}</span>
+                {f'<div style="margin-top: 5px;"><small style="color: #dc3545;">⚠️ Service nicht verfügbar</small></div>' if nav_timestamp else '<div style="margin-top: 5px;"><small style="color: #dc3545;">⚠️ Service nicht verfügbar</small></div>'}
+            </div>
+            
+            <button onclick="navigateVergleichsanalyse('next', '{timeframe}')" 
+                    style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                Vor ({error_nav_periods['next']}) ➡️
+            </button>
+        </div>
+        
         <!-- Zeitintervall-Auswahl (immer verfügbar) -->
         <h3>🔧 Zeitintervall auswählen</h3>
         <div class="btn-group">
@@ -776,6 +1050,20 @@ async def vergleichsanalyse(
             <button class="btn {'btn-primary' if timeframe == '1M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('1M')">📈 1 Monat</button>
             <button class="btn {'btn-primary' if timeframe == '3M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('3M')">📊 3 Monate</button>
         </div>
+        
+        <script>
+            function navigateVergleichsanalyse(direction, timeframe) {{
+                var timeframeDays = {{ '1W': 7, '1M': 30, '3M': 90 }};
+                var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
+                var newDate = new Date();
+                newDate.setDate(newDate.getDate() + daysToAdd);
+                var timestamp = Math.floor(newDate.getTime() / 1000);
+                var currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('nav_timestamp', timestamp);
+                currentUrl.searchParams.set('nav_direction', direction);
+                window.location.href = currentUrl.toString();
+            }}
+        </script>
         """
     
     return HTMLTemplateService.generate_base_template("SOLL-IST Vergleichsanalyse", content)

@@ -1,0 +1,55 @@
+[Unit]
+Description=Aktienanalyse Prediction Evaluation Service v1.0.0 - Automatische IST-Berechnung
+Documentation=https://github.com/aktienanalyse-ökosystem
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=exec
+User=aktienanalyse
+Group=aktienanalyse
+WorkingDirectory=/opt/aktienanalyse-ökosystem/services/prediction-evaluation-service
+
+# Environment
+Environment=PYTHONPATH=/opt/aktienanalyse-ökosystem
+Environment=SERVICE_PORT=8026
+Environment=POSTGRES_HOST=10.1.1.174
+Environment=POSTGRES_PORT=5432
+Environment=POSTGRES_DB=aktienanalyse_events
+Environment=POSTGRES_USER=aktienanalyse
+Environment=REDIS_HOST=10.1.1.174
+Environment=REDIS_PORT=6379
+EnvironmentFile=-/opt/aktienanalyse-ökosystem/.env
+
+# Execution
+ExecStartPre=/bin/mkdir -p /var/log/aktienanalyse
+ExecStart=/opt/aktienanalyse-ökosystem/venv/bin/python main.py
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Process Management
+Restart=always
+RestartSec=10
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Resource Limits
+LimitNOFILE=65536
+MemoryMax=512M
+CPUQuota=100%
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/aktienanalyse-ökosystem
+ReadWritePaths=/var/log/aktienanalyse
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=prediction-evaluation-service
+
+[Install]
+WantedBy=multi-user.target

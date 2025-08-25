@@ -143,7 +143,9 @@ class UnifiedProfitEngineProvider(IPredictionProvider):
             symbols = list(set(pred.symbol for pred in predictions))
             
             # Use Market Data Service for actual returns (fallback: mock)
-            url = f"http://10.1.1.174:8020/api/market-data/bulk"
+            market_data_host = os.getenv("MARKET_DATA_HOST", "10.1.1.174")
+            market_data_port = os.getenv("MARKET_DATA_PORT", "8020")
+            url = f"http://{market_data_host}:{market_data_port}/api/market-data/bulk"
             params = {'symbols': ','.join(symbols)}
             
             actual_returns = {}

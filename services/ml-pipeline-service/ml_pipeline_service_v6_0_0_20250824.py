@@ -35,6 +35,7 @@ Version: 6.0.0 (Clean Architecture Refactored)
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 import traceback
@@ -279,10 +280,14 @@ class ServiceConfiguration:
         self.postgres_password = "secure_password_2024"
         
         # Event Bus Configuration
-        self.event_bus_url = "http://localhost:8014"
+        event_bus_host = os.getenv("EVENT_BUS_HOST", "localhost")
+        event_bus_port = os.getenv("EVENT_BUS_PORT", "8014")
+        self.event_bus_url = f"http://{event_bus_host}:{event_bus_port}"
         
         # Market Data Service Configuration
-        self.market_data_service_url = "http://localhost:8002"
+        market_data_host = os.getenv("MARKET_DATA_HOST", "localhost")  
+        market_data_port = os.getenv("MARKET_DATA_PORT", "8002")
+        self.market_data_service_url = f"http://{market_data_host}:{market_data_port}"
         
         # ML Configuration
         self.model_storage_path = "/opt/aktienanalyse-ökosystem/models"

@@ -17,6 +17,7 @@ Datum: 18. August 2025
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 import traceback
@@ -35,8 +36,22 @@ from contextlib import asynccontextmanager
 project_root = str(Path(__file__).parent.parent.parent)
 sys.path.insert(0, project_root)
 
-# Import configuration
-from config.ml_service_config import ML_SERVICE_CONFIG
+# Service configuration
+ML_SERVICE_CONFIG = {
+    'service': {
+        'port': int(os.getenv('ML_ANALYTICS_SERVICE_PORT', '8021'))  # HLD-konform
+    },
+    'database': {
+        'host': os.getenv('POSTGRES_HOST', 'localhost'),
+        'port': int(os.getenv('POSTGRES_PORT', '5432')),
+        'name': os.getenv('POSTGRES_DB', 'aktienanalyse'),
+        'user': os.getenv('POSTGRES_USER', 'aktienanalyse'),
+        'password': os.getenv('POSTGRES_PASSWORD', '')
+    },
+    'storage': {
+        'model_storage_path': os.getenv('ML_MODEL_STORAGE_PATH', './models')
+    }
+}
 
 # Import ML modules
 from basic_features_v1_0_0_20250818 import BasicFeatureEngine
@@ -338,28 +353,18 @@ class MLAnalyticsService:
             return {'AAPL': 0.1, 'MSFT': 0.08, 'GOOGL': 0.12}  # Default predictions
     
     async def _initialize_database(self):
-        """Initialisiert PostgreSQL Database Pool"""
+        """Initialisiert zentralen Database Connection Manager"""
         try:
-            db_config = ML_SERVICE_CONFIG['database']
-            # SECURITY FIX: Use asyncpg.create_pool with separate parameters to avoid password logging
-            connection_params = {
-                "host": db_config['host'],
-                "port": db_config['port'],
-                "database": db_config['name'],
-                "user": db_config['user'],
-                "password": db_config['password']
-            }
+            # Import centralized database manager
+            from shared.database_connection_manager_v1_0_0_20250825 import DatabaseConnectionManager
             
-            self.database_pool = await asyncpg.create_pool(
-                **connection_params,
-                min_size=db_config.get('min_connections', 5),
-                max_size=db_config.get('max_connections', 20),
-                command_timeout=60,
-                server_settings={
-                    'application_name': 'ml-analytics-v1.0.0',
-                    'jit': 'off'
-                }
-            )
+            # Use centralized database connection manager
+            db_manager = DatabaseConnectionManager()
+            await db_manager.initialize()
+            
+            # Store the manager instead of direct pool
+            self.database_manager = db_manager
+            self.database_pool = db_manager.pool  # For backward compatibility
             
             # Test connection and check ML schema
             async with self.database_pool.acquire() as conn:
