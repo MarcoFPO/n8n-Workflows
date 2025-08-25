@@ -1,1 +1,0 @@
-# Unified Profit Engine Enhanced v6.0.0 - Clean Architecture
