@@ -1,0 +1,145 @@
+# CODEOWNERS for Intelligent Team Routing
+# This file defines team ownership for automatic code review assignment
+# Works in conjunction with Issue Analysis Intelligence for comprehensive team routing
+
+# =============================================================================
+# GLOBAL OWNERSHIP (Architecture Team oversees all changes)
+# =============================================================================
+* @aktienanalyse-ecosystem/architecture-team
+
+# =============================================================================
+# DOMAIN LAYER (Business Logic)
+# =============================================================================
+services/*/domain/ @aktienanalyse-ecosystem/architecture-team @aktienanalyse-ecosystem/backend-team
+services/*/domain/entities/ @aktienanalyse-ecosystem/architecture-team
+services/*/domain/value_objects/ @aktienanalyse-ecosystem/architecture-team
+services/*/domain/repositories/ @aktienanalyse-ecosystem/architecture-team @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# APPLICATION LAYER (Use Cases)
+# =============================================================================
+services/*/application/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/architecture-team
+services/*/application/use_cases/ @aktienanalyse-ecosystem/backend-team
+services/*/application/interfaces/ @aktienanalyse-ecosystem/backend-team
+services/*/application/dtos/ @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# INFRASTRUCTURE LAYER (External Services)
+# =============================================================================
+services/*/infrastructure/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/devops-team
+services/*/infrastructure/persistence/ @aktienanalyse-ecosystem/backend-team
+services/*/infrastructure/external_services/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/devops-team
+services/*/infrastructure/events/ @aktienanalyse-ecosystem/backend-team
+services/*/infrastructure/container/ @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# PRESENTATION LAYER (API Controllers)  
+# =============================================================================
+services/*/presentation/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/frontend-team
+services/*/presentation/controllers/ @aktienanalyse-ecosystem/backend-team
+services/*/presentation/models/ @aktienanalyse-ecosystem/backend-team
+services/*/presentation/middleware/ @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# ML/AI SERVICES (Machine Learning Team)
+# =============================================================================
+services/ml-analytics/ @aktienanalyse-ecosystem/ml-team @aktienanalyse-ecosystem/backend-team
+services/prediction-*/ @aktienanalyse-ecosystem/ml-team @aktienanalyse-ecosystem/backend-team
+services/*prediction*/ @aktienanalyse-ecosystem/ml-team @aktienanalyse-ecosystem/backend-team
+services/*/ml/ @aktienanalyse-ecosystem/ml-team
+services/*/ai/ @aktienanalyse-ecosystem/ml-team
+services/*/analytics/ @aktienanalyse-ecosystem/ml-team @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# PERFORMANCE CRITICAL SERVICES
+# =============================================================================
+services/portfolio-performance/ @aktienanalyse-ecosystem/performance-team @aktienanalyse-ecosystem/backend-team
+services/data-processing/ @aktienanalyse-ecosystem/performance-team @aktienanalyse-ecosystem/backend-team
+services/csv-processor/ @aktienanalyse-ecosystem/performance-team @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# DEVOPS & INFRASTRUCTURE
+# =============================================================================
+.github/workflows/ @aktienanalyse-ecosystem/devops-team @aktienanalyse-ecosystem/architecture-team
+docker-compose.yml @aktienanalyse-ecosystem/devops-team
+Dockerfile @aktienanalyse-ecosystem/devops-team
+*/Dockerfile @aktienanalyse-ecosystem/devops-team
+.env* @aktienanalyse-ecosystem/devops-team
+scripts/ @aktienanalyse-ecosystem/devops-team @aktienanalyse-ecosystem/architecture-team
+deploy/ @aktienanalyse-ecosystem/devops-team
+
+# =============================================================================
+# FRONTEND & UI
+# =============================================================================
+frontend/ @aktienanalyse-ecosystem/frontend-team
+web/ @aktienanalyse-ecosystem/frontend-team
+ui/ @aktienanalyse-ecosystem/frontend-team
+*.html @aktienanalyse-ecosystem/frontend-team
+*.css @aktienanalyse-ecosystem/frontend-team
+*.js @aktienanalyse-ecosystem/frontend-team @aktienanalyse-ecosystem/backend-team
+*.ts @aktienanalyse-ecosystem/frontend-team @aktienanalyse-ecosystem/backend-team
+*.vue @aktienanalyse-ecosystem/frontend-team
+*.react @aktienanalyse-ecosystem/frontend-team
+
+# =============================================================================
+# DOCUMENTATION
+# =============================================================================
+*.md @aktienanalyse-ecosystem/docs-team @aktienanalyse-ecosystem/architecture-team
+documentation/ @aktienanalyse-ecosystem/docs-team
+docs/ @aktienanalyse-ecosystem/docs-team
+README* @aktienanalyse-ecosystem/docs-team @aktienanalyse-ecosystem/architecture-team
+CHANGELOG* @aktienanalyse-ecosystem/docs-team
+API.md @aktienanalyse-ecosystem/docs-team @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# TESTING
+# =============================================================================
+tests/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/architecture-team
+*/tests/ @aktienanalyse-ecosystem/backend-team
+test/ @aktienanalyse-ecosystem/backend-team
+*/test/ @aktienanalyse-ecosystem/backend-team
+*test*.py @aktienanalyse-ecosystem/backend-team
+*_test.py @aktienanalyse-ecosystem/backend-team
+test_*.py @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# PERFORMANCE TESTING
+# =============================================================================
+tests/performance/ @aktienanalyse-ecosystem/performance-team @aktienanalyse-ecosystem/backend-team
+tests/load/ @aktienanalyse-ecosystem/performance-team
+performance/ @aktienanalyse-ecosystem/performance-team
+benchmarks/ @aktienanalyse-ecosystem/performance-team
+
+# =============================================================================
+# SECURITY
+# =============================================================================
+.github/workflows/security-*.yml @aktienanalyse-ecosystem/security-team @aktienanalyse-ecosystem/devops-team
+security/ @aktienanalyse-ecosystem/security-team
+*.security @aktienanalyse-ecosystem/security-team
+
+# =============================================================================
+# CONFIGURATION & CLEAN ARCHITECTURE COMPLIANCE
+# =============================================================================
+.github/workflows/issue-analysis-pipeline.yml @aktienanalyse-ecosystem/architecture-team @aktienanalyse-ecosystem/devops-team
+scripts/check_clean_architecture.py @aktienanalyse-ecosystem/architecture-team
+DEVELOPMENT_WORKFLOW_*.md @aktienanalyse-ecosystem/architecture-team @aktienanalyse-ecosystem/docs-team
+pyproject.toml @aktienanalyse-ecosystem/architecture-team @aktienanalyse-ecosystem/backend-team
+requirements*.txt @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/devops-team
+package*.json @aktienanalyse-ecosystem/frontend-team @aktienanalyse-ecosystem/backend-team
+
+# =============================================================================
+# BUSINESS LOGIC & DOMAIN MODELS
+# =============================================================================
+services/*/models/ @aktienanalyse-ecosystem/architecture-team @aktienanalyse-ecosystem/backend-team
+services/*/schemas/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/architecture-team
+services/*/entities/ @aktienanalyse-ecosystem/architecture-team
+services/*/value_objects/ @aktienanalyse-ecosystem/architecture-team
+
+# =============================================================================
+# DATABASE & DATA LAYER
+# =============================================================================
+migrations/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/devops-team
+*/migrations/ @aktienanalyse-ecosystem/backend-team
+*.sql @aktienanalyse-ecosystem/backend-team
+database/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/devops-team
+data/ @aktienanalyse-ecosystem/backend-team @aktienanalyse-ecosystem/ml-team
