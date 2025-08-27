@@ -1,0 +1,36 @@
+[importlinter]
+root_package = services
+
+[[importlinter.contracts]]
+name = "Clean Architecture Layer Dependencies"
+type = "forbidden"
+source_modules = [
+    "services.*.domain",
+]
+forbidden_modules = [
+    "services.*.application",
+    "services.*.infrastructure", 
+    "services.*.presentation",
+]
+
+[[importlinter.contracts]]  
+name = "Application Layer Dependencies"
+type = "forbidden"
+source_modules = [
+    "services.*.application",
+]
+forbidden_modules = [
+    "services.*.infrastructure",
+    "services.*.presentation",
+]
+
+[[importlinter.contracts]]
+name = "No Circular Dependencies"
+type = "independence"
+modules = [
+    "services.frontend-service",
+    "services.ml-analytics-service", 
+    "services.event-bus-service",
+    "services.data-processing-service",
+    "services.prediction-tracking-service",
+]

@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-08-27T05:21:52.785669",
+  "workflows": {
+    "data_processing_api_discovery": {
+      "success": true,
+      "has_docs": true,
+      "has_openapi": true,
+      "details": "Docs: 200, OpenAPI: 200",
+      "available_endpoints": [
+        "/health",
+        "/api/v1/data/predictions",
+        "/api/v1/data/top15-predictions",
+        "/api/v1/data/predictions/csv"
+      ],
+      "endpoint_count": 4
+    },
+    "data_processing_health_check": {
+      "success": true,
+      "service_version": "6.1.0",
+      "architecture": "clean",
+      "features": [
+        "csv_processing",
+        "data_transformation",
+        "prediction_storage"
+      ],
+      "csv_processing_available": true,
+      "details": "Version 6.1.0, Features: 3"
+    },
+    "ml_analytics_capabilities": {
+      "success": true,
+      "service_phase": "Phase 6 - Automated Retraining & Versioning",
+      "version": "1.0.0",
+      "uptime_seconds": 31678.408915,
+      "components": {
+        "database": true,
+        "feature_engine": true,
+        "lstm_model": true,
+        "sentiment_model": true,
+        "fundamental_model": true,
+        "meta_model": true,
+        "multi_horizon_models": 4,
+        "multi_horizon_ensemble": true,
+        "synthetic_trainer": true,
+        "version_manager": true,
+        "retraining_scheduler": true
+      },
+      "model_info": {},
+      "prediction_ready": false,
+      "details": "Phase: Phase 6 - Automated Retraining & Versioning, Uptime: 8.8h"
+    },
+    "ml_prediction_endpoint": {
+      "success": false,
+      "status_code": 404,
+      "prediction_endpoint_available": false,
+      "response_time": 0.000952
+    },
+    "event_bus_health": {
+      "success": true,
+      "version": "6.2.0",
+      "uptime_seconds": 38715.648494,
+      "redis_healthy": true,
+      "redis_url": "redis://localhost:6379/0",
+      "event_bus_ready": true,
+      "details": "Version 6.2.0, Redis: healthy"
+    },
+    "event_publishing_test": {
+      "success": false,
+      "status_code": 404,
+      "publish_endpoint_available": false,
+      "event_accepted": false
+    },
+    "prediction_tracking_capabilities": {
+      "success": true,
+      "version": "6.1.0",
+      "architecture": "clean",
+      "features": [
+        "soll_ist_comparison",
+        "prediction_tracking",
+        "accuracy_scoring"
+      ],
+      "soll_ist_available": true,
+      "prediction_tracking_available": true,
+      "accuracy_scoring_available": true,
+      "details": "Features: soll_ist_comparison, prediction_tracking, accuracy_scoring"
+    },
+    "soll_ist_comparison_test": {
+      "success": false,
+      "status_code": 404,
+      "comparison_endpoint_available": false,
+      "response_time": 0.001158
+    },
+    "profit_engine_connectivity": {
+      "success": true,
+      "service": "unified-profit-engine-enhanced",
+      "version": "6.0.0",
+      "event_bus_connected": true,
+      "redis_connected": true,
+      "engine_operational": true,
+      "details": "Event Bus: ✅, Redis: ✅"
+    },
+    "integrated_flow_stock_analysis_flow": {
+      "success": true,
+      "scenario": "stock_analysis_flow",
+      "description": "Aktienanalyse von Eingabe bis Ergebnis",
+      "steps_tested": 4,
+      "services_available": 4,
+      "details": "data-processing: ✅ Available; ml-analytics: ✅ Available; prediction-tracking: ✅ Available; profit-engine: ✅ Available"
+    }
+  }
+}

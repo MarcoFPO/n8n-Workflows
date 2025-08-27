@@ -1,0 +1,197 @@
+{
+  "timestamp": "2025-08-27T05:20:24.656463",
+  "screenshots": [
+    {
+      "port": 8080,
+      "screenshots": [
+        {
+          "success": true,
+          "url": "http://10.1.1.174:8080/",
+          "filename": "screenshots/port_8080_homepage.html",
+          "content_length": 11169,
+          "ui_analysis": {
+            "bootstrap_detected": false,
+            "responsive_classes": true,
+            "navigation_elements": {
+              "nav_tag": false,
+              "navbar": false,
+              "menu_items": 0,
+              "timeline_nav": true
+            },
+            "form_elements": {
+              "forms": 0,
+              "inputs": 0,
+              "buttons": 0,
+              "selects": 0
+            },
+            "data_elements": {
+              "tables": 1,
+              "charts": false,
+              "cards": 0,
+              "alerts": 0
+            },
+            "javascript_detected": true,
+            "css_detected": true,
+            "title": "KI-Prognosen mit Durchschnittswerten - Enhanced GUI v8.1.0",
+            "meta_viewport": true
+          },
+          "page_name": "homepage",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/predictions",
+          "page_name": "ki_prognosen",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/comparison",
+          "page_name": "soll_ist_vergleich",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/dashboard",
+          "page_name": "dashboard",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/predictions?timeframe=1W",
+          "page_name": "timeline_1w",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/predictions?timeframe=1M",
+          "page_name": "timeline_1m",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/predictions?timeframe=3M",
+          "page_name": "timeline_3m",
+          "port": 8080
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8080/predictions?timeframe=1Y",
+          "page_name": "timeline_1y",
+          "port": 8080
+        }
+      ]
+    },
+    {
+      "port": 8081,
+      "screenshots": [
+        {
+          "success": false,
+          "error": "HTTP 503",
+          "url": "http://10.1.1.174:8081/",
+          "page_name": "homepage",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/predictions",
+          "page_name": "ki_prognosen",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/comparison",
+          "page_name": "soll_ist_vergleich",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/dashboard",
+          "page_name": "dashboard",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/predictions?timeframe=1W",
+          "page_name": "timeline_1w",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/predictions?timeframe=1M",
+          "page_name": "timeline_1m",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/predictions?timeframe=3M",
+          "page_name": "timeline_3m",
+          "port": 8081
+        },
+        {
+          "success": false,
+          "error": "HTTP 404",
+          "url": "http://10.1.1.174:8081/predictions?timeframe=1Y",
+          "page_name": "timeline_1y",
+          "port": 8081
+        }
+      ]
+    }
+  ],
+  "ui_analysis": {},
+  "responsive_testing": {
+    "desktop": {
+      "success": true,
+      "has_viewport_meta": true,
+      "has_bootstrap_grid": false,
+      "has_responsive_images": false,
+      "content_length": 11169
+    },
+    "tablet": {
+      "success": true,
+      "has_viewport_meta": true,
+      "has_bootstrap_grid": false,
+      "has_responsive_images": false,
+      "content_length": 11169
+    },
+    "mobile": {
+      "success": true,
+      "has_viewport_meta": true,
+      "has_bootstrap_grid": false,
+      "has_responsive_images": false,
+      "content_length": 11169
+    }
+  },
+  "accessibility": {
+    "alt_attributes": 0,
+    "aria_labels": 0,
+    "semantic_html": {
+      "header": false,
+      "nav": false,
+      "main": false,
+      "section": false,
+      "footer": false
+    },
+    "form_labels": 0,
+    "skip_links": false,
+    "focus_management": false,
+    "color_contrast": {
+      "color_indicators_found": 4,
+      "has_css_colors": true,
+      "potential_contrast_issues": false
+    }
+  }
+}

@@ -1,0 +1,231 @@
+{
+  "test_run_timestamp": "2025-08-27T05:20:22.386695",
+  "system_info": {
+    "server": "10.1.1.174",
+    "architecture": "Clean Architecture v6.0.0",
+    "services_count": 11
+  },
+  "phase_results": {
+    "PHASE_1_FRONTEND": {
+      "frontend_port_8080": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.09178972244262695,
+        "meets_threshold": true,
+        "content_length": 11169,
+        "response_preview": "\n    <!DOCTYPE html>\n    <html lang=\"de\">\n    <head>\n        <meta charset=\"UTF-8\">\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n        <title>KI-Prognosen mit Durch",
+        "has_bootstrap": false,
+        "has_navigation": true
+      },
+      "frontend_port_8081": {
+        "success": false,
+        "status_code": 503,
+        "response_time": 0.0021469593048095703,
+        "meets_threshold": true,
+        "content_length": 49,
+        "response_preview": "{\"detail\":\"Service initializing, please wait...\"}"
+      },
+      "timeline_navigation_1W": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.0017633438110351562,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      },
+      "timeline_navigation_1M": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.0015697479248046875,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      },
+      "timeline_navigation_3M": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.001405954360961914,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      },
+      "timeline_navigation_1Y": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.0015106201171875,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      }
+    },
+    "PHASE_2_DATA": {
+      "csv_to_json_processing": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.001236,
+        "meets_threshold": true
+      },
+      "service_data-processing": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.0014960765838623047,
+        "meets_threshold": true,
+        "content_length": 211,
+        "response_preview": "{\"status\":\"healthy\",\"service\":\"data-processing-service\",\"version\":\"6.1.0\",\"architecture\":\"clean\",\"features\":[\"csv_processing\",\"data_transformation\",\"prediction_storage\"],\"timestamp\":\"2025-08-27T07:20:"
+      },
+      "service_ml-analytics": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.03430604934692383,
+        "meets_threshold": true,
+        "content_length": 1993,
+        "response_preview": "{\"service\":\"ml-analytics\",\"version\":\"1.0.0\",\"phase\":\"Phase 6 - Automated Retraining & Versioning\",\"status\":\"healthy\",\"timestamp\":\"2025-08-27T05:20:22.492007\",\"uptime_seconds\":31588.104258,\"components\""
+      },
+      "service_event-bus": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.0018634796142578125,
+        "meets_threshold": true,
+        "content_length": 211,
+        "response_preview": "{\"status\":\"healthy\",\"service\":\"event-bus-service\",\"version\":\"6.2.0\",\"timestamp\":\"2025-08-27T07:20:22.526332\",\"components\":{\"redis\":\"healthy\"},\"uptime_seconds\":38625.373802,\"redis_url\":\"redis://localho"
+      },
+      "service_yahoo-finance-api": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.0018360614776611328,
+        "meets_threshold": true,
+        "content_length": 218,
+        "response_preview": "{\"status\":\"healthy\",\"service\":\"prediction-tracking-service\",\"version\":\"6.1.0\",\"architecture\":\"clean\",\"features\":[\"soll_ist_comparison\",\"prediction_tracking\",\"accuracy_scoring\"],\"timestamp\":\"2025-08-27"
+      },
+      "service_portfolio-performance": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.0017533302307128906,
+        "meets_threshold": true,
+        "content_length": 224,
+        "response_preview": "{\"status\":\"healthy\",\"version\":\"6.2.0\",\"service\":\"enhanced-ml-predictions-tracking\",\"timestamp\":\"2025-08-27T07:20:22.529944\",\"features\":{\"averages_support\":true,\"ml_predictions_integration\":true,\"perfo"
+      },
+      "service_notification-service": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 1.0049395561218262,
+        "meets_threshold": false,
+        "content_length": 174,
+        "response_preview": "{\"status\":\"healthy\",\"service\":\"system-monitoring-api\",\"timestamp\":\"2025-08-27T07:20:23.534500\",\"system_online\":true,\"cpu_percent\":31.9,\"ram_percent\":28.8,\"disk_percent\":14.2}"
+      },
+      "service_dashboard-aggregator": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='10.1.1.174', port=8022): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7a9bae604bd0>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "response_time": 0.001180410385131836
+      },
+      "service_config-service": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='10.1.1.174', port=8023): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7a9bae618850>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "response_time": 0.0010724067687988281
+      },
+      "service_system-monitor": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='10.1.1.174', port=8024): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7a9bae61a610>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "response_time": 0.0009860992431640625
+      },
+      "service_database-service": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.02178192138671875,
+        "meets_threshold": true,
+        "content_length": 168,
+        "response_preview": "{\"healthy\":true,\"service\":\"unified-profit-engine-enhanced\",\"version\":\"6.0.0\",\"event_bus_connected\":true,\"redis_connected\":true,\"timestamp\":\"2025-08-27T07:20:23.559761\"}"
+      },
+      "service_auth-service": {
+        "success": true,
+        "status_code": 200,
+        "response_time": 0.001961231231689453,
+        "meets_threshold": true,
+        "content_length": 106,
+        "response_preview": "{\"status\":\"healthy\",\"service\":\"market-data-collector\",\"version\":\"1.0.0\",\"compliance\":\"HLD_LLD_conformant\"}"
+      },
+      "services_overview": {
+        "success": true,
+        "healthy_services": 8,
+        "total_services": 11,
+        "health_percentage": 72.72727272727273
+      }
+    },
+    "PHASE_3_BUSINESS": {
+      "ki_prognosen_workflow": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.001990795135498047,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      },
+      "soll_ist_vergleich_workflow": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.001737356185913086,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      }
+    },
+    "PHASE_4_REALTIME": {
+      "event_bus_communication": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.0016100406646728516,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      },
+      "event_publishing": {
+        "success": false,
+        "status_code": 404,
+        "response_time": 0.0015139579772949219,
+        "meets_threshold": true,
+        "content_length": 22,
+        "response_preview": "{\"detail\":\"Not Found\"}"
+      },
+      "realtime_dashboard": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='10.1.1.174', port=8022): Max retries exceeded with url: /dashboard (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7a9bae634d10>: Failed to establish a new connection: [Errno 111] Connection refused'))",
+        "response_time": 0.0009989738464355469
+      }
+    },
+    "PHASE_5_PERFORMANCE": {
+      "performance_under_load": {
+        "success": true,
+        "average_response_time": 0.03143665790557861,
+        "successful_requests": 30,
+        "total_requests": 30,
+        "success_rate": 100.0,
+        "meets_threshold": true
+      },
+      "invalid_stock_symbol": {
+        "success": true,
+        "status_code": 404,
+        "expected_status": [
+          400,
+          404
+        ],
+        "has_error_message": true
+      },
+      "malformed_csv": {
+        "success": false,
+        "status_code": 404,
+        "expected_status": [
+          400
+        ],
+        "has_error_message": true
+      },
+      "nonexistent_endpoint": {
+        "success": true,
+        "status_code": 404,
+        "expected_status": [
+          404
+        ],
+        "has_error_message": true
+      }
+    }
+  }
+}
