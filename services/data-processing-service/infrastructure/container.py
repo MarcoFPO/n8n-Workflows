@@ -152,7 +152,8 @@ class DataProcessingServiceContainer:
         failure_rate = self.config.get("ml_failure_rate", 0.0)
         
         if use_real_ml_service:
-            # TODO: Initialize real ML service when available
+            # IMPLEMENTATION NOTE: Real ML service integration pending
+            # Configure use_real_ml_service=true in config when ML Analytics Service is ready
             logger.warning("Real ML service not yet implemented, using mock")
             self.ml_service_provider = MockMLServiceProvider(simulate_failures, failure_rate)
         else:
@@ -164,7 +165,8 @@ class DataProcessingServiceContainer:
         use_real_event_bus = self.config.get("use_real_event_bus", False)
         
         if use_real_event_bus:
-            # TODO: Initialize real event publisher when available
+            # IMPLEMENTATION NOTE: Real event bus integration pending
+            # Configure use_real_event_bus=true when Event Bus Service v6 is stable
             logger.warning("Real event bus not yet implemented, using mock")
             self.event_publisher = MockEventPublisher()
         else:

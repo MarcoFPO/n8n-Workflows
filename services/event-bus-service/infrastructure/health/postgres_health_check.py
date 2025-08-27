@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 PostgreSQL Health Check Implementation
 Clean Architecture - Infrastructure Layer
@@ -21,7 +25,7 @@ class PostgreSQLHealthCheck:
         try:
             self._connection = await asyncpg.connect(self.connection_string)
         except Exception as e:
-            print(f"PostgreSQL connection failed: {e}")
+            logger.info(f"PostgreSQL connection failed: {e}")
             
     async def check_health(self) -> Dict[str, Any]:
         """Check PostgreSQL health status"""

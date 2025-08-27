@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 Redis Health Check Implementation
 Clean Architecture - Infrastructure Layer
@@ -20,7 +24,7 @@ class RedisHealthCheck:
         try:
             self._redis_client = await aioredis.from_url(self.redis_url)
         except Exception as e:
-            print(f"Redis connection failed: {e}")
+            logger.info(f"Redis connection failed: {e}")
             
     async def check_health(self) -> Dict[str, Any]:
         """Check Redis health status"""

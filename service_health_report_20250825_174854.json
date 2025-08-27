@@ -1,0 +1,171 @@
+{
+  "timestamp": "2025-08-25T17:48:54.425414",
+  "services": {
+    "frontend": {
+      "name": "aktienanalyse-frontend.service",
+      "description": "Frontend Service - Clean Architecture",
+      "migration_status": "migrated",
+      "systemctl": {
+        "active": true,
+        "status": "running",
+        "details": "\u25cf aktienanalyse-frontend.service - Aktienanalyse Frontend Service\n     Loaded: loaded (/etc/systemd/system/aktienanalyse-frontend.service; enabled; preset: enabled)\n     Active: active (running) since Mon 2025-08-25 17:05:02 UTC; 43min ago\n       Docs: https://github.com/MarcoFPO/aktienanalyse--kosystem\n   Main PID: 3461972 (python)\n      Tasks: 6 (limit: 76868)\n     Memory: 49.4M (max: 512.0M available: 462.5M)\n        CPU: 2.705s\n     CGroup: /system.slice/aktienanalyse-frontend.service\n             \u2514\u25003461972 /opt/aktienanalyse-\u00f6kosystem/venv/bin/python run_frontend_new.py\n\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: 2025-08-25 17:05:03,396 - __main__ - INFO - Configuration: 0.0.0.0:8080\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: 2025-08-25 17:05:03,396 - __main__ - INFO - Architecture: Clean Architecture with SOLID Principles\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: 2025-08-25 17:05:03,396 - __main__ - INFO - New in v8.0.2: Improved CSV parsing for empty data handling\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: INFO:     Started server process [3461972]\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: INFO:     Waiting for application startup.\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: INFO:     Application startup complete.\nAug 25 17:05:03 claude aktienanalyse-frontend[3461972]: INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)\nAug 25 17:09:01 claude aktienanalyse-frontend[3461972]: INFO:     127.0.0.1:57914 - \"GET /health HTTP/1.1\" 200 OK\nAug 25 17:10:47 claude aktienanalyse-frontend[3461972]: INFO:     127.0.0.1:33654 - \"GET /openapi.json HTTP/1.1\" 200 OK\nAug 25 17:15:36 claude aktienanalyse-frontend[3461972]: INFO:     127.0.0.1:60702 - \"GET /openapi.json HTTP/1.1\" 200 OK\n"
+      },
+      "health": {
+        "healthy": true,
+        "status_code": 200,
+        "data": {
+          "status": "healthy",
+          "service": "Aktienanalyse Frontend Service - Consolidated + Fixed",
+          "version": "8.0.1",
+          "timestamp": "2025-08-25T17:48:54.445894",
+          "consolidation_status": "13_versions_consolidated_to_1",
+          "architecture": "clean_architecture_solid_principles",
+          "fixes_applied": "analyse_functions_restored_soll_ist_vergleich_restored"
+        }
+      },
+      "overall_status": "healthy"
+    },
+    "data-processing": {
+      "name": "aktienanalyse-data-processing-v6.service",
+      "description": "Data Processing Service - Clean Architecture",
+      "migration_status": "migrated",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-data-processing-v6.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "prediction-tracking": {
+      "name": "aktienanalyse-prediction-tracking-v6.service",
+      "description": "Prediction Tracking - Clean Architecture",
+      "migration_status": "repaired",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-prediction-tracking-v6.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "broker-gateway": {
+      "name": "aktienanalyse-broker-gateway-eventbus-first.service",
+      "description": "Broker Gateway - Event-Bus-First",
+      "migration_status": "stable",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-broker-gateway-eventbus-first.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "intelligent-core": {
+      "name": "aktienanalyse-intelligent-core-eventbus-first.service",
+      "description": "Intelligent Core - Event-Bus-First",
+      "migration_status": "stable",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-intelligent-core-eventbus-first.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "monitoring": {
+      "name": "aktienanalyse-monitoring-modular.service",
+      "description": "Monitoring Service - Modular",
+      "migration_status": "stable",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-monitoring-modular.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "ml-analytics": {
+      "name": "aktienanalyse-ml-analytics-v6.service",
+      "description": "ML Analytics - Database Issues",
+      "migration_status": "failing",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-ml-analytics-v6.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "event-bus": {
+      "name": "aktienanalyse-event-bus-v6.service",
+      "description": "Event Bus - Runtime Issues",
+      "migration_status": "failing",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-event-bus-v6.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "diagnostic": {
+      "name": "aktienanalyse-diagnostic-v6.service",
+      "description": "Diagnostic Service",
+      "migration_status": "unknown",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-diagnostic-v6.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    },
+    "marketcap": {
+      "name": "aktienanalyse-marketcap-v6.service",
+      "description": "MarketCap Service",
+      "migration_status": "unknown",
+      "systemctl": {
+        "active": false,
+        "status": "inactive",
+        "details": "Service aktienanalyse-marketcap-v6.service is not active"
+      },
+      "health": {
+        "healthy": false,
+        "error": "Service not active"
+      },
+      "overall_status": "unhealthy"
+    }
+  },
+  "summary": {
+    "total_services": 10,
+    "active_services": 1,
+    "healthy_services": 1,
+    "migrated_services": 2,
+    "failing_services": 2
+  }
+}

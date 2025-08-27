@@ -25,7 +25,7 @@ import numpy as np
 import asyncpg
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple, Union
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -53,41 +53,60 @@ ML_SERVICE_CONFIG = {
     }
 }
 
-# Import ML modules
-from basic_features_v1_0_0_20250818 import BasicFeatureEngine
-from simple_lstm_model_v1_0_0_20250818 import SimpleLSTMModel
-from multi_horizon_lstm_model_v1_0_0_20250818 import MultiHorizonLSTMModel
-from multi_horizon_ensemble_v1_0_0_20250818 import MultiHorizonEnsembleManager
-from synthetic_multi_horizon_trainer_v1_0_0_20250818 import SyntheticMultiHorizonTrainer
-from sentiment_features_v1_0_0_20250818 import SentimentFeatureEngine
-from sentiment_xgboost_model_v1_0_0_20250818 import SentimentXGBoostModel
-from fundamental_features_v1_0_0_20250818 import FundamentalFeatureEngine
-from fundamental_xgboost_model_v1_0_0_20250818 import FundamentalXGBoostModel
-
-# Phase 13 Import - Advanced Risk Management Engine
-from risk_management_engine_v1_0_0_20250819 import AdvancedRiskEngine, RiskMeasure, VaRMethod, StressTestType
-
-# Phase 14 Import - ESG Analytics und Sustainable Finance Engine
-from esg_analytics_engine_v1_0_0_20250819 import ESGAnalyticsEngine, ESGCategory, ESGRatingAgency, SustainabilityMetric, ClimateRiskType
-
-# Phase 15 Import - Real-Time Market Intelligence und Event-Driven Analytics Engine
-from market_intelligence_engine_v1_0_0_20250819 import MarketIntelligenceEngine, EventType, EventPriority, MarketRegime
-
-# Phase 16 Import - Classical-Enhanced ML Models für LXC 10.1.1.174
-from quantum_ml_engine_v1_0_0_20250819 import ClassicalEnhancedMLEngine, ClassicalAlgorithmType, ModelArchitectureType, VCEResult, QIAOAResult
-from lxc_performance_monitor_v1_0_0_20250819 import LXCPerformanceMonitor
-from meta_lightgbm_model_v1_0_0_20250818 import MetaLightGBMModel
-from model_version_manager_v1_0_0_20250818 import ModelVersionManager
-from automated_retraining_scheduler_v1_0_0_20250818 import AutomatedRetrainingScheduler
-from realtime_streaming_analytics_v1_0_0_20250818 import RealTimeStreamingAnalytics
-from portfolio_risk_manager_v1_0_0_20250818 import PortfolioRiskManager
-from advanced_portfolio_optimizer_v1_0_0_20250818 import AdvancedPortfolioOptimizer, OptimizationMethod, InvestorView, ViewConfidence
-from multi_asset_correlation_engine_v1_0_0_20250818 import MultiAssetCorrelationEngine, AssetClass, Sector, MarketRegime
-from global_portfolio_optimizer_v1_0_0_20250818 import GlobalPortfolioOptimizer, AllocationStrategy, CurrencyHedgeStrategy, RiskBudget
-from market_microstructure_engine_v1_0_0_20250818 import MarketMicrostructureEngine
-from ai_options_pricing_engine_v1_0_0_20250818 import AIOptionsOraclingEngine, OptionType, VolatilityModel, PricingMethod
-from exotic_derivatives_engine_v1_0_0_20250819 import ExoticDerivativesEngine, ExoticType, BarrierType, AsianType, LookbackType, SimulationMethod
-from ml_event_publisher_v1_0_0_20250818 import ml_event_publisher
+# Import ML modules - REPAIRED: Using Legacy Modules Collection
+from legacy_modules_collection_v1_0_0_20250818 import (
+    # Feature Engines
+    BasicFeatureEngine,
+    SentimentFeatureEngine, 
+    FundamentalFeatureEngine,
+    
+    # ML Models
+    SimpleLSTMModel,
+    MultiHorizonLSTMModel,
+    SentimentXGBoostModel,
+    FundamentalXGBoostModel,
+    MetaLightGBMModel,
+    
+    # Ensemble & Management
+    MultiHorizonEnsembleManager,
+    SyntheticMultiHorizonTrainer,
+    ModelVersionManager,
+    AutomatedRetrainingScheduler,
+    
+    # Analytics
+    RealTimeStreamingAnalytics,
+    PortfolioRiskManager,
+    
+    # Portfolio Optimization
+    AdvancedPortfolioOptimizer, OptimizationMethod, InvestorView, ViewConfidence,
+    
+    # Correlation & Global
+    MultiAssetCorrelationEngine, AssetClass, Sector, MarketRegime,
+    GlobalPortfolioOptimizer, AllocationStrategy, CurrencyHedgeStrategy, RiskBudget,
+    
+    # Market Analysis
+    MarketMicrostructureEngine,
+    
+    # Options & Derivatives
+    AIOptionsOraclingEngine, OptionType, VolatilityModel, PricingMethod,
+    ExoticDerivativesEngine, ExoticType, BarrierType, AsianType, LookbackType, SimulationMethod,
+    
+    # Risk Management (Phase 13)
+    AdvancedRiskEngine, RiskMeasure, VaRMethod, StressTestType,
+    
+    # ESG Analytics (Phase 14)
+    ESGAnalyticsEngine, ESGCategory, ESGRatingAgency, SustainabilityMetric, ClimateRiskType,
+    
+    # Market Intelligence (Phase 15)
+    MarketIntelligenceEngine, EventType, EventPriority,
+    
+    # Quantum ML (Phase 16)
+    ClassicalEnhancedMLEngine, ClassicalAlgorithmType, ModelArchitectureType, VCEResult, QIAOAResult,
+    LXCPerformanceMonitor,
+    
+    # Event Publisher
+    ml_event_publisher
+)
 
 # Setup simple logging
 logging.basicConfig(
@@ -2604,7 +2623,7 @@ async def get_carbon_footprint(symbol: str):
         if not ml_service.esg_analytics_engine:
             raise HTTPException(status_code=503, detail="ESG Analytics Engine not initialized")
         
-        carbon_footprint = await ml_service.esg_analytics_engine.analyze_carbon_footprint(symbol)
+        carbon_footprint = await ml_service.esg_analytics_engine.analyze_carbon_footlogger.info(symbol)
         
         return {
             "symbol": symbol,

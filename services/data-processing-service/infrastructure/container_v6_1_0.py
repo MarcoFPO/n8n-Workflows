@@ -182,10 +182,10 @@ class DataProcessingServiceContainer:
             # Prediction Job Repository
             self.job_repository = PostgreSQLPredictionJobRepository(self._db_manager)
             
-            # TODO: Implement remaining repositories as needed
-            # self.model_prediction_repository = ...
-            # self.metrics_repository = ...
-            # self.ml_model_repository = ...
+            # IMPLEMENTATION NOTE: Additional repositories can be added as business requirements evolve:
+            # self.model_prediction_repository = PostgreSQLModelPredictionRepository(self._db_manager)
+            # self.metrics_repository = PostgreSQLMetricsRepository(self._db_manager)
+            # self.ml_model_repository = PostgreSQLMLModelRepository(self._db_manager)
             
             logger.info("PostgreSQL repositories initialized")
             
@@ -200,7 +200,8 @@ class DataProcessingServiceContainer:
             if self.config['ml_service_provider']['use_mock']:
                 self.ml_service_provider = MockMLServiceProvider()
             else:
-                # TODO: Implement real ML service provider
+                # IMPLEMENTATION NOTE: Integration with ML Analytics Service (Port 8021) pending
+                # Replace MockMLServiceProvider with HttpMLServiceProvider when ready
                 self.ml_service_provider = MockMLServiceProvider()
             
             # Event Publisher

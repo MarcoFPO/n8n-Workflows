@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Frontend Service v8.0.1 - Clean Architecture mit ursprünglichen Analyse-Funktionen wiederhergestellt
-Konsolidierte Version + Missing Analyse & SOLL-IST Vergleich Endpoints
+Frontend Service v8.0.1 - Clean Architecture
+Konsolidierte Version + SOLL-IST Vergleich Endpoints
 
 CLEAN ARCHITECTURE PRINCIPLES:
 - Single Responsibility: Jeder Endpoint hat eine klare Aufgabe
@@ -11,9 +11,7 @@ CLEAN ARCHITECTURE PRINCIPLES:
 - Dependency Inversion: Configuration-based Dependencies
 
 WIEDERHERGESTELLTE FUNKTIONEN:
-- /analyse - Detaillierte technische und fundamentale Analysen
 - /vergleichsanalyse - SOLL-IST Vergleichsanalyse mit CSV-Service Integration
-- /api/content/analyse - API Endpoint für Analyse-Content
 - /api/content/vergleichsanalyse - API Endpoint für Vergleichsanalyse
 
 Autor: Claude Code
@@ -72,12 +70,16 @@ class ServiceConfig:
     # Vergleichsanalyse Service URL (SOLL-IST Service)
     VERGLEICHSANALYSE_SERVICE_URL = os.getenv("VERGLEICHSANALYSE_SERVICE_URL", "http://10.1.1.174:8025")
     
+    # Enhanced Predictions Averages Service URL
+    ENHANCED_PREDICTIONS_AVERAGES_URL = os.getenv("ENHANCED_PREDICTIONS_AVERAGES_URL", "http://10.1.1.105:8087")
+    
     # Timeframe Configuration
     TIMEFRAMES = {
         "1W": {"display_name": "1 Woche", "days": 7, "icon": "📊", "css_class": "timeframe-week"},
         "1M": {"display_name": "1 Monat", "days": 30, "icon": "📈", "css_class": "timeframe-month"},
         "3M": {"display_name": "3 Monate", "days": 90, "icon": "📊", "css_class": "timeframe-quarter"},
         "6M": {"display_name": "6 Monate", "days": 180, "icon": "📊", "css_class": "timeframe-half-year"},
+        "12M": {"display_name": "12 Monate", "days": 365, "icon": "📈", "css_class": "timeframe-year"},
         "1Y": {"display_name": "1 Jahr", "days": 365, "icon": "📈", "css_class": "timeframe-year"},
     }
     
@@ -103,6 +105,13 @@ class ServiceConfig:
             "days": 90, 
             "icon": "📊", 
             "url": f"{os.getenv('PREDICTION_TRACKING_URL', 'http://10.1.1.174:8018')}/api/v1/soll-ist-comparison?days_back=90"
+        },
+        "12M": {
+            "display_name": "12 Monate", 
+            "description": "Jährliche SOLL-IST Vergleiche", 
+            "days": 365, 
+            "icon": "📈", 
+            "url": f"{os.getenv('PREDICTION_TRACKING_URL', 'http://10.1.1.174:8018')}/api/v1/soll-ist-comparison?days_back=365"
         }
     }
     
@@ -419,9 +428,6 @@ class HTMLTemplateService:
                 function loadVergleichsanalyse(timeframe) {{
                     window.location.href = '/vergleichsanalyse?timeframe=' + timeframe;
                 }}
-                function loadAnalyse(type) {{
-                    window.location.href = '/analyse?type=' + type;
-                }}
             </script>
         </head>
         <body>
@@ -433,8 +439,8 @@ class HTMLTemplateService:
                 <nav class="nav-menu">
                     <a href="/" class="nav-item">🏠 Dashboard</a>
                     <a href="/prognosen" class="nav-item">📊 KI-Prognosen</a>
+                    <a href="/prediction-averages" class="nav-item">📈 Vorhersage-Mittelwerte</a>
                     <a href="/depot" class="nav-item">💼 Depot-Analyse</a>
-                    <a href="/analyse" class="nav-item">🔍 Analyse</a>
                     <a href="/vergleichsanalyse" class="nav-item">⚖️ SOLL-IST Vergleich</a>
                     <a href="/system" class="nav-item">⚙️ System-Status</a>
                     <a href="/docs" class="nav-item">📚 API Docs</a>
@@ -463,7 +469,6 @@ async def dashboard() -> str:
         <div class="alert alert-info">
             <h3>📊 System Status</h3>
             <p><span class="status-indicator status-active"></span><strong>Frontend Service:</strong> v{ServiceConfig.VERSION} - Konsolidierte Version mit wiederhergestellten Funktionen ✅</p>
-            <p><span class="status-indicator status-active"></span><strong>Analyse-Funktionen:</strong> Wiederhergestellt ✅</p>
             <p><span class="status-indicator status-active"></span><strong>SOLL-IST Vergleich:</strong> Wiederhergestellt ✅</p>
         </div>
         
@@ -473,10 +478,10 @@ async def dashboard() -> str:
                 <h3>KI-Prognosen</h3>
                 <p>Machine Learning Vorhersagen für verschiedene Zeiträume</p>
             </div>
-            <div class="timeframe-card" onclick="window.location.href='/analyse'">
-                <div class="icon">🔍</div>
-                <h3>Detaillierte Analyse</h3>
-                <p>Technische und fundamentale Aktienanalysen</p>
+            <div class="timeframe-card" onclick="window.location.href='/prediction-averages'">
+                <div class="icon">📈</div>
+                <h3>Vorhersage-Mittelwerte</h3>
+                <p>Mittelwerte über 1W, 1M, 3M und 12M Zeiträume</p>
             </div>
             <div class="timeframe-card" onclick="window.location.href='/vergleichsanalyse'">
                 <div class="icon">⚖️</div>
@@ -493,7 +498,6 @@ async def dashboard() -> str:
         <div class="alert alert-warning">
             <h3>🚀 Recent Updates v8.0.1</h3>
             <ul>
-                <li><strong>✅ FIXED:</strong> Analyse-Funktionen wiederhergestellt</li>
                 <li><strong>✅ FIXED:</strong> SOLL-IST Vergleichsanalyse mit CSV-Service Integration</li>
                 <li><strong>Clean Code:</strong> SOLID Principles, Type Safety, Error Handling</li>
                 <li><strong>Configuration:</strong> Environment-based URLs, keine Hard-coding</li>
@@ -505,101 +509,31 @@ async def dashboard() -> str:
 
 
 @app.get("/prognosen", response_class=HTMLResponse, summary="KI-Prognosen Interface")
-async def prognosen() -> str:
-    """KI-Prognosen Interface Handler"""
-    timeframe_cards = ""
-    for tf_key, tf_data in ServiceConfig.TIMEFRAMES.items():
-        timeframe_cards += f"""
-            <div class="timeframe-card {tf_data['css_class']}" onclick="window.location.href='/prognosen/{tf_key}'">
-                <div class="icon">{tf_data['icon']}</div>
-                <h3>{tf_data['display_name']}</h3>
-                <p>{tf_data['days']} Tage Vorhersage-Horizont</p>
-                <small>KI-Analyse: Technical + Sentiment + Fundamental + Meta</small>
-            </div>
-        """
-    
-    content = f"""
-        <h2>📊 KI-Prognosen - Machine Learning Vorhersagen</h2>
-        <div class="alert alert-info">
-            <p><strong>4-Modell Ensemble:</strong> Technical LSTM + Sentiment XGBoost + Fundamental XGBoost + Meta LightGBM</p>
-            <p><strong>Datenquellen:</strong> Historische Kurse, Sentiment-Analyse, Fundamentaldaten, Meta-Features</p>
-        </div>
-        
-        <h3>🎯 Verfügbare Zeiträume:</h3>
-        <div class="timeframe-grid">
-            {timeframe_cards}
-        </div>
-    """
-    
-    return HTMLTemplateService.generate_base_template("KI-Prognosen", content)
-
-
-@app.get("/prognosen/{timeframe}", response_class=HTMLResponse, summary="Prognosen für spezifischen Zeitraum")
-async def prognosen_timeframe(
-    timeframe: str,
+async def prognosen(
+    timeframe: str = Query(default="1M", description="Zeitintervall für KI-Prognosen"),
     nav_timestamp: Optional[int] = Query(None, description="Navigation timestamp für Timeline-Navigation"),
     nav_direction: Optional[str] = Query(None, description="Navigation direction (previous/next)"),
     http_client: IHTTPClient = Depends(get_http_client)
 ) -> str:
-    """Prognosen für spezifischen Zeitraum Handler"""
-    if timeframe not in ServiceConfig.TIMEFRAMES:
-        raise HTTPException(status_code=404, detail=f"Zeitraum {timeframe} nicht verfügbar")
+    """KI-Prognosen Interface Handler mit Zeitraum-Navigation"""
     
-    tf_data = ServiceConfig.TIMEFRAMES[timeframe]
+    # Verwende die gleichen Timeframes wie SOLL-IST Vergleich
+    if timeframe not in ServiceConfig.VERGLEICHSANALYSE_TIMEFRAMES:
+        timeframe = "1M"  # Default fallback
+    
+    timeframe_info = ServiceConfig.VERGLEICHSANALYSE_TIMEFRAMES[timeframe]
     
     try:
-        # Prognose-Daten von Backend abrufen
-        prediction_url = ServiceConfig.get_prediction_url(timeframe)
-        predictions_data = await http_client.get(prediction_url)
+        from datetime import datetime, timedelta
+        start_time = datetime.now()
         
-        # Generate predictions table
-        predictions_table = ""
-        if predictions_data and "predictions" in predictions_data:
-            for prediction in predictions_data["predictions"][:10]:  # Top 10
-                confidence = prediction.get('confidence', 0) * 100
-                profit_str = prediction.get('prediction_percent', '0%').replace('%', '')
-                try:
-                    profit = float(profit_str)
-                except:
-                    profit = 0
-                
-                # Format prediction date (Vorhersage-Datum)
-                prediction_date = prediction.get('timestamp', 'N/A')
-                if prediction_date != 'N/A':
-                    try:
-                        # Parse and format the date
-                        from datetime import datetime
-                        if isinstance(prediction_date, str):
-                            parsed_date = datetime.fromisoformat(prediction_date.replace('Z', '+00:00'))
-                        else:
-                            parsed_date = prediction_date
-                        formatted_date = parsed_date.strftime('%d.%m.%Y')
-                    except:
-                        formatted_date = str(prediction_date)[:10] if len(str(prediction_date)) >= 10 else 'N/A'
-                else:
-                    formatted_date = 'N/A'
-                
-                predictions_table += f"""
-                    <tr>
-                        <td><strong>{prediction.get('symbol', 'N/A')}</strong></td>
-                        <td>{prediction.get('company', 'N/A')}</td>
-                        <td>{formatted_date}</td>
-                        <td><span style="color: {'green' if profit > 0 else 'red'};">{profit:+.2f}%</span></td>
-                        <td>{confidence:.1f}%</td>
-                        <td><span style="background: {'#28a745' if 'BUY' in prediction.get('recommendation', '') else '#dc3545' if prediction.get('recommendation') == 'SELL' else '#ffc107'}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em;">{prediction.get('recommendation', 'HOLD')}</span></td>
-                    </tr>
-                """
-        
-        # Calculate navigation periods based on timeframe and current navigation state
-        def get_navigation_periods(current_timeframe: str, nav_ts: Optional[int] = None, nav_dir: Optional[str] = None):
-            """Calculate previous and next time periods based on current timeframe and navigation state"""
-            from datetime import datetime, timedelta
-            
+        # Navigation Periods berechnen (gleiche Logik wie SOLL-IST Vergleich)
+        def get_prognosen_navigation_periods(current_timeframe: str, nav_ts: Optional[int] = None, nav_dir: Optional[str] = None):
+            """Calculate previous and next time periods for KI-Prognosen"""
             timeframe_deltas = {
                 "1W": timedelta(weeks=1),
                 "1M": timedelta(days=30),
-                "3M": timedelta(days=90),
-                "12M": timedelta(days=365)
+                "3M": timedelta(days=90)
             }
             
             # Use navigation timestamp if provided, otherwise current time
@@ -623,178 +557,282 @@ async def prognosen_timeframe(
                 "timestamp": int(current_date.timestamp())
             }
         
-        nav_periods = get_navigation_periods(timeframe, nav_timestamp, nav_direction)
+        nav_periods = get_prognosen_navigation_periods(timeframe, nav_timestamp, nav_direction)
         
-        content = f"""
-            <h2>{tf_data['icon']} KI-Prognosen - {tf_data['display_name']}</h2>
-            <div class="alert alert-info">
-                <p><strong>Zeitraum:</strong> {tf_data['days']} Tage | <strong>Ensemble-Methode:</strong> 4-Modell Weighted Average</p>
-            </div>
+        # KI-Prognose Daten laden
+        prediction_url = ServiceConfig.get_prediction_url(timeframe)
+        logger.info(f"Loading KI-Prognosen from: {prediction_url}")
+        
+        prediction_response = await http_client.get(prediction_url)
+        logger.info(f"Received prediction response: {prediction_response}")
+        
+        # Parse zu HTML-Tabelle (korrigiertes Parsing)
+        prediction_data = None
+        if prediction_response:
+            if isinstance(prediction_response, dict) and "predictions" in prediction_response:
+                prediction_data = prediction_response["predictions"]
+            elif isinstance(prediction_response, list):
+                prediction_data = prediction_response
+        
+        if prediction_data and isinstance(prediction_data, list) and len(prediction_data) > 0:
+            # ERWEITERTE HEADERS: Durchschnittswerte-Spalten hinzugefügt
+            enhanced_headers = [
+                'Prognosedatum', 'Berechnungsdatum', 'Symbol', 
+                'Erwartete Änderung', 'Durchschnitt', 'Abweichung', 
+                'Konfidenz', 'Ø-Konfidenz', 'Datenbasis'
+            ]
             
-            <!-- Timeline Navigation -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
-                <button onclick="navigateTimeline('previous', '{timeframe}')" 
-                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                    ⬅️ Zurück ({nav_periods['previous']})
-                </button>
-                
-                <div style="text-align: center;">
-                    <strong>{nav_periods['nav_info']}</strong><br>
-                    <span style="color: #007bff; font-size: 16px; font-weight: bold;">{nav_periods['current']}</span>
-                    {f'<div style="margin-top: 5px;"><small style="color: #28a745;">✅ Navigation erfolgreich</small></div>' if nav_timestamp else ''}
-                </div>
-                
-                <button onclick="navigateTimeline('next', '{timeframe}')" 
-                        style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                    Vor ({nav_periods['next']}) ➡️
-                </button>
-            </div>
+            # Prüfe auf Enhanced Predictions mit Durchschnittswerten
+            has_averages_data = any(
+                item.get('avg_prediction_percent') is not None 
+                for item in prediction_data
+            )
+            averages_available = prediction_response.get('averages_available', False) if isinstance(prediction_response, dict) else has_averages_data
             
-            <h3>📈 Top Prognosen</h3>
+            # Sortiere nach erwartetem Gewinn (prediction_percent) absteigend
+            def get_prediction_percent(item):
+                prediction_percent_str = item.get('prediction_percent', '0%').replace('%', '')
+                try:
+                    return float(prediction_percent_str)
+                except ValueError:
+                    return 0
+            
+            # Sortiere und nehme die besten 15 Prognosen
+            sorted_predictions = sorted(prediction_data, key=get_prediction_percent, reverse=True)[:15]
+            
+            table_rows = ""
+            
+            # Zeitraum-Mapping für Prognosedatum-Berechnung
+            timeframe_days = {
+                '1W': 7,
+                '1M': 30, 
+                '3M': 90
+            }
+            prediction_offset_days = timeframe_days.get(timeframe, 30)
+            
+            for item in sorted_predictions:  # Top 15 Prognosen nach Gewinn sortiert
+                symbol = item.get('symbol', 'N/A')
+                
+                # Aktuelle Vorhersage
+                prediction_percent_str = item.get('prediction_percent', '0%').replace('%', '')
+                try:
+                    change_percent = float(prediction_percent_str)
+                except ValueError:
+                    change_percent = 0
+                
+                # NEUE FELDER: Durchschnittswerte
+                avg_prediction_str = item.get('avg_prediction_percent', '')
+                avg_change_percent = None
+                if avg_prediction_str and avg_prediction_str != 'None':
+                    try:
+                        avg_change_percent = float(avg_prediction_str.replace('%', ''))
+                    except ValueError:
+                        avg_change_percent = None
+                
+                # Abweichung vom Durchschnitt
+                deviation_str = item.get('deviation_from_avg', '')
+                deviation_percent = None
+                if deviation_str and deviation_str != 'None':
+                    try:
+                        deviation_percent = float(deviation_str.replace('%', ''))
+                    except ValueError:
+                        deviation_percent = None
+                
+                # Relative Performance
+                relative_performance_str = item.get('relative_performance', '')
+                
+                # Konfidenz-Daten
+                confidence = item.get('confidence', 0) or 0
+                avg_confidence_str = item.get('avg_confidence_percent', '')
+                avg_confidence = None
+                if avg_confidence_str and avg_confidence_str != 'None':
+                    try:
+                        avg_confidence = float(avg_confidence_str.replace('%', ''))
+                    except ValueError:
+                        avg_confidence = None
+                
+                # Datenbasis (Anzahl Vorhersagen für Durchschnitt)
+                prediction_count = item.get('prediction_count', 0) or 0
+                
+                # Berechnungsdatum aus Backend-Timestamp formatieren
+                calculation_date = item.get('timestamp', '')
+                if calculation_date:
+                    try:
+                        from datetime import datetime, timedelta
+                        # Parse ISO timestamp 
+                        calculation_dt = datetime.fromisoformat(calculation_date.replace('Z', '+00:00'))
+                        formatted_calculation_date = calculation_dt.strftime('%d.%m.%Y %H:%M')
+                        
+                        # Prognosedatum = Berechnungsdatum + Prognosezeitraum
+                        prediction_dt = calculation_dt + timedelta(days=prediction_offset_days)
+                        formatted_prediction_date = prediction_dt.strftime('%d.%m.%Y')
+                        
+                    except Exception:
+                        formatted_calculation_date = calculation_date[:16]  # Fallback
+                        formatted_prediction_date = nav_periods['current']  # Fallback
+                else:
+                    formatted_calculation_date = 'N/A'
+                    formatted_prediction_date = nav_periods['current']  # Fallback
+                
+                # ERWEITERTE FARBKODIERUNG für Durchschnittswerte
+                change_color = 'green' if change_percent > 0 else 'red'
+                confidence_color = 'green' if confidence > 0.8 else 'orange' if confidence > 0.6 else 'red'
+                
+                # Durchschnittswerte-Farben
+                avg_color = 'green' if avg_change_percent and avg_change_percent > 0 else 'red' if avg_change_percent and avg_change_percent < 0 else 'gray'
+                deviation_color = 'green' if deviation_percent and abs(deviation_percent) < 2 else 'orange' if deviation_percent and abs(deviation_percent) < 5 else 'red'
+                avg_confidence_color = 'green' if avg_confidence and avg_confidence > 80 else 'orange' if avg_confidence and avg_confidence > 60 else 'red'
+                datenbasis_color = 'green' if prediction_count >= 10 else 'orange' if prediction_count >= 5 else 'red'
+                
+                # ERWEITERTE TABELLENZELLEN mit Durchschnittswerten
+                avg_prediction_cell = f"""<span style="color: {avg_color};" title="Durchschnittliche Vorhersage">{avg_change_percent:+.2f}%</span>""" if avg_change_percent is not None else """<span style="color: gray;" title="Keine Durchschnittsdaten">N/A</span>"""
+                
+                deviation_cell = f"""<span style="color: {deviation_color};" title="Abweichung vom Durchschnitt">{deviation_percent:+.2f}%</span>""" if deviation_percent is not None else """<span style="color: gray;" title="Keine Abweichungsdaten">N/A</span>"""
+                
+                avg_confidence_cell = f"""<span style="color: {avg_confidence_color};" title="Durchschnittliche Konfidenz">{avg_confidence:.1f}%</span>""" if avg_confidence is not None else """<span style="color: gray;" title="Keine Konfidenz-Durchschnitt">N/A</span>"""
+                
+                datenbasis_cell = f"""<span style="color: {datenbasis_color};" title="Anzahl Vorhersagen für Durchschnitt">{prediction_count}</span>""" if prediction_count > 0 else """<span style="color: gray;">0</span>"""
+                
+                table_rows += f"""
+                <tr class="{'prediction-with-averages' if avg_change_percent is not None else 'prediction-no-averages'}">
+                    <td><strong>{formatted_prediction_date}</strong></td>
+                    <td><small>{formatted_calculation_date}</small></td>
+                    <td><strong>{symbol}</strong></td>
+                    <td><span style="color: {change_color};" title="Aktuelle Vorhersage">{change_percent:+.2f}%</span></td>
+                    <td>{avg_prediction_cell}</td>
+                    <td>{deviation_cell}</td>
+                    <td><span style="color: {confidence_color};" title="Aktuelle Konfidenz">{confidence*100:.1f}%</span></td>
+                    <td>{avg_confidence_cell}</td>
+                    <td>{datenbasis_cell}</td>
+                </tr>
+                """
+            
+            table_html = f"""
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Symbol</th>
-                        <th>Unternehmen</th>
-                        <th>Vorhersage-Datum</th>
-                        <th>Gewinn-Prognose</th>
-                        <th>Konfidenz</th>
-                        <th>Empfehlung</th>
+                        {''.join(f'<th>{header}</th>' for header in enhanced_headers)}
                     </tr>
                 </thead>
                 <tbody>
-                    {predictions_table}
+                    {table_rows}
                 </tbody>
             </table>
-            
-            <script>
-                function navigateTimeline(direction, timeframe) {{
-                    // Calculate new date based on direction and timeframe
-                    var timeframeDays = {{
-                        '1W': 7,
-                        '1M': 30,
-                        '3M': 90,
-                        '12M': 365
-                    }};
-                    
-                    var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
-                    var newDate = new Date();
-                    newDate.setDate(newDate.getDate() + daysToAdd);
-                    
-                    // For now, just refresh the page with a timestamp parameter to show navigation works
-                    var timestamp = Math.floor(newDate.getTime() / 1000);
-                    var currentUrl = new URL(window.location);
-                    currentUrl.searchParams.set('nav_timestamp', timestamp);
-                    currentUrl.searchParams.set('nav_direction', direction);
-                    
-                    window.location.href = currentUrl.toString();
-                }}
-            </script>
-            
-            <div style="margin-top: 30px;">
-                <a href="/prognosen" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">⬅️ Zurück zu Zeiträumen</a>
+            """
+        else:
+            table_html = f"""
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Keine Prognosen verfügbar</strong><br>
+                Für den Zeitraum {timeframe_info['display_name']} sind derzeit keine KI-Prognosen verfügbar.
             </div>
+            """
+        
+        load_time = (datetime.now() - start_time).total_seconds()
+        
+        content = f"""
+        <h2>📊 KI-Prognosen - Machine Learning Vorhersagen</h2>
+        <div class="alert alert-info">
+            <p><strong>Zeitraum:</strong> {timeframe_info['display_name']} | <strong>Beschreibung:</strong> {timeframe_info['description']}</p>
+            <p><strong>4-Modell Ensemble:</strong> Technical LSTM + Sentiment XGBoost + Fundamental XGBoost + Meta LightGBM</p>
+        </div>
+        
+        <!-- Timeline Navigation für KI-Prognosen -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
+            <button onclick="navigatePrognosen('previous', '{timeframe}')" 
+                    style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                ⬅️ Zurück ({nav_periods['previous']})
+            </button>
+            
+            <div style="text-align: center;">
+                <strong>{nav_periods['nav_info']}</strong><br>
+                <span style="color: #007bff; font-size: 16px; font-weight: bold;">{nav_periods['current']}</span>
+                {f'<div style="margin-top: 5px;"><small style="color: #007bff;">✅ Navigation erfolgreich</small></div>' if nav_timestamp else ''}
+            </div>
+            
+            <button onclick="navigatePrognosen('next', '{timeframe}')" 
+                    style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                Vor ({nav_periods['next']}) ➡️
+            </button>
+        </div>
+        
+        <!-- Zeitintervall-Auswahl -->
+        <h3>🔧 Zeitintervall auswählen</h3>
+        <div class="btn-group">
+            <button class="btn {'btn-primary' if timeframe == '1W' else 'btn-outline-primary'}" onclick="loadPrognosen('1W')">📊 1 Woche</button>
+            <button class="btn {'btn-primary' if timeframe == '1M' else 'btn-outline-primary'}" onclick="loadPrognosen('1M')">📈 1 Monat</button>
+            <button class="btn {'btn-primary' if timeframe == '3M' else 'btn-outline-primary'}" onclick="loadPrognosen('3M')">📊 3 Monate</button>
+            <button class="btn {'btn-primary' if timeframe == '6M' else 'btn-outline-primary'}" onclick="loadPrognosen('6M')">📊 6 Monate</button>
+            <button class="btn {'btn-primary' if timeframe == '12M' else 'btn-outline-primary'}" onclick="loadPrognosen('12M')">📈 12 Monate</button>
+        </div>
+        
+        <!-- KI-Prognosen Tabelle mit Datum -->
+        <h3>📊 KI-Prognosen - {timeframe_info['display_name']} <small>(Ladezeit: {load_time:.2f}s)</small></h3>
+        {table_html}
+        
+        
+        <script>
+            function navigatePrognosen(direction, timeframe) {{
+                // Calculate new date based on direction and timeframe
+                var timeframeDays = {{
+                    '1W': 7,
+                    '1M': 30,
+                    '3M': 90,
+                    '6M': 180,
+                    '12M': 365
+                }};
+                
+                var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
+                var newDate = new Date();
+                newDate.setDate(newDate.getDate() + daysToAdd);
+                
+                // Refresh page with navigation parameters
+                var timestamp = Math.floor(newDate.getTime() / 1000);
+                var currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('nav_timestamp', timestamp);
+                currentUrl.searchParams.set('nav_direction', direction);
+                
+                window.location.href = currentUrl.toString();
+            }}
+            
+            function loadPrognosen(timeframe) {{
+                window.location.href = '/prognosen?timeframe=' + timeframe;
+            }}
+        </script>
         """
         
     except Exception as e:
-        logger.error(f"Error fetching predictions for {timeframe}: {str(e)}")
+        logger.error(f"Error loading KI-Prognosen for {timeframe}: {str(e)}")
         content = f"""
-            <h2>{tf_data['icon']} KI-Prognosen - {tf_data['display_name']}</h2>
-            <div class="alert alert-error">
-                <h3>⚠️ Service Temporarily Unavailable</h3>
-                <p>Die Prognose-Daten können derzeit nicht abgerufen werden.</p>
-                <p><strong>Error:</strong> {str(e)}</p>
-            </div>
-            <div style="margin-top: 30px;">
-                <a href="/prognosen" style="background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">⬅️ Zurück zu Zeiträumen</a>
-            </div>
+        <h2>📊 KI-Prognosen - Machine Learning Vorhersagen</h2>
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Fehler beim Laden der Prognosen</strong><br>
+            {str(e)}
+        </div>
         """
     
-    return HTMLTemplateService.generate_base_template(f"Prognosen {tf_data['display_name']}", content)
+    return HTMLTemplateService.generate_base_template("KI-Prognosen", content)
 
 
-@app.get("/analyse", response_class=HTMLResponse, summary="Detaillierte Analyse Interface")
-async def analyse(
-    type: str = Query(default="technical", description="Analyse-Typ: technical, fundamental, comparison"),
-    http_client: IHTTPClient = Depends(get_http_client)
-) -> str:
-    """
-    Detaillierte Analyse Interface Handler
+@app.get("/prognosen/{timeframe}", summary="Prognosen für spezifischen Zeitraum - Redirect")
+async def prognosen_timeframe_redirect(
+    timeframe: str,
+    nav_timestamp: Optional[int] = Query(None),
+    nav_direction: Optional[str] = Query(None)
+):
+    """Redirect alte Prognosen-URLs zur neuen Hauptroute"""
+    from fastapi.responses import RedirectResponse
     
-    Single Responsibility: Nur Analyse UI
-    Wiederhergestellte Funktionalität aus ursprünglichen Versionen
-    """
+    # Build redirect URL with parameters
+    redirect_url = f"/prognosen?timeframe={timeframe}"
+    if nav_timestamp:
+        redirect_url += f"&nav_timestamp={nav_timestamp}"
+    if nav_direction:
+        redirect_url += f"&nav_direction={nav_direction}"
     
-    if type == "comparison":
-        # Redirect to SOLL-IST Vergleichsanalyse
-        return await vergleichsanalyse()
-    
-    content = f"""
-        <h2>🔍 Detaillierte Analysen</h2>
-        <div class="alert alert-info">
-            <p><strong>Analyse-Tools:</strong> Erweiterte Analysefunktionen für fundierte Investitionsentscheidungen</p>
-            <p><strong>Aktuelle Analyse:</strong> {type.title()} Analysis</p>
-        </div>
-        
-        <!-- Analyse-Typ Auswahl -->
-        <div class="btn-group">
-            <button class="btn {'btn-primary' if type == 'technical' else 'btn-outline-primary'}" onclick="loadAnalyse('technical')">📊 Technische Analyse</button>
-            <button class="btn {'btn-primary' if type == 'fundamental' else 'btn-outline-primary'}" onclick="loadAnalyse('fundamental')">📈 Fundamental-Analyse</button>
-            <button class="btn {'btn-primary' if type == 'comparison' else 'btn-outline-primary'}" onclick="loadAnalyse('comparison')">⚖️ SOLL-IST Vergleich</button>
-        </div>
-        
-        <div class="timeframe-grid" style="margin-top: 30px;">
-            <div class="timeframe-card">
-                <div class="icon">📊</div>
-                <h3>Technische Analyse</h3>
-                <p>Chart-Analysen, Indikatoren und Trends</p>
-                <ul style="text-align: left; padding-left: 20px;">
-                    <li>📊 Chart-Analysen</li>
-                    <li>📈 RSI, MACD, Bollinger Bands</li>
-                    <li>🎯 Support & Resistance</li>
-                    <li>📉 Trend-Erkennung</li>
-                </ul>
-            </div>
-            <div class="timeframe-card">
-                <div class="icon">📈</div>
-                <h3>Fundamental-Analyse</h3>
-                <p>Unternehmenskennzahlen und Bewertung</p>
-                <ul style="text-align: left; padding-left: 20px;">
-                    <li>💰 KGV, KBV, KUV</li>
-                    <li>📊 ROE, ROI, EBIT</li>
-                    <li>📈 Umsatz- & Gewinnwachstum</li>
-                    <li>🎯 Fair Value Berechnung</li>
-                </ul>
-            </div>
-            <div class="timeframe-card">
-                <div class="icon">🤖</div>
-                <h3>KI-Analyse Engine</h3>
-                <p>Machine Learning basierte Analysen</p>
-                <ul style="text-align: left; padding-left: 20px;">
-                    <li>🧠 Neural Network Analysis</li>
-                    <li>📊 Sentiment Analysis</li>
-                    <li>🎯 Pattern Recognition</li>
-                    <li>⚡ Real-time Scoring</li>
-                </ul>
-                <div style="text-align: center; margin-top: 15px;">
-                    <button class="btn btn-primary">Neue Analyse starten</button>
-                    <button class="btn" style="margin-left: 10px;">Gespeicherte Analysen</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="alert alert-warning">
-            <h3>💡 Analyse-Hinweise</h3>
-            <ul>
-                <li>Kombinieren Sie verschiedene Analyse-Methoden für bessere Ergebnisse</li>
-                <li>Technische Analyse eignet sich für kurzfristige Trends</li>
-                <li>Fundamental-Analyse ist wichtig für langfristige Investments</li>
-                <li>KI-basierte Analysen ergänzen traditionelle Methoden</li>
-            </ul>
-        </div>
-    """
-    
-    return HTMLTemplateService.generate_base_template("Detaillierte Analysen", content)
+    return RedirectResponse(url=redirect_url, status_code=301)
+
 
 
 @app.get("/vergleichsanalyse", response_class=HTMLResponse, summary="SOLL-IST Vergleichsanalyse")
@@ -860,15 +898,22 @@ async def vergleichsanalyse(
         comparison_data = await http_client.get(api_url)
         logger.info(f"Received comparison data: {comparison_data}")
         
-        # Parse JSON zu HTML-Tabelle 
-        if comparison_data and isinstance(comparison_data, list) and len(comparison_data) > 0:
+        # Parse JSON zu HTML-Tabelle (korrigiertes Parsing)
+        comparison_list = None
+        if comparison_data:
+            if isinstance(comparison_data, dict) and "comparisons" in comparison_data:
+                comparison_list = comparison_data["comparisons"]
+            elif isinstance(comparison_data, list):
+                comparison_list = comparison_data
+        
+        if comparison_list and isinstance(comparison_list, list) and len(comparison_list) > 0:
             # JSON-Daten vorhanden - erweiterte Tabelle erstellen
             enhanced_headers = ['Vergleichsdatum', 'Symbol', 'SOLL-Performance', 'IST-Performance', 'Abweichung', 'Genauigkeit']
             
             table_rows = ""
             comparison_date = nav_periods['current']
             
-            for item in comparison_data[:15]:  # Top 15 Vergleiche
+            for item in comparison_list[:15]:  # Top 15 Vergleiche
                 symbol = item.get('symbol', 'N/A')
                 soll_performance = item.get('soll_performance', 0)
                 ist_performance = item.get('ist_performance', 0) or 0
@@ -948,6 +993,8 @@ async def vergleichsanalyse(
             <button class="btn {'btn-primary' if timeframe == '1W' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('1W')">📊 1 Woche</button>
             <button class="btn {'btn-primary' if timeframe == '1M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('1M')">📈 1 Monat</button>
             <button class="btn {'btn-primary' if timeframe == '3M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('3M')">📊 3 Monate</button>
+            <button class="btn {'btn-primary' if timeframe == '6M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('6M')">📊 6 Monate</button>
+            <button class="btn {'btn-primary' if timeframe == '12M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('12M')">📈 12 Monate</button>
         </div>
         
         <!-- SOLL-IST Vergleichstabelle mit Datum -->
@@ -970,7 +1017,9 @@ async def vergleichsanalyse(
                 var timeframeDays = {{
                     '1W': 7,
                     '1M': 30,
-                    '3M': 90
+                    '3M': 90,
+                    '6M': 180,
+                    '12M': 365
                 }};
                 
                 var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
@@ -1049,11 +1098,13 @@ async def vergleichsanalyse(
             <button class="btn {'btn-primary' if timeframe == '1W' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('1W')">📊 1 Woche</button>
             <button class="btn {'btn-primary' if timeframe == '1M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('1M')">📈 1 Monat</button>
             <button class="btn {'btn-primary' if timeframe == '3M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('3M')">📊 3 Monate</button>
+            <button class="btn {'btn-primary' if timeframe == '6M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('6M')">📊 6 Monate</button>
+            <button class="btn {'btn-primary' if timeframe == '12M' else 'btn-outline-primary'}" onclick="loadVergleichsanalyse('12M')">📈 12 Monate</button>
         </div>
         
         <script>
             function navigateVergleichsanalyse(direction, timeframe) {{
-                var timeframeDays = {{ '1W': 7, '1M': 30, '3M': 90 }};
+                var timeframeDays = {{ '1W': 7, '1M': 30, '3M': 90, '6M': 180, '12M': 365 }};
                 var daysToAdd = direction === 'next' ? timeframeDays[timeframe] : -timeframeDays[timeframe];
                 var newDate = new Date();
                 newDate.setDate(newDate.getDate() + daysToAdd);
@@ -1110,6 +1161,192 @@ async def depot() -> str:
     return HTMLTemplateService.generate_base_template("Depot-Analyse", content)
 
 
+@app.get("/prediction-averages", response_class=HTMLResponse, summary="Enhanced Prediction Averages Interface")
+async def prediction_averages(
+    symbol: Optional[str] = Query(None, description="Spezifisches Symbol für Mittelwerte"),
+    http_client: IHTTPClient = Depends(get_http_client)
+) -> str:
+    """Enhanced Prediction Averages Interface Handler"""
+    
+    try:
+        start_time = datetime.now()
+        
+        # Verfügbare Symbole laden
+        symbols_url = f"{ServiceConfig.ENHANCED_PREDICTIONS_AVERAGES_URL}/prediction-averages"
+        logger.info(f"Loading available symbols from: {symbols_url}")
+        
+        symbols_response = await http_client.get(symbols_url)
+        logger.info(f"Received symbols response: {symbols_response}")
+        
+        symbols_list = []
+        if symbols_response and "symbols" in symbols_response:
+            symbols_list = symbols_response["symbols"]
+        
+        # Spezifische Symbol-Daten laden wenn Symbol angegeben
+        symbol_data = None
+        if symbol and symbol.strip():
+            symbol = symbol.strip().upper()
+            symbol_url = f"{ServiceConfig.ENHANCED_PREDICTIONS_AVERAGES_URL}/prediction-averages/{symbol}"
+            logger.info(f"Loading symbol data from: {symbol_url}")
+            
+            try:
+                symbol_data = await http_client.get(symbol_url)
+                logger.info(f"Received symbol data: {symbol_data}")
+            except Exception as e:
+                logger.warning(f"Error loading symbol {symbol}: {str(e)}")
+                symbol_data = None
+        
+        # HTML Content generieren
+        if symbol_data and symbol_data.get("averages"):
+            # Symbol-spezifische Ansicht
+            averages = symbol_data["averages"]
+            last_updated = symbol_data.get("last_updated", "N/A")
+            
+            # Parse last_updated datetime
+            try:
+                from datetime import datetime
+                if isinstance(last_updated, str) and "T" in last_updated:
+                    updated_dt = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                    formatted_date = updated_dt.strftime('%d.%m.%Y %H:%M:%S UTC')
+                else:
+                    formatted_date = str(last_updated)[:19]
+            except:
+                formatted_date = str(last_updated)
+            
+            # Einzelsymbol-Tabelle
+            symbol_rows = ""
+            timeframes = ["1W", "1M", "3M", "12M"]
+            
+            for tf in timeframes:
+                if tf in averages:
+                    avg_value = averages[tf]
+                    color = 'green' if avg_value > 0 else 'red' if avg_value < 0 else 'gray'
+                    symbol_rows += f"""
+                    <tr>
+                        <td><strong>{tf}</strong></td>
+                        <td>{tf.replace('W', ' Woche').replace('M', ' Monat').replace('3 Monat', '3 Monate').replace('12 Monat', '12 Monate')}</td>
+                        <td><span style="color: {color}; font-weight: bold;">{avg_value:.2f}</span></td>
+                        <td><small>{formatted_date}</small></td>
+                    </tr>
+                    """
+            
+            symbol_table = f"""
+            <div class="alert alert-info">
+                <h3>📈 Vorhersage-Mittelwerte für {symbol}</h3>
+                <p><strong>Letztes Update:</strong> {formatted_date}</p>
+            </div>
+            
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Zeitraum</th>
+                        <th>Beschreibung</th>
+                        <th>Mittelwert</th>
+                        <th>Berechnet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {symbol_rows}
+                </tbody>
+            </table>
+            
+            <div style="margin: 20px 0;">
+                <a href="/prediction-averages" class="btn btn-primary">🔙 Zurück zur Übersicht</a>
+            </div>
+            """
+        
+        else:
+            # Übersichts-Ansicht mit allen verfügbaren Symbolen
+            if symbols_list and len(symbols_list) > 0:
+                overview_rows = ""
+                
+                for item in symbols_list:
+                    symbol_name = item.get("symbol", "N/A")
+                    last_updated = item.get("last_updated", "N/A")
+                    
+                    # Format last updated
+                    try:
+                        if isinstance(last_updated, str) and "T" in last_updated:
+                            updated_dt = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                            formatted_date = updated_dt.strftime('%d.%m.%Y %H:%M')
+                        else:
+                            formatted_date = str(last_updated)[:16]
+                    except:
+                        formatted_date = "N/A"
+                    
+                    overview_rows += f"""
+                    <tr onclick="window.location.href='/prediction-averages?symbol={symbol_name}'" style="cursor: pointer;">
+                        <td><strong>{symbol_name}</strong></td>
+                        <td><small>{formatted_date}</small></td>
+                        <td><span style="color: #007bff;">📈 Ansehen</span></td>
+                    </tr>
+                    """
+                
+                symbol_table = f"""
+                <div class="alert alert-info">
+                    <h3>📊 Verfügbare Vorhersage-Mittelwerte</h3>
+                    <p><strong>Anzahl Symbole:</strong> {len(symbols_list)}</p>
+                </div>
+                
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Letztes Update</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {overview_rows}
+                    </tbody>
+                </table>
+                """
+            else:
+                symbol_table = """
+                <div class="alert alert-warning">
+                    <h3>⚠️ Keine Daten verfügbar</h3>
+                    <p>Derzeit sind keine Vorhersage-Mittelwerte verfügbar.</p>
+                </div>
+                """
+        
+        load_time = (datetime.now() - start_time).total_seconds()
+        
+        content = f"""
+        <h2>📈 Enhanced Predictions Averages - Vorhersage-Mittelwerte</h2>
+        <div class="alert alert-info">
+            <p><strong>Service:</strong> Enhanced Predictions Averages Service auf Port 8087</p>
+            <p><strong>Zeiträume:</strong> 1 Woche, 1 Monat, 3 Monate, 12 Monate</p>
+            <p><strong>Ladezeit:</strong> {load_time:.2f}s</p>
+        </div>
+        
+        {symbol_table}
+        
+        <div class="alert alert-info">
+            <h3>💡 Enhanced Predictions Averages Erklärung</h3>
+            <ul>
+                <li><strong>1W:</strong> Mittelwert der Vorhersagen über 1 Woche</li>
+                <li><strong>1M:</strong> Mittelwert der Vorhersagen über 1 Monat</li>
+                <li><strong>3M:</strong> Mittelwert der Vorhersagen über 3 Monate</li>
+                <li><strong>12M:</strong> Mittelwert der Vorhersagen über 12 Monate</li>
+            </ul>
+        </div>
+        """
+        
+    except Exception as e:
+        logger.error(f"Error loading prediction averages: {str(e)}")
+        content = f"""
+        <h2>📈 Enhanced Predictions Averages - Vorhersage-Mittelwerte</h2>
+        <div class="alert alert-error">
+            <h3>⚠️ Service nicht verfügbar</h3>
+            <p>Die Enhanced Predictions Averages können derzeit nicht abgerufen werden.</p>
+            <p><strong>Error:</strong> {str(e)}</p>
+            <p><strong>Service URL:</strong> {ServiceConfig.ENHANCED_PREDICTIONS_AVERAGES_URL}</p>
+        </div>
+        """
+    
+    return HTMLTemplateService.generate_base_template("Vorhersage-Mittelwerte", content)
+
+
 @app.get("/system", response_class=HTMLResponse, summary="System Status & Monitoring")
 async def system_status(http_client: IHTTPClient = Depends(get_http_client)) -> str:
     """System Status & Monitoring Handler"""
@@ -1118,6 +1355,7 @@ async def system_status(http_client: IHTTPClient = Depends(get_http_client)) -> 
         {"name": "ML Analytics", "url": ServiceConfig.ML_ANALYTICS_URL, "port": "8021"},
         {"name": "CSV Service", "url": ServiceConfig.CSV_SERVICE_URL, "port": "8030"},
         {"name": "Vergleichsanalyse Service", "url": ServiceConfig.VERGLEICHSANALYSE_SERVICE_URL, "port": "8019"},
+        {"name": "Enhanced Predictions Averages", "url": ServiceConfig.ENHANCED_PREDICTIONS_AVERAGES_URL, "port": "8087"},
         {"name": "Event Bus", "url": ServiceConfig.EVENT_BUS_URL, "port": "8014"},
         {"name": "Intelligent Core", "url": ServiceConfig.INTELLIGENT_CORE_URL, "port": "8011"},
         {"name": "Broker Gateway", "url": ServiceConfig.BROKER_GATEWAY_URL, "port": "8020"},
@@ -1175,7 +1413,6 @@ async def system_status(http_client: IHTTPClient = Depends(get_http_client)) -> 
         <div class="alert alert-warning">
             <h3>🚀 Code Quality Status v8.0.1</h3>
             <ul>
-                <li><strong>✅ FIXED:</strong> Analyse-Funktionen wiederhergestellt</li>
                 <li><strong>✅ FIXED:</strong> SOLL-IST Vergleichsanalyse mit CSV-Service Integration</li>
                 <li><strong>Frontend Consolidation:</strong> 13 → 1 Version (v8.0.1)</li>
                 <li><strong>Clean Architecture:</strong> SOLID Principles implemented</li>
@@ -1191,16 +1428,6 @@ async def system_status(http_client: IHTTPClient = Depends(get_http_client)) -> 
 # API ENDPOINTS (für Legacy-Kompatibilität)
 # =============================================================================
 
-@app.get("/api/content/analyse", response_class=HTMLResponse, summary="Analyse-Content API")
-async def get_analyse_content(
-    analysis_type: str = Query(default="technical", description="Analyse-Typ"),
-    http_client: IHTTPClient = Depends(get_http_client)
-) -> str:
-    """
-    Analyse-Content API für Legacy-Kompatibilität
-    Wiederhergestellte Funktionalität aus ursprünglichen Versionen
-    """
-    return await analyse(type=analysis_type, http_client=http_client)
 
 
 @app.get("/api/content/vergleichsanalyse", response_class=HTMLResponse, summary="Vergleichsanalyse-Content API") 
@@ -1225,7 +1452,7 @@ async def health_check() -> Dict[str, Any]:
         "timestamp": datetime.utcnow().isoformat(),
         "consolidation_status": "13_versions_consolidated_to_1",
         "architecture": "clean_architecture_solid_principles",
-        "fixes_applied": "analyse_functions_restored_soll_ist_vergleich_restored"
+        "fixes_applied": "soll_ist_vergleich_restored"
     }
 
 
@@ -1238,7 +1465,6 @@ async def startup_event():
     """Application Startup Event Handler"""
     logger.info(f"🚀 Starting {ServiceConfig.SERVICE_NAME} v{ServiceConfig.VERSION}")
     logger.info(f"📊 Frontend Service Consolidated: 13 → 1 Versions")
-    logger.info(f"✅ FIXED: Analyse-Funktionen wiederhergestellt")
     logger.info(f"✅ FIXED: SOLL-IST Vergleichsanalyse wiederhergestellt")
     logger.info(f"🏗️ Clean Architecture: SOLID Principles Implemented")
     logger.info(f"⚙️ Configuration: Environment-based URLs")
@@ -1259,7 +1485,6 @@ if __name__ == "__main__":
     logger.info(f"🚀 Launching {ServiceConfig.SERVICE_NAME} v{ServiceConfig.VERSION}")
     logger.info("📋 Code Quality Improvements Applied:")
     logger.info("   ✅ Frontend Service Consolidation (13 → 1)")
-    logger.info("   ✅ FIXED: Analyse-Funktionen wiederhergestellt")
     logger.info("   ✅ FIXED: SOLL-IST Vergleichsanalyse wiederhergestellt") 
     logger.info("   ✅ SOLID Principles Implementation")
     logger.info("   ✅ Type Safety & Error Handling")

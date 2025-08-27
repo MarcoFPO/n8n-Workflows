@@ -1,0 +1,157 @@
+# MANUAL EXECUTION COMMANDS für PostgreSQL Fix
+# Ausführung auf Server 10.1.1.174 als mdoehler user
+
+# ============================================================================
+# STEP 1: SSH auf Server
+# ============================================================================
+ssh mdoehler@10.1.1.174
+
+# ============================================================================
+# STEP 2: PostgreSQL Configuration Fix
+# ============================================================================
+
+# postgresql.conf bearbeiten
+sudo nano /etc/postgresql/15/main/postgresql.conf
+
+# Änderungen:
+# listen_addresses = '*'          # von 'localhost' zu '*' 
+# port = 5432                     # uncomment falls auskommentiert
+
+# pg_hba.conf bearbeiten  
+sudo nano /etc/postgresql/15/main/pg_hba.conf
+
+# Am Anfang der Datei HINZUFÜGEN (vor den lokalen Connections):
+# host    aktienanalyse_events    aktienanalyse    0.0.0.0/0    md5
+# local   aktienanalyse_events    aktienanalyse    md5
+
+# PostgreSQL Service restart
+sudo systemctl restart postgresql
+
+# ============================================================================
+# STEP 3: Database Setup SQL ausführen
+# ============================================================================
+
+# Database und User erstellen
+sudo -u postgres createdb aktienanalyse_events
+
+# SQL Script ausführen (falls bereits kopiert)
+sudo -u postgres psql -f /tmp/direct_postgres_fix_v1_0_0_20250826.sql
+
+# ODER manuell SQL ausführen:
+sudo -u postgres psql -c "
+DO \$\$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'aktienanalyse') THEN
+        CREATE USER aktienanalyse WITH PASSWORD 'secure_password_2025';
+        ALTER USER aktienanalyse CREATEDB CREATEROLE SUPERUSER;
+    ELSE
+        ALTER USER aktienanalyse WITH PASSWORD 'secure_password_2025';
+        ALTER USER aktienanalyse CREATEDB CREATEROLE SUPERUSER;
+    END IF;
+END
+\$\$;
+GRANT ALL PRIVILEGES ON DATABASE aktienanalyse_events TO aktienanalyse;
+"
+
+# In aktienanalyse_events database wechseln und Schema erstellen:
+sudo -u postgres psql -d aktienanalyse_events -c "
+CREATE TABLE IF NOT EXISTS soll_ist_gewinn_tracking (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    company_name VARCHAR(255),
+    datum DATE NOT NULL,
+    soll_gewinn_1w DECIMAL(12,4),
+    soll_gewinn_1m DECIMAL(12,4), 
+    soll_gewinn_3m DECIMAL(12,4),
+    soll_gewinn_12m DECIMAL(12,4),
+    ist_gewinn DECIMAL(12,4),
+    avg_prediction_1w DECIMAL(12,4),
+    avg_prediction_1m DECIMAL(12,4),
+    avg_prediction_3m DECIMAL(12,4),
+    avg_prediction_12m DECIMAL(12,4),
+    market_region VARCHAR(50) DEFAULT 'DE',
+    confidence_score DECIMAL(5,4),
+    model_version VARCHAR(50),
+    calculation_method VARCHAR(50) DEFAULT 'ensemble',
+    calculation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    avg_calculation_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    avg_sample_count_1w INTEGER DEFAULT 0,
+    avg_sample_count_1m INTEGER DEFAULT 0,
+    avg_sample_count_3m INTEGER DEFAULT 0,
+    avg_sample_count_12m INTEGER DEFAULT 0,
+    CONSTRAINT soll_ist_gewinn_tracking_datum_symbol_unique UNIQUE (datum, symbol)
+);
+
+-- Indexes erstellen
+CREATE INDEX IF NOT EXISTS idx_soll_ist_symbol_datum ON soll_ist_gewinn_tracking (symbol, datum DESC);
+CREATE INDEX IF NOT EXISTS idx_soll_ist_datum ON soll_ist_gewinn_tracking (datum DESC);
+CREATE INDEX IF NOT EXISTS idx_soll_ist_region ON soll_ist_gewinn_tracking (market_region);
+
+-- Permissions setzen
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO aktienanalyse;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO aktienanalyse;
+
+-- Sample data einfügen
+INSERT INTO soll_ist_gewinn_tracking 
+(symbol, company_name, datum, soll_gewinn_1w, soll_gewinn_1m, soll_gewinn_3m, soll_gewinn_12m, confidence_score, model_version)
+VALUES 
+('AAPL', 'Apple Inc.', CURRENT_DATE, 2.5, 5.2, 8.7, 15.3, 0.85, 'v6.0.0'),
+('MSFT', 'Microsoft Corp.', CURRENT_DATE, 1.8, 4.1, 7.2, 12.8, 0.82, 'v6.0.0'),
+('GOOGL', 'Alphabet Inc.', CURRENT_DATE, 3.2, 6.5, 9.8, 18.2, 0.79, 'v6.0.0'),
+('TSLA', 'Tesla Inc.', CURRENT_DATE, -1.2, 2.3, 12.1, 25.7, 0.73, 'v6.0.0'),
+('AMZN', 'Amazon.com Inc.', CURRENT_DATE, 2.1, 4.8, 8.2, 14.6, 0.81, 'v6.0.0')
+ON CONFLICT (datum, symbol) DO NOTHING;
+"
+
+# ============================================================================
+# STEP 4: Verbindung testen
+# ============================================================================
+
+# Local test
+PGPASSWORD="secure_password_2025" psql -h localhost -U aktienanalyse -d aktienanalyse_events -c "SELECT 'Local connection SUCCESS!' as status, NOW() as timestamp;"
+
+# Remote test (von anderem Server)
+PGPASSWORD="secure_password_2025" psql -h 10.1.1.174 -U aktienanalyse -d aktienanalyse_events -c "SELECT 'Remote connection SUCCESS!' as status, NOW() as timestamp;"
+
+# Table test
+PGPASSWORD="secure_password_2025" psql -h 10.1.1.174 -U aktienanalyse -d aktienanalyse_events -c "SELECT COUNT(*) as record_count FROM soll_ist_gewinn_tracking;"
+
+# ============================================================================
+# VERIFICATION COMMANDS
+# ============================================================================
+
+# PostgreSQL Process prüfen
+ps aux | grep postgres
+
+# Port 5432 listening prüfen  
+netstat -tlnp | grep 5432
+
+# Database und Tables prüfen
+PGPASSWORD="secure_password_2025" psql -h 10.1.1.174 -U aktienanalyse -d aktienanalyse_events -c "
+SELECT 
+    schemaname, 
+    tablename, 
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+FROM pg_tables 
+WHERE schemaname = 'public'
+ORDER BY tablename;
+"
+
+# ============================================================================
+# SUCCESS INDICATORS
+# ============================================================================
+
+# Erfolgreich wenn:
+# 1. PostgreSQL läuft und hört auf 0.0.0.0:5432
+# 2. Remote connection funktioniert
+# 3. soll_ist_gewinn_tracking table existiert und hat Daten
+# 4. Database Manager kann connecten
+
+# Nach dem Fix Environment Variables setzen für Services:
+export POSTGRES_HOST=10.1.1.174
+export POSTGRES_PORT=5432
+export POSTGRES_DB=aktienanalyse_events  
+export POSTGRES_USER=aktienanalyse
+export POSTGRES_PASSWORD=secure_password_2025

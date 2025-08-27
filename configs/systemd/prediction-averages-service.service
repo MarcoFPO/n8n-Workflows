@@ -1,0 +1,50 @@
+[Unit]
+Description=Prediction Averages Service v1.0.0 - Clean Architecture Mittelwert-Berechnungen
+Documentation=file:///home/mdoehler/aktienanalyse-ökosystem/ENHANCED_PREDICTIONS_AVERAGES_IMPLEMENTATION_REPORT_v1_0_0.md
+After=network.target postgresql.service redis.service
+Wants=postgresql.service
+PartOf=aktienanalyse-ecosystem.target
+
+[Service]
+Type=simple
+User=mdoehler
+Group=mdoehler
+WorkingDirectory=/home/mdoehler/aktienanalyse-ökosystem/services/prediction-averages-service
+ExecStart=/usr/bin/python3 main.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Environment
+Environment=PYTHONPATH=/home/mdoehler/aktienanalyse-ökosystem
+Environment=SERVICE_NAME=prediction-averages-service
+Environment=SERVICE_PORT=8008
+Environment=LOG_LEVEL=INFO
+
+# Resource Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/mdoehler/aktienanalyse-ökosystem/logs
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=prediction-averages-service
+
+# Health Check  
+TimeoutStartSec=30
+TimeoutStopSec=15
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
+Also=aktienanalyse-ecosystem.target
