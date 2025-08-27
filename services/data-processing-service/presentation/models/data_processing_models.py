@@ -6,7 +6,7 @@ Request/Response Models für FastAPI Endpoints
 """
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 from decimal import Decimal
 
 
@@ -263,3 +263,73 @@ class ModelStatisticsResponse(BaseModel):
     model_statistics: List[ModelStatistics] = Field(..., description="Individual model statistics")
     overall_statistics: Dict[str, Any] = Field(..., description="Overall system statistics")
     timestamp: str = Field(..., description="Statistics generation timestamp")
+
+
+# Timeline Navigation Models (KI-PROGNOSEN-NAV-002 Fix)
+class TimelineNavigationRequest(BaseModel):
+    """Request for timeline navigation with nav_timestamp and nav_direction"""
+    timeframe: str = Field(default="1M", description="Zeitintervall für Vorhersagen (1W, 1M, 3M, 6M, 1Y)")
+    nav_timestamp: Optional[int] = Field(None, description="Navigation timestamp für Timeline-Position")
+    nav_direction: Optional[Literal["prev", "next", "previous"]] = Field(None, description="Navigation direction")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "timeframe": "1M",
+                "nav_timestamp": 1693526400,  # Example timestamp
+                "nav_direction": "next"
+            }
+        }
+    )
+
+
+class TimelineNavigationResponse(BaseModel):
+    """Response for timeline navigation requests"""
+    status: str = Field(..., description="Request status")
+    timeframe: str = Field(..., description="Applied timeframe")
+    nav_timestamp: Optional[int] = Field(None, description="Navigation timestamp")
+    nav_direction: Optional[str] = Field(None, description="Navigation direction")
+    current_period: str = Field(..., description="Current time period")
+    previous_period: str = Field(..., description="Previous time period")
+    next_period: str = Field(..., description="Next time period")
+    predictions: List[Dict[str, Any]] = Field(..., description="Prediction data for timeline")
+    count: int = Field(..., description="Number of predictions")
+    timestamp: str = Field(..., description="Response timestamp")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "status": "success",
+                "timeframe": "1M",
+                "nav_timestamp": 1693526400,
+                "nav_direction": "next",
+                "current_period": "10.09.2025",
+                "previous_period": "10.08.2025",
+                "next_period": "10.10.2025",
+                "predictions": [],
+                "count": 15,
+                "timestamp": "2025-08-27T12:00:00Z"
+            }
+        }
+    )
+
+
+class PredictionQueryRequest(BaseModel):
+    """Enhanced prediction query request with navigation parameters"""
+    timeframe: str = Field(default="1M", description="Zeitintervall für Vorhersagen")
+    limit: int = Field(default=15, ge=1, le=100, description="Maximum number of predictions")
+    nav_timestamp: Optional[int] = Field(None, description="Navigation timestamp")
+    nav_direction: Optional[Literal["prev", "next", "previous"]] = Field(None, description="Navigation direction")
+    include_navigation_context: bool = Field(default=True, description="Include timeline navigation context")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "timeframe": "1M",
+                "limit": 15,
+                "nav_timestamp": None,
+                "nav_direction": None,
+                "include_navigation_context": True
+            }
+        }
+    )

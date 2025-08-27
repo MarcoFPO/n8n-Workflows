@@ -19,6 +19,7 @@ Version: 1.0.0 - Independent QA Agent
 
 import asyncio
 import aiohttp
+import ssl
 import json
 import sys
 import logging
@@ -76,12 +77,17 @@ class IndependentQualityAssuranceAgent:
     - Success ohne objektive Validierung melden
     """
     
-    def __init__(self, system_base_url: str = "http://10.1.1.174:8080", agent_id: str = "QA-001"):
+    def __init__(self, system_base_url: str = "https://10.1.1.174", agent_id: str = "QA-001"):
         self.system_base_url = system_base_url.rstrip('/')
         self.agent_id = agent_id
         self.session_timeout = aiohttp.ClientTimeout(total=30)
         self.qa_test_results: List[QATestResult] = []
         self.qa_start_time = datetime.now()
+        
+        # SSL context for self-signed certificates
+        self.ssl_context = ssl.create_default_context()
+        self.ssl_context.check_hostname = False
+        self.ssl_context.verify_mode = ssl.CERT_NONE
         
         # QA Agent Identity
         logger.info(f"🔍 Independent QA Agent {self.agent_id} initialized")
@@ -217,7 +223,8 @@ class IndependentQualityAssuranceAgent:
         test_start_time = datetime.now()
         
         try:
-            async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
+            connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+            async with aiohttp.ClientSession(timeout=self.session_timeout, connector=connector) as session:
                 # Determine redirect behavior based on test type
                 follow_redirects = test_case.test_type in ["integration", "user_experience"]
                 

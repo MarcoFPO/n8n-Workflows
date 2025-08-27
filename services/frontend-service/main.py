@@ -58,7 +58,7 @@ class ServiceConfig:
     
     # Backend Service URLs (Environment-configurable)
     # Production-ready service URLs - 10.1.1.174 deployment
-    DATA_PROCESSING_URL = os.getenv("DATA_PROCESSING_URL", "http://10.1.1.174:8017")
+    DATA_PROCESSING_URL = os.getenv("DATA_PROCESSING_URL", "http://10.1.1.174:8091")  # Enhanced service
     CSV_SERVICE_URL = os.getenv("CSV_SERVICE_URL", "http://10.1.1.174:8030")
     PREDICTION_TRACKING_URL = os.getenv("PREDICTION_TRACKING_URL", "http://10.1.1.174:8018")
     ML_ANALYTICS_URL = os.getenv("ML_ANALYTICS_URL", "http://10.1.1.174:8021")
@@ -119,9 +119,47 @@ class ServiceConfig:
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
     
     @classmethod
-    def get_prediction_url(cls, timeframe: str) -> str:
-        """Generate prediction URL for timeframe"""
-        return f"{cls.DATA_PROCESSING_URL}/api/v1/data/predictions?timeframe={timeframe}"
+    def get_prediction_url(
+        cls, 
+        timeframe: str, 
+        nav_timestamp: Optional[int] = None, 
+        nav_direction: Optional[str] = None
+    ) -> str:
+        """
+        Generate prediction URL for timeframe with optional navigation parameters
+        
+        KI-PROGNOSEN-NAV-002 Fix: Frontend supports nav_timestamp and nav_direction
+        """
+        base_url = f"{cls.DATA_PROCESSING_URL}/api/v1/data/predictions"
+        params = [f"timeframe={timeframe}"]
+        
+        # Add navigation parameters if provided
+        if nav_timestamp is not None:
+            params.append(f"nav_timestamp={nav_timestamp}")
+        
+        if nav_direction is not None:
+            params.append(f"nav_direction={nav_direction}")
+        
+        return f"{base_url}?{'&'.join(params)}"
+    
+    @classmethod
+    def get_timeline_navigation_url(
+        cls,
+        timeframe: str,
+        nav_timestamp: Optional[int] = None,
+        nav_direction: Optional[str] = None
+    ) -> str:
+        """Generate dedicated timeline navigation URL"""
+        base_url = f"{cls.DATA_PROCESSING_URL}/api/v1/data/timeline-navigation"
+        params = [f"timeframe={timeframe}"]
+        
+        if nav_timestamp is not None:
+            params.append(f"nav_timestamp={nav_timestamp}")
+        
+        if nav_direction is not None:
+            params.append(f"nav_direction={nav_direction}")
+            
+        return f"{base_url}?{'&'.join(params)}"
 
 
 # =============================================================================
@@ -572,9 +610,10 @@ async def prognosen(
         
         nav_periods = get_prognosen_navigation_periods(timeframe, nav_timestamp, nav_direction)
         
-        # KI-Prognose Daten laden mit erweiterten Exception Handling
-        prediction_url = ServiceConfig.get_prediction_url(timeframe)
-        logger.info(f"Loading KI-Prognosen from: {prediction_url}")
+        # KI-Prognose Daten laden mit Timeline Navigation Parameters (KI-PROGNOSEN-NAV-002 Fix)
+        prediction_url = ServiceConfig.get_prediction_url(timeframe, nav_timestamp, nav_direction)
+        logger.info(f"Loading KI-Prognosen with navigation params from: {prediction_url}")
+        logger.info(f"Navigation context: timestamp={nav_timestamp}, direction={nav_direction}")
         
         prediction_data = None
         try:
@@ -1595,6 +1634,103 @@ async def health_check() -> Dict[str, Any]:
 
 
 # =============================================================================
+# API ENDPOINTS FOR TIMELINE NAVIGATION (KI-PROGNOSEN-NAV-002 Fix)
+# =============================================================================
+
+@app.get("/api/timeline/navigation", response_class=JSONResponse, summary="Timeline Navigation API")
+async def api_timeline_navigation(
+    timeframe: str = Query(default="1M", description="Zeitintervall für Timeline Navigation"),
+    nav_timestamp: Optional[int] = Query(None, description="Navigation timestamp"),
+    nav_direction: Optional[str] = Query(None, description="Navigation direction (prev, next, previous)"),
+    http_client: IHTTPClient = Depends(get_http_client)
+) -> Dict[str, Any]:
+    """
+    API Endpoint für Timeline Navigation
+    
+    KI-PROGNOSEN-NAV-002 Fix: Frontend unterstützt vollständig nav_timestamp und nav_direction Parameter
+    """
+    try:
+        logger.info(f"Timeline Navigation API called: timeframe={timeframe}, nav_timestamp={nav_timestamp}, nav_direction={nav_direction}")
+        
+        # Timeline Navigation URL mit allen Parametern
+        timeline_url = ServiceConfig.get_timeline_navigation_url(timeframe, nav_timestamp, nav_direction)
+        logger.info(f"Forwarding to backend: {timeline_url}")
+        
+        # Backend-Aufruf
+        timeline_response = await http_client.get(timeline_url)
+        
+        if timeline_response and isinstance(timeline_response, dict):
+            # Enhanced response mit Frontend-spezifischen Metadaten
+            response_data = {
+                **timeline_response,
+                "frontend_support": "full_nav_params_forwarding",
+                "api_version": "v8.0.1",
+                "navigation_parameters_received": {
+                    "timeframe": timeframe,
+                    "nav_timestamp": nav_timestamp,
+                    "nav_direction": nav_direction
+                },
+                "backend_url": timeline_url,
+                "processed_at": datetime.now().isoformat()
+            }
+            
+            logger.info(f"Timeline navigation successful: {len(timeline_response.get('predictions', []))} predictions returned")
+            return response_data
+        else:
+            logger.error(f"Invalid backend response: {timeline_response}")
+            raise HTTPException(status_code=502, detail="Invalid backend response")
+            
+    except Exception as e:
+        logger.error(f"Timeline navigation API error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Timeline Navigation API Error",
+                "message": str(e),
+                "navigation_params": {
+                    "timeframe": timeframe,
+                    "nav_timestamp": nav_timestamp,
+                    "nav_direction": nav_direction
+                }
+            }
+        )
+
+
+@app.get("/api/prognosen/navigation", response_class=JSONResponse, summary="Prognosen Navigation API")
+async def api_prognosen_navigation(
+    timeframe: str = Query(default="1M", description="Zeitintervall"),
+    nav_timestamp: Optional[int] = Query(None, description="Navigation timestamp"),
+    nav_direction: Optional[str] = Query(None, description="Navigation direction"),
+    http_client: IHTTPClient = Depends(get_http_client)
+) -> Dict[str, Any]:
+    """
+    API Endpoint für Prognosen mit Navigation Support
+    
+    Simplere Version für direkte Prognosen-Abfragen mit Navigation
+    """
+    try:
+        # Standard prediction URL mit Navigation Parameters
+        prediction_url = ServiceConfig.get_prediction_url(timeframe, nav_timestamp, nav_direction)
+        logger.info(f"Prognosen Navigation API: {prediction_url}")
+        
+        # Backend-Aufruf
+        prediction_response = await http_client.get(prediction_url)
+        
+        if prediction_response and isinstance(prediction_response, dict):
+            return {
+                **prediction_response,
+                "api_type": "prognosen_navigation",
+                "navigation_forwarded": nav_timestamp is not None or nav_direction is not None
+            }
+        else:
+            raise HTTPException(status_code=502, detail="Backend response error")
+            
+    except Exception as e:
+        logger.error(f"Prognosen navigation API error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"API error: {str(e)}")
+
+
+# =============================================================================
 # APPLICATION STARTUP
 # =============================================================================
 
@@ -1604,9 +1740,16 @@ async def startup_event():
     logger.info(f"🚀 Starting {ServiceConfig.SERVICE_NAME} v{ServiceConfig.VERSION}")
     logger.info(f"📊 Frontend Service Consolidated: 13 → 1 Versions")
     logger.info(f"✅ FIXED: SOLL-IST Vergleichsanalyse wiederhergestellt")
+    logger.info(f"🔄 FIXED: KI-PROGNOSEN-NAV-002 Timeline Navigation Support")
     logger.info(f"🏗️ Clean Architecture: SOLID Principles Implemented")
     logger.info(f"⚙️ Configuration: Environment-based URLs")
     logger.info(f"🔧 Server: {ServiceConfig.HOST}:{ServiceConfig.PORT}")
+    logger.info("📋 Available Endpoints:")
+    logger.info("   📊 /prognosen - KI-Prognosen Interface (nav_timestamp/nav_direction support)")
+    logger.info("   📈 /vergleichsanalyse - SOLL-IST Vergleichsanalyse")
+    logger.info("   🔄 /api/timeline/navigation - Timeline Navigation API")
+    logger.info("   📊 /api/prognosen/navigation - Prognosen Navigation API")
+    logger.info("   🏥 /health - Service Status")
 
 
 @app.on_event("shutdown")
