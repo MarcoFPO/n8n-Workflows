@@ -1,4 +1,4 @@
-# 🏗️ Low-Level Design (LLD) - Clean Architecture Integration v6.0
+# 🏗️ Low-Level Design (LLD) - Clean Architecture Integration v7.1
 
 ## 🎯 **Enhanced Service Architecture - Clean Architecture Principles**
 
@@ -561,6 +561,780 @@ WantedBy=multi-user.target
 
 ---
 
-*Low-Level Design - Clean Architecture Integration v6.0*  
-*Event-Driven Trading Intelligence System - Enhanced Implementation Details*  
-*Letzte Aktualisierung: 24. August 2025*
+---
+
+## 📊 **Data Processing Service Enhanced - Port 8017 - Timeframe Aggregation Engine v7.1**
+
+### 🏛️ **Clean Architecture Layers für Aggregation**
+
+#### **Domain Layer - Aggregation Core Business Logic**
+
+```python
+# Domain Entities & Value Objects
+from dataclasses import dataclass
+from decimal import Decimal
+from datetime import date, datetime, timedelta
+from uuid import UUID, uuid4
+from typing import List, Optional, Dict, Any
+import numpy as np
+
+@dataclass
+class TimeframeConfiguration:
+    """Value Object für Zeitintervall-Konfiguration"""
+    interval_type: str      # "minutes", "hours", "days", "weeks", "months"
+    interval_value: int     # 1, 5, 15, 30, 60, etc.
+    display_name: str       # "1M", "1W", "3M", "12M"
+    horizon_days: int       # Berechnete Tage bis Zieldatum
+    
+    def __post_init__(self):
+        valid_types = ["minutes", "hours", "days", "weeks", "months"]
+        if self.interval_type not in valid_types:
+            raise ValueError(f"Invalid interval_type. Must be one of: {valid_types}")
+        if self.interval_value <= 0:
+            raise ValueError("interval_value must be positive")
+        if self.horizon_days <= 0:
+            raise ValueError("horizon_days must be positive")
+    
+    def calculate_target_date(self, base_date: date = None) -> date:
+        """Berechnet Zieldatum basierend auf Konfiguration"""
+        base = base_date or date.today()
+        return base + timedelta(days=self.horizon_days)
+
+@dataclass
+class QualityMetrics:
+    """Value Object für Quality Assessment"""
+    data_quality_score: float          # 0.0 - 1.0
+    prediction_quality_score: float    # 0.0 - 1.0
+    overall_quality_score: float       # 0.0 - 1.0
+    data_completeness: float           # 0.0 - 1.0
+    data_consistency: float            # 0.0 - 1.0
+    confidence_distribution: float     # Variance of individual confidences
+    outlier_count: int                 # Number of outliers removed
+    quality_threshold_met: bool        # Whether quality standards are met
+    
+    def __post_init__(self):
+        # Validate score ranges
+        scores = [self.data_quality_score, self.prediction_quality_score, 
+                 self.overall_quality_score, self.data_completeness, self.data_consistency]
+        for score in scores:
+            if not (0.0 <= score <= 1.0):
+                raise ValueError("All quality scores must be between 0.0 and 1.0")
+
+@dataclass
+class AggregatedPrediction:
+    """Core Domain Entity für aggregierte Vorhersagen"""
+    
+    # Identity & Context
+    id: UUID
+    symbol: str
+    company_name: str
+    market_region: str
+    
+    # Temporal Configuration
+    timeframe_config: TimeframeConfiguration
+    aggregation_date: date
+    target_date: date
+    
+    # Aggregated Values
+    predicted_value: Decimal        # Hauptvorhersage
+    confidence_score: float         # 0.0 - 1.0 Confidence
+    quality_metrics: QualityMetrics # Quality Assessment
+    
+    # Statistical Metadata
+    data_points_count: int         # Anzahl aggregierter Predictions
+    variance: float                # Statistische Varianz
+    standard_deviation: float      # Standardabweichung
+    
+    # Processing Metadata  
+    aggregation_strategy: str      # "weighted_average", "median", "ensemble"
+    created_at: datetime
+    last_updated: datetime
+    
+    def __post_init__(self):
+        self._validate_confidence_score()
+        self._validate_data_points_count()
+        
+    def _validate_confidence_score(self):
+        if not (0.0 <= self.confidence_score <= 1.0):
+            raise ValueError("Confidence score must be between 0.0 and 1.0")
+    
+    def _validate_data_points_count(self):
+        if self.data_points_count <= 0:
+            raise ValueError("Data points count must be positive")
+        
+    # Domain Behavior
+    def is_prediction_expired(self) -> bool:
+        return datetime.now().date() > self.target_date
+        
+    def calculate_accuracy_against_actual(self, actual_value: Decimal) -> float:
+        """Berechnet Genauigkeit gegen tatsächlichen Wert"""
+        if self.predicted_value == 0:
+            return 0.0
+        diff = abs(actual_value - self.predicted_value)
+        return float(1.0 - (diff / abs(self.predicted_value)))
+    
+    def is_high_quality(self, threshold: float = 0.8) -> bool:
+        """Prüft ob Prediction hohe Qualität hat"""
+        return self.quality_metrics.overall_quality_score >= threshold
+
+# Domain Services
+class TimeframeAggregationService:
+    """
+    CORE DOMAIN SERVICE für Aggregations-Business-Logic
+    
+    SOLID Principles Implementation:
+    - Single Responsibility: Nur Aggregation Logic
+    - Open/Closed: Erweiterbar durch Strategy Pattern
+    - Liskov Substitution: Strategy Interface compliance
+    - Interface Segregation: Separate Validation Service
+    - Dependency Inversion: Abhängig von Interfaces
+    """
+    
+    def __init__(self, 
+                 validation_service: 'MathematicalValidationService'):
+        self._validation_service = validation_service
+        self._strategies = self._initialize_strategies()
+        self.min_required_predictions = 3
+    
+    def calculate_aggregated_prediction(
+        self, 
+        raw_predictions: List[Dict],
+        timeframe_config: TimeframeConfiguration,
+        strategy_type: str = "ensemble",
+        strategy_parameters: Dict = None
+    ) -> AggregatedPrediction:
+        """
+        MAIN BUSINESS LOGIC: Aggregation Calculation
+        
+        Process Flow:
+        1. Data Validation & Cleaning
+        2. Strategy Pattern Application
+        3. Quality Metrics Calculation
+        4. Domain Entity Creation
+        """
+        
+        if strategy_parameters is None:
+            strategy_parameters = {}
+        
+        # Step 1: Comprehensive Data Validation
+        validated_predictions = self._validation_service.validate_prediction_data(
+            raw_predictions
+        )
+        
+        if len(validated_predictions) == 0:
+            raise InsufficientDataError("No valid predictions available for aggregation")
+        
+        # Step 2: Strategy Pattern Execution
+        aggregation_func = self._get_strategy_function(strategy_type)
+        statistical_result = aggregation_func(validated_predictions, strategy_parameters)
+        
+        # Step 3: Quality Assessment
+        quality_metrics = self._calculate_quality_metrics(
+            raw_predictions=raw_predictions,
+            validated_predictions=validated_predictions,
+            statistical_result=statistical_result,
+            strategy_type=strategy_type
+        )
+        
+        # Step 4: Domain Entity Construction
+        return self._build_aggregated_prediction(
+            validated_predictions=validated_predictions,
+            timeframe_config=timeframe_config,
+            statistical_result=statistical_result,
+            quality_metrics=quality_metrics,
+            strategy_type=strategy_type
+        )
+    
+    def _get_strategy_function(self, strategy_type: str):
+        """Strategy Pattern: Dynamic strategy selection"""
+        if strategy_type not in self._strategies:
+            raise UnsupportedStrategyError(f"Strategy not supported: {strategy_type}")
+        return self._strategies[strategy_type]
+    
+    def _initialize_strategies(self) -> Dict[str, callable]:
+        """Initialize available aggregation strategies"""
+        return {
+            "weighted_average": self._weighted_average_strategy,
+            "median": self._median_strategy,
+            "ensemble": self._ensemble_strategy
+        }
+    
+    def _weighted_average_strategy(self, predictions: List[Dict], parameters: Dict) -> Dict:
+        """Weighted Average Aggregation Strategy"""
+        weights = [p.get("confidence", 1.0) * parameters.get("base_weight", 1.0) 
+                  for p in predictions]
+        values = [float(p["predicted_value"]) for p in predictions]
+        
+        total_weight = sum(weights)
+        if total_weight == 0:
+            raise ValueError("Total weight cannot be zero")
+            
+        weighted_value = sum(w * v for w, v in zip(weights, values)) / total_weight
+        
+        return {
+            "predicted_value": Decimal(str(round(weighted_value, 6))),
+            "variance": float(np.var(values)),
+            "standard_deviation": float(np.std(values)),
+            "method_details": {
+                "strategy": "weighted_average",
+                "total_weight": total_weight,
+                "weight_distribution": weights
+            }
+        }
+    
+    def _median_strategy(self, predictions: List[Dict], parameters: Dict) -> Dict:
+        """Median-based Aggregation Strategy"""
+        values = [float(p["predicted_value"]) for p in predictions]
+        median_value = float(np.median(values))
+        
+        return {
+            "predicted_value": Decimal(str(round(median_value, 6))),
+            "variance": float(np.var(values)),
+            "standard_deviation": float(np.std(values)),
+            "method_details": {
+                "strategy": "median",
+                "quartiles": {
+                    "q1": float(np.percentile(values, 25)),
+                    "q2": median_value,
+                    "q3": float(np.percentile(values, 75))
+                }
+            }
+        }
+    
+    def _ensemble_strategy(self, predictions: List[Dict], parameters: Dict) -> Dict:
+        """Advanced Ensemble Aggregation Strategy"""
+        # Combine weighted average (70%) and median (30%) for robustness
+        weighted_result = self._weighted_average_strategy(predictions, parameters)
+        median_result = self._median_strategy(predictions, parameters)
+        
+        ensemble_weight = parameters.get("weighted_avg_weight", 0.7)
+        median_weight = 1.0 - ensemble_weight
+        
+        ensemble_value = (
+            float(weighted_result["predicted_value"]) * ensemble_weight +
+            float(median_result["predicted_value"]) * median_weight
+        )
+        
+        values = [float(p["predicted_value"]) for p in predictions]
+        
+        return {
+            "predicted_value": Decimal(str(round(ensemble_value, 6))),
+            "variance": float(np.var(values)),
+            "standard_deviation": float(np.std(values)),
+            "method_details": {
+                "strategy": "ensemble",
+                "ensemble_composition": {
+                    "weighted_average_contribution": ensemble_weight,
+                    "median_contribution": median_weight
+                },
+                "component_results": {
+                    "weighted_average": float(weighted_result["predicted_value"]),
+                    "median": float(median_result["predicted_value"])
+                }
+            }
+        }
+
+class MathematicalValidationService:
+    """
+    DOMAIN SERVICE für mathematische Validierung
+    Implements advanced statistical validation algorithms
+    """
+    
+    def __init__(self):
+        self.min_required_predictions = 3
+        self.outlier_method = "iqr"  # IQR-based outlier detection
+        self.quality_threshold = 0.6
+    
+    def validate_prediction_data(self, predictions: List[Dict]) -> List[Dict]:
+        """
+        Comprehensive Data Validation Pipeline:
+        1. Structural Validation
+        2. Statistical Outlier Detection (IQR Method)
+        3. Consistency Checks
+        4. Quality Thresholding
+        """
+        
+        # Phase 1: Basic Structure Validation
+        structurally_valid = self._validate_structure(predictions)
+        
+        # Phase 2: Statistical Outlier Removal
+        outlier_cleaned = self._remove_statistical_outliers(structurally_valid)
+        
+        # Phase 3: Data Consistency Validation
+        consistency_validated = self._validate_consistency(outlier_cleaned)
+        
+        # Phase 4: Quality Threshold Application
+        quality_filtered = self._apply_quality_thresholds(consistency_validated)
+        
+        if len(quality_filtered) < self.min_required_predictions:
+            raise InsufficientQualityDataError(
+                f"Only {len(quality_filtered)} valid predictions, need minimum {self.min_required_predictions}"
+            )
+        
+        return quality_filtered
+    
+    def _validate_structure(self, predictions: List[Dict]) -> List[Dict]:
+        """Validates basic structure and required fields"""
+        valid_predictions = []
+        required_fields = ["predicted_value", "confidence", "created_at"]
+        
+        for pred in predictions:
+            if all(field in pred for field in required_fields):
+                try:
+                    # Validate data types
+                    float(pred["predicted_value"])
+                    float(pred["confidence"])
+                    valid_predictions.append(pred)
+                except (ValueError, TypeError):
+                    continue  # Skip invalid predictions
+        
+        return valid_predictions
+    
+    def _remove_statistical_outliers(self, predictions: List[Dict]) -> List[Dict]:
+        """
+        IQR-based Outlier Detection Algorithm
+        
+        Mathematical Formula:
+        - Q1 = 25th percentile
+        - Q3 = 75th percentile
+        - IQR = Q3 - Q1
+        - Lower Bound = Q1 - 1.5 * IQR
+        - Upper Bound = Q3 + 1.5 * IQR
+        - Outlier: value < Lower Bound OR value > Upper Bound
+        """
+        if len(predictions) < 4:  # IQR needs minimum 4 points
+            return predictions
+            
+        values = [float(p["predicted_value"]) for p in predictions]
+        
+        # Calculate IQR bounds
+        q1 = np.percentile(values, 25)
+        q3 = np.percentile(values, 75)
+        iqr = q3 - q1
+        
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        
+        # Filter outliers
+        filtered_predictions = []
+        
+        for pred in predictions:
+            value = float(pred["predicted_value"])
+            if lower_bound <= value <= upper_bound:
+                filtered_predictions.append(pred)
+        
+        # Ensure minimum data retention
+        if len(filtered_predictions) < self.min_required_predictions:
+            # Sort by distance to median and retain best predictions
+            median_value = np.median(values)
+            predictions_with_distance = [
+                (pred, abs(float(pred["predicted_value"]) - median_value))
+                for pred in predictions
+            ]
+            predictions_with_distance.sort(key=lambda x: x[1])
+            filtered_predictions = [
+                pred for pred, _ in predictions_with_distance[:self.min_required_predictions]
+            ]
+        
+        return filtered_predictions
+    
+    def _validate_consistency(self, predictions: List[Dict]) -> List[Dict]:
+        """Validates temporal and logical consistency"""
+        # Remove predictions with future creation dates
+        now = datetime.now()
+        consistent_predictions = [
+            p for p in predictions 
+            if datetime.fromisoformat(p["created_at"].replace("Z", "+00:00")) <= now
+        ]
+        
+        return consistent_predictions
+    
+    def _apply_quality_thresholds(self, predictions: List[Dict]) -> List[Dict]:
+        """Applies minimum quality thresholds"""
+        return [
+            p for p in predictions 
+            if p.get("confidence", 0.0) >= self.quality_threshold
+        ]
+    
+    def calculate_aggregation_confidence(
+        self, 
+        predictions: List[Dict],
+        aggregation_result: Dict
+    ) -> float:
+        """
+        Advanced Confidence Calculation Algorithm
+        
+        Factors:
+        1. Individual prediction confidences
+        2. Prediction agreement (low std dev = high agreement)
+        3. Data completeness ratio
+        4. Mathematical validity
+        """
+        
+        # Factor 1: Average Individual Confidences
+        individual_confidences = [p.get("confidence", 0.5) for p in predictions]
+        avg_individual_confidence = np.mean(individual_confidences)
+        
+        # Factor 2: Prediction Agreement Score
+        predicted_values = [float(p["predicted_value"]) for p in predictions]
+        if len(predicted_values) > 1:
+            std_dev = np.std(predicted_values)
+            mean_value = abs(np.mean(predicted_values))
+            agreement_score = 1.0 - min(1.0, std_dev / (mean_value + 1e-6))
+        else:
+            agreement_score = 1.0
+        
+        # Factor 3: Data Completeness Score
+        completeness_score = min(1.0, len(predictions) / 10.0)  # Normalized to 10 predictions
+        
+        # Factor 4: Mathematical Validity
+        predicted_value = aggregation_result.get("predicted_value", 0.0)
+        math_validity = 0.0 if (np.isnan(float(predicted_value)) or np.isinf(float(predicted_value))) else 1.0
+        
+        # Weighted Combination
+        confidence = (
+            avg_individual_confidence * 0.35 +  # Individual confidences
+            agreement_score * 0.25 +            # Prediction agreement  
+            completeness_score * 0.20 +         # Data completeness
+            math_validity * 0.20                # Mathematical validity
+        )
+        
+        return max(0.0, min(1.0, confidence))
+
+# Custom Domain Exceptions
+class AggregationDomainError(Exception):
+    """Base exception for aggregation domain errors"""
+    pass
+
+class InsufficientDataError(AggregationDomainError):
+    """Raised when insufficient data is available for aggregation"""
+    pass
+
+class InsufficientQualityDataError(AggregationDomainError):
+    """Raised when data doesn't meet quality requirements"""
+    pass
+
+class UnsupportedStrategyError(AggregationDomainError):
+    """Raised when unsupported aggregation strategy is requested"""
+    pass
+```
+
+#### **Application Layer - Use Cases & DTOs**
+
+```python
+# Application DTOs
+from pydantic import BaseModel, Field, validator
+from typing import List, Optional, Dict, Any
+from datetime import date, datetime
+from uuid import UUID
+
+class AggregationRequestDTO(BaseModel):
+    """DTO für Aggregation Requests"""
+    request_id: str = Field(..., description="Eindeutige Request-ID")
+    symbols: List[str] = Field(..., min_items=1, max_items=50, description="Zu aggregierende Symbole")
+    timeframe_type: str = Field(..., description="Zeitintervall-Typ")
+    timeframe_value: int = Field(..., ge=1, le=365, description="Zeitintervall-Wert")
+    timeframe_display_name: str = Field(..., description="Anzeigename für Zeitintervall")
+    timeframe_hours: int = Field(..., ge=1, description="Zeitintervall in Stunden")
+    aggregation_strategy: str = Field("ensemble", description="Aggregationsstrategie")
+    strategy_parameters: Optional[Dict[str, float]] = Field(default_factory=dict)
+    quality_threshold: float = Field(0.8, ge=0.0, le=1.0)
+    max_predictions_per_symbol: int = Field(50, ge=1, le=1000)
+    min_prediction_quality: float = Field(0.6, ge=0.0, le=1.0)
+    cache_ttl_seconds: int = Field(3600, ge=60, le=86400)
+    force_recalculation: bool = Field(False)
+    
+    @validator("timeframe_type")
+    def validate_timeframe_type(cls, v):
+        valid_types = ["minutes", "hours", "days", "weeks", "months"]
+        if v not in valid_types:
+            raise ValueError(f"timeframe_type must be one of: {valid_types}")
+        return v
+    
+    @validator("aggregation_strategy")
+    def validate_strategy(cls, v):
+        valid_strategies = ["weighted_average", "median", "ensemble"]
+        if v not in valid_strategies:
+            raise ValueError(f"aggregation_strategy must be one of: {valid_strategies}")
+        return v
+
+class AggregatedPredictionDTO(BaseModel):
+    """DTO für Aggregated Predictions Response"""
+    id: UUID
+    symbol: str
+    company_name: str
+    market_region: str
+    timeframe_display: str
+    predicted_value: float
+    confidence_score: float
+    quality_score: float
+    target_date: date
+    data_points_count: int
+    aggregation_strategy: str
+    created_at: datetime
+    
+    @classmethod
+    def from_entity(cls, entity: AggregatedPrediction) -> 'AggregatedPredictionDTO':
+        """Converts Domain Entity to DTO"""
+        return cls(
+            id=entity.id,
+            symbol=entity.symbol,
+            company_name=entity.company_name,
+            market_region=entity.market_region,
+            timeframe_display=entity.timeframe_config.display_name,
+            predicted_value=float(entity.predicted_value),
+            confidence_score=entity.confidence_score,
+            quality_score=entity.quality_metrics.overall_quality_score,
+            target_date=entity.target_date,
+            data_points_count=entity.data_points_count,
+            aggregation_strategy=entity.aggregation_strategy,
+            created_at=entity.created_at
+        )
+
+class QualityReportDTO(BaseModel):
+    """DTO für Quality Assessment Reports"""
+    aggregation_id: UUID
+    overall_quality_score: float
+    quality_status: str
+    validation_passed: bool
+    quality_dimensions: Dict[str, float]
+    issues_found: int
+    recommendations: List[str]
+
+# Application Use Cases
+class CalculateAggregatedPredictionsUseCase:
+    """
+    PRIMARY USE CASE für Aggregation Workflow
+    
+    Responsibilities:
+    1. Request Validation & Processing
+    2. Domain Service Orchestration  
+    3. Repository & Cache Management
+    4. Event Publishing
+    5. Error Handling & Recovery
+    """
+    
+    def __init__(
+        self,
+        # Domain Services (Injected Dependencies)
+        aggregation_service: TimeframeAggregationService,
+        
+        # Repository Interfaces (DIP Compliance)
+        aggregation_repository: 'AggregationRepositoryInterface',
+        prediction_repository: 'PredictionRepositoryInterface',
+        
+        # Infrastructure Services (Interface-based)
+        cache_service: 'CacheServiceInterface',
+        event_publisher: 'EventPublisherInterface',
+        performance_monitor: 'PerformanceMonitorInterface'
+    ):
+        # Dependency Injection - All dependencies are interfaces
+        self._aggregation_service = aggregation_service
+        self._aggregation_repository = aggregation_repository
+        self._prediction_repository = prediction_repository
+        self._cache_service = cache_service
+        self._event_publisher = event_publisher
+        self._performance_monitor = performance_monitor
+    
+    async def execute(self, request: AggregationRequestDTO) -> List[AggregatedPredictionDTO]:
+        """
+        MAIN EXECUTION FLOW for Aggregated Predictions
+        
+        Performance Targets:
+        - Response Time: < 300ms (1M), < 150ms (1W)
+        - Cache Hit Rate: > 85%
+        - Error Rate: < 1%
+        - Throughput: 50+ concurrent requests
+        """
+        
+        # Start performance monitoring
+        execution_context = await self._performance_monitor.start_execution(
+            operation="calculate_aggregated_predictions",
+            request_id=request.request_id
+        )
+        
+        try:
+            # Phase 1: Request Validation
+            self._validate_request(request)
+            
+            # Phase 2: Cache Strategy (Performance Optimization)
+            cache_key = self._build_deterministic_cache_key(request)
+            cached_result = await self._attempt_cache_retrieval(cache_key, request)
+            
+            if cached_result:
+                await execution_context.record_cache_hit()
+                return cached_result
+            
+            # Phase 3: Data Acquisition & Processing
+            processing_results = await self._process_symbols_batch(request)
+            
+            # Phase 4: Result Caching & Event Publishing
+            if processing_results:
+                await self._cache_and_publish_results(cache_key, processing_results, request)
+            
+            # Phase 5: Performance Metrics Recording
+            await execution_context.complete_successfully(
+                symbols_processed=len(processing_results),
+                cache_miss=True
+            )
+            
+            return processing_results
+            
+        except Exception as e:
+            # Comprehensive Error Handling
+            await execution_context.complete_with_error(error=str(e))
+            await self._handle_execution_error(e, request)
+            raise
+    
+    async def _process_symbols_batch(self, request: AggregationRequestDTO) -> List[AggregatedPredictionDTO]:
+        """
+        Batch processing mit Error Isolation per Symbol
+        """
+        results = []
+        failed_symbols = []
+        
+        for symbol in request.symbols:
+            try:
+                # Get raw prediction data
+                raw_predictions = await self._prediction_repository.get_predictions_for_aggregation(
+                    symbol=symbol,
+                    timeframe_hours=request.timeframe_hours,
+                    quality_threshold=request.min_prediction_quality,
+                    limit=request.max_predictions_per_symbol
+                )
+                
+                if not raw_predictions:
+                    failed_symbols.append(symbol)
+                    continue
+                
+                # Domain Layer Processing
+                aggregated_prediction = await self._execute_domain_aggregation(
+                    symbol=symbol,
+                    raw_predictions=raw_predictions,
+                    request=request
+                )
+                
+                # Repository Persistence
+                await self._aggregation_repository.save(aggregated_prediction)
+                
+                # DTO Conversion
+                dto = AggregatedPredictionDTO.from_entity(aggregated_prediction)
+                results.append(dto)
+                
+                # Individual Success Event
+                await self._event_publisher.publish(
+                    "aggregation.calculation.completed",
+                    self._build_completion_event_data(symbol, aggregated_prediction)
+                )
+                
+            except Exception as symbol_error:
+                failed_symbols.append(symbol)
+                await self._event_publisher.publish(
+                    "aggregation.calculation.symbol_failed", 
+                    {
+                        "symbol": symbol,
+                        "error": str(symbol_error),
+                        "request_id": request.request_id
+                    }
+                )
+                # Continue processing other symbols
+                continue
+        
+        # Batch Summary Event
+        await self._event_publisher.publish(
+            "aggregation.batch.processed",
+            {
+                "request_id": request.request_id,
+                "successful_symbols": len(results),
+                "failed_symbols": len(failed_symbols),
+                "success_rate": len(results) / len(request.symbols) if request.symbols else 0.0
+            }
+        )
+        
+        return results
+    
+    async def _execute_domain_aggregation(
+        self,
+        symbol: str,
+        raw_predictions: List[Dict],
+        request: AggregationRequestDTO
+    ) -> AggregatedPrediction:
+        """Execute domain aggregation logic"""
+        
+        # Create timeframe configuration
+        timeframe_config = TimeframeConfiguration(
+            interval_type=request.timeframe_type,
+            interval_value=request.timeframe_value,
+            display_name=request.timeframe_display_name,
+            horizon_days=request.timeframe_hours // 24
+        )
+        
+        # Execute domain service
+        return self._aggregation_service.calculate_aggregated_prediction(
+            raw_predictions=raw_predictions,
+            timeframe_config=timeframe_config,
+            strategy_type=request.aggregation_strategy,
+            strategy_parameters=request.strategy_parameters
+        )
+
+# Repository Interfaces (Dependency Inversion Principle)
+from abc import ABC, abstractmethod
+
+class AggregationRepositoryInterface(ABC):
+    """Repository interface for aggregated predictions"""
+    
+    @abstractmethod
+    async def save(self, aggregation: AggregatedPrediction) -> None:
+        pass
+    
+    @abstractmethod
+    async def get_by_id(self, aggregation_id: UUID) -> Optional[AggregatedPrediction]:
+        pass
+    
+    @abstractmethod
+    async def get_by_symbol_and_timeframe(
+        self, 
+        symbol: str, 
+        timeframe: str,
+        limit: int = 10
+    ) -> List[AggregatedPrediction]:
+        pass
+
+class PredictionRepositoryInterface(ABC):
+    """Repository interface for raw predictions"""
+    
+    @abstractmethod
+    async def get_predictions_for_aggregation(
+        self,
+        symbol: str,
+        timeframe_hours: int,
+        quality_threshold: float,
+        limit: int
+    ) -> List[Dict]:
+        pass
+
+# Service Interfaces
+class CacheServiceInterface(ABC):
+    """Cache service interface"""
+    
+    @abstractmethod
+    async def get(self, key: str) -> Optional[Any]:
+        pass
+    
+    @abstractmethod
+    async def set(self, key: str, value: Any, ttl: int) -> None:
+        pass
+
+class EventPublisherInterface(ABC):
+    """Event publisher interface"""
+    
+    @abstractmethod
+    async def publish(self, event_type: str, event_data: Dict[str, Any]) -> None:
+        pass
+```
+
+---
+
+*Low-Level Design - Clean Architecture Integration v7.1*  
+*Event-Driven Trading Intelligence System - Enhanced Implementation Details with Timeframe Aggregation*  
+*Letzte Aktualisierung: 27. August 2025*

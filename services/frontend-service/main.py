@@ -660,6 +660,15 @@ async def prognosen(
             }
             prediction_offset_days = timeframe_days.get(timeframe, 30)
             
+            # Einheitliches Basis-Datum für alle Vorhersagen (FESTE BASIS für Konsistenz)
+            from datetime import datetime, timedelta
+            # Verwende aktuelles Datum um 12:00 Uhr als einheitliche Basis für alle Vorhersagen
+            base_date = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+            unified_prediction_date = base_date + timedelta(days=prediction_offset_days)
+            formatted_unified_prediction_date = unified_prediction_date.strftime('%d.%m.%Y')
+            
+            logger.info(f"UNIFIED DATE DEBUG: base_date={base_date.isoformat()}, offset_days={prediction_offset_days}, unified_date={formatted_unified_prediction_date}")
+            
             for item in sorted_predictions:  # Top 15 Prognosen nach Gewinn sortiert
                 symbol = item.get('symbol', 'N/A')
                 
@@ -708,21 +717,19 @@ async def prognosen(
                 calculation_date = item.get('timestamp', '')
                 if calculation_date:
                     try:
-                        from datetime import datetime, timedelta
                         # Parse ISO timestamp 
                         calculation_dt = datetime.fromisoformat(calculation_date.replace('Z', '+00:00'))
                         formatted_calculation_date = calculation_dt.strftime('%d.%m.%Y %H:%M')
                         
-                        # Prognosedatum = Berechnungsdatum + Prognosezeitraum
-                        prediction_dt = calculation_dt + timedelta(days=prediction_offset_days)
-                        formatted_prediction_date = prediction_dt.strftime('%d.%m.%Y')
+                        # Einheitliches Prognosedatum für alle Vorhersagen verwenden
+                        formatted_prediction_date = formatted_unified_prediction_date
                         
                     except Exception:
                         formatted_calculation_date = calculation_date[:16]  # Fallback
-                        formatted_prediction_date = nav_periods['current']  # Fallback
+                        formatted_prediction_date = formatted_unified_prediction_date  # Einheitliches Datum auch als Fallback
                 else:
                     formatted_calculation_date = 'N/A'
-                    formatted_prediction_date = nav_periods['current']  # Fallback
+                    formatted_prediction_date = formatted_unified_prediction_date  # Einheitliches Datum auch als Fallback
                 
                 # ERWEITERTE FARBKODIERUNG für Durchschnittswerte
                 change_color = 'green' if change_percent > 0 else 'red'
