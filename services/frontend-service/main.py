@@ -133,16 +133,29 @@ def setup_logging() -> logging.Logger:
     Centralized Logging Configuration
     
     Single Responsibility: Nur Logging Setup
+    Enhanced Debug-Logging für KI-Prognosen Bug Debugging
     """
+    # Force DEBUG level für intensive Debugging
+    log_level = logging.DEBUG if ServiceConfig.LOG_LEVEL.upper() == 'DEBUG' else getattr(logging, ServiceConfig.LOG_LEVEL.upper(), logging.INFO)
+    
     logging.basicConfig(
-        level=getattr(logging, ServiceConfig.LOG_LEVEL),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler('/opt/aktienanalyse-ökosystem/logs/frontend-service.log')
         ]
     )
-    return logging.getLogger(__name__)
+    
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
+    
+    # Aktiviere auch aiohttp-Logging für HTTP-Client Debugging
+    aiohttp_logger = logging.getLogger('aiohttp.client')
+    aiohttp_logger.setLevel(log_level)
+    
+    logger.info(f"Enhanced Logging Setup: Level={log_level}, File=/opt/aktienanalyse-ökosystem/logs/frontend-service.log")
+    return logger
 
 
 logger = setup_logging()
@@ -559,20 +572,57 @@ async def prognosen(
         
         nav_periods = get_prognosen_navigation_periods(timeframe, nav_timestamp, nav_direction)
         
-        # KI-Prognose Daten laden
+        # KI-Prognose Daten laden mit erweiterten Exception Handling
         prediction_url = ServiceConfig.get_prediction_url(timeframe)
         logger.info(f"Loading KI-Prognosen from: {prediction_url}")
         
-        prediction_response = await http_client.get(prediction_url)
-        logger.info(f"Received prediction response: {prediction_response}")
-        
-        # Parse zu HTML-Tabelle (korrigiertes Parsing)
         prediction_data = None
-        if prediction_response:
-            if isinstance(prediction_response, dict) and "predictions" in prediction_response:
-                prediction_data = prediction_response["predictions"]
-            elif isinstance(prediction_response, list):
-                prediction_data = prediction_response
+        try:
+            # Erweiterte Exception-Logging für Debugging
+            logger.info(f"CRITICAL DEBUG: Starting prediction request to {prediction_url}")
+            prediction_response = await http_client.get(prediction_url)
+            logger.info(f"CRITICAL DEBUG: Received response, type: {type(prediction_response).__name__}, size: {len(str(prediction_response))} bytes")
+            
+            # Detaillierte Response-Analyse
+            if prediction_response:
+                logger.info(f"CRITICAL DEBUG: Response keys: {list(prediction_response.keys()) if isinstance(prediction_response, dict) else 'not_dict'}")
+                
+                if isinstance(prediction_response, dict) and "predictions" in prediction_response:
+                    prediction_data = prediction_response["predictions"]
+                    logger.info(f"CRITICAL DEBUG: Successfully parsed {len(prediction_data)} predictions from dict")
+                elif isinstance(prediction_response, list):
+                    prediction_data = prediction_response
+                    logger.info(f"CRITICAL DEBUG: Successfully parsed {len(prediction_data)} predictions from list")
+                else:
+                    logger.error(f"CRITICAL DEBUG: Unexpected response format - type: {type(prediction_response).__name__}, content: {str(prediction_response)[:200]}...")
+                    # Log response structure for debugging
+                    if hasattr(prediction_response, '__dict__'):
+                        logger.error(f"CRITICAL DEBUG: Response attributes: {prediction_response.__dict__}")
+            else:
+                logger.error("CRITICAL DEBUG: Empty or None prediction_response received")
+                
+        except aiohttp.ClientError as e:
+            logger.error(f"CRITICAL DEBUG: HTTP Client Error: {str(e)}")
+            logger.error(f"CRITICAL DEBUG: Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"CRITICAL DEBUG: Traceback: {traceback.format_exc()}")
+            prediction_data = None
+        except asyncio.TimeoutError as e:
+            logger.error(f"CRITICAL DEBUG: Timeout Error: {str(e)}")
+            import traceback
+            logger.error(f"CRITICAL DEBUG: Traceback: {traceback.format_exc()}")
+            prediction_data = None
+        except json.JSONDecodeError as e:
+            logger.error(f"CRITICAL DEBUG: JSON Parse Error: {str(e)}")
+            import traceback
+            logger.error(f"CRITICAL DEBUG: Traceback: {traceback.format_exc()}")
+            prediction_data = None
+        except Exception as e:
+            logger.error(f"CRITICAL DEBUG: Unexpected Exception in prediction loading: {str(e)}")
+            logger.error(f"CRITICAL DEBUG: Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"CRITICAL DEBUG: Full traceback: {traceback.format_exc()}")
+            prediction_data = None
         
         if prediction_data and isinstance(prediction_data, list) and len(prediction_data) > 0:
             # ERWEITERTE HEADERS: Durchschnittswerte-Spalten hinzugefügt
@@ -720,11 +770,17 @@ async def prognosen(
             </table>
             """
         else:
+            # Erweiterte Fallback-Meldung mit Debug-Info
+            debug_info = f"prediction_data={'✓' if prediction_data is not None else '✗'}, type={type(prediction_data).__name__}, len={len(prediction_data) if isinstance(prediction_data, list) else 'N/A'}"
+            logger.warning(f"No predictions available: {debug_info}, backend_url={prediction_url}")
+            
             table_html = f"""
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i>
                 <strong>Keine Prognosen verfügbar</strong><br>
                 Für den Zeitraum {timeframe_info['display_name']} sind derzeit keine KI-Prognosen verfügbar.
+                <br><small style="color: #6c757d;">Debug: {debug_info}</small>
+                <br><small style="color: #6c757d;">Backend: {prediction_url}</small>
             </div>
             """
         
@@ -802,13 +858,26 @@ async def prognosen(
         """
         
     except Exception as e:
-        logger.error(f"Error loading KI-Prognosen for {timeframe}: {str(e)}")
+        logger.error(f"CRITICAL DEBUG: MAIN EXCEPTION in prognosen() handler for {timeframe}: {str(e)}")
+        logger.error(f"CRITICAL DEBUG: Main exception type: {type(e).__name__}")
+        import traceback
+        logger.error(f"CRITICAL DEBUG: Full main exception traceback: {traceback.format_exc()}")
+        
+        # Re-raise the exception to see the full stack trace instead of silent fallback
+        raise HTTPException(
+            status_code=500,
+            detail=f"KI-Prognosen loading failed: {str(e)} (Type: {type(e).__name__})"
+        )
+        
+        # Alternative: Keep old fallback behavior for graceful degradation
         content = f"""
         <h2>📊 KI-Prognosen - Machine Learning Vorhersagen</h2>
         <div class="alert alert-danger">
             <i class="fas fa-exclamation-triangle"></i>
-            <strong>Fehler beim Laden der Prognosen</strong><br>
-            {str(e)}
+            <strong>CRITICAL ERROR beim Laden der Prognosen</strong><br>
+            <p><strong>Error:</strong> {str(e)}</p>
+            <p><strong>Error Type:</strong> {type(e).__name__}</p>
+            <p><strong>Backend URL:</strong> {ServiceConfig.get_prediction_url(timeframe)}</p>
         </div>
         """
     
