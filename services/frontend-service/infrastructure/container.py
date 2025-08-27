@@ -430,7 +430,7 @@ class FrontendContainerFactory:
         """Create container for development environment"""
         config = {
             'environment': 'development',
-            'host': 'localhost',
+            'host': os.getenv('FRONTEND_HOST', '10.1.1.174'),
             'port': 8080,
             'log_level': 'DEBUG',
             'health_check_interval': 30
@@ -442,7 +442,7 @@ class FrontendContainerFactory:
         """Create container for testing environment"""
         config = {
             'environment': 'test',
-            'host': 'localhost',
+            'host': os.getenv('FRONTEND_HOST', '10.1.1.174'),
             'port': 8081,
             'log_level': 'DEBUG',
             'health_check_interval': 10,

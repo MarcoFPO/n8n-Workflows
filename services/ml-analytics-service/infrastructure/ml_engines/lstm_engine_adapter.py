@@ -8,9 +8,12 @@ Clean Architecture v6.0.0 - Infrastructure Layer
 """
 
 import asyncio
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 from ...application.interfaces.ml_prediction_service import IMLPredictionService
 from ...domain.entities.prediction import PredictionResult, PredictionTarget, PredictionMetrics
@@ -122,8 +125,71 @@ class LSTMEngineAdapter(IMLPredictionService):
     async def generate_ensemble_prediction(self,
                                          target: PredictionTarget,
                                          engine_types: List[MLEngineType]) -> 'EnsemblePrediction':
-        """Generate ensemble prediction - not directly supported by this adapter"""
-        raise NotImplementedError("Ensemble predictions handled by dedicated ensemble adapter")
+        """
+        Generate ensemble prediction using multiple LSTM engines
+        
+        CLEAN ARCHITECTURE IMPLEMENTATION:
+        - Combines predictions from Simple LSTM and Multi-Horizon LSTM
+        - Returns weighted ensemble result based on confidence scores
+        - Isolates ensemble logic in infrastructure layer
+        """
+        if not self._is_initialized:
+            raise MLModelNotReadyError("LSTM engines not initialized")
+        
+        try:
+            predictions = []
+            
+            # Generate predictions with available engines
+            for engine_type in engine_types:
+                if engine_type in [MLEngineType.SIMPLE_LSTM, MLEngineType.MULTI_HORIZON_LSTM]:
+                    try:
+                        prediction = await self.generate_single_prediction(target, engine_type)
+                        predictions.append(prediction)
+                    except Exception as e:
+                        # Log error but continue with other engines
+                        logger.warning(f"Engine {engine_type} failed: {e}")
+                        continue
+                        
+            if not predictions:
+                raise MLPredictionError("No LSTM engines generated predictions")
+            
+            # Create ensemble prediction (simplified implementation)
+            ensemble_prediction = self._create_ensemble_prediction(predictions, target)
+            return ensemble_prediction
+            
+        except Exception as e:
+            raise MLPredictionError(f"Ensemble prediction failed: {str(e)}")
+    
+    def _create_ensemble_prediction(self, predictions: List[PredictionResult], target: PredictionTarget) -> 'EnsemblePrediction':
+        """Create ensemble prediction from individual predictions"""
+        from ...domain.entities.prediction import EnsemblePrediction
+        
+        # Simple ensemble: average predictions weighted by confidence
+        total_confidence = sum(pred.confidence for pred in predictions)
+        if total_confidence == 0:
+            total_confidence = 1  # Avoid division by zero
+            
+        weighted_prediction = sum(
+            pred.predicted_value * (pred.confidence / total_confidence)
+            for pred in predictions
+        )
+        
+        average_confidence = sum(pred.confidence for pred in predictions) / len(predictions)
+        
+        return EnsemblePrediction(
+            prediction_id=str(uuid4()),
+            target=target,
+            predicted_value=weighted_prediction,
+            confidence=average_confidence,
+            individual_predictions=predictions,
+            ensemble_method="confidence_weighted_average",
+            timestamp=datetime.now(),
+            metadata={
+                'engines_used': len(predictions),
+                'total_engines_requested': len([t for t in [MLEngineType.SIMPLE_LSTM, MLEngineType.MULTI_HORIZON_LSTM]]),
+                'ensemble_algorithm': 'confidence_weighted_average'
+            }
+        )
     
     async def batch_predict(self,
                           symbols: List[str],

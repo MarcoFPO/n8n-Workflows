@@ -91,7 +91,7 @@ class MLServiceConfig:
         if "database" not in self._config:
             self._config["database"] = {}
         
-        self._config["database"].setdefault("host", os.getenv("POSTGRES_HOST", "localhost"))
+        self._config["database"].setdefault("host", os.getenv("POSTGRES_HOST", os.getenv("ML_SERVICE_HOST", "10.1.1.174")))
         self._config["database"].setdefault("port", int(os.getenv("POSTGRES_PORT", "5432")))
         self._config["database"].setdefault("name", os.getenv("POSTGRES_DB", "aktienanalyse"))
         self._config["database"].setdefault("user", os.getenv("POSTGRES_USER", "aktienanalyse"))

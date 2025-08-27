@@ -1,0 +1,223 @@
+{
+  "timestamp": "2025-08-27T04:41:20.766812",
+  "files_moved": [
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/frontend-service/main_clean_v1_0_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main_clean_v1_0_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/frontend-service/main_clean_v1_0_0_fixed.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main_clean_v1_0_0_fixed.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/frontend-service/main_clean_v1_0_0_production.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main_clean_v1_0_0_production.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/frontend-service/main_enhanced_gui.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main_enhanced_gui.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/frontend-service/main_v8_1_0_enhanced_averages.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main_v8_1_0_enhanced_averages.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/frontend-service/main.py.backup_20250826_190147",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main.py.backup_20250826_190147",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/main_v6_0_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/main_v6_0_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/main_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/main_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/main_v6_1_1.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/main_v6_1_1.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/main_refactored.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/main_refactored.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/main_backup_original.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/main_backup_original.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/migration_script.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/migration_script.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/infrastructure/container_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/infrastructure/container_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/infrastructure/di_container.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/ml-analytics-service/infrastructure/di_container.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/prediction-tracking-service/main_v6_0_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/prediction-tracking-service/main_v6_0_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/prediction-tracking-service/main_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/prediction-tracking-service/main_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/prediction-tracking-service/main_v6_2_0_enhanced_averages.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/prediction-tracking-service/main_v6_2_0_enhanced_averages.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/prediction-tracking-service/main_ml_predictions_enhanced.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/prediction-tracking-service/main_ml_predictions_enhanced.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/prediction-tracking-service/simple_enhanced_api.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/prediction-tracking-service/simple_enhanced_api.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/prediction-tracking-service/infrastructure/container_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/prediction-tracking-service/infrastructure/container_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/data-processing-service/main_v6_0_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/data-processing-service/main_v6_0_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/data-processing-service/main_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/data-processing-service/main_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/data-processing-service/infrastructure/container_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/data-processing-service/infrastructure/container_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/marketcap-service/main_v6_0_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/marketcap-service/main_v6_0_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/marketcap-service/main_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/marketcap-service/main_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/marketcap-service/infrastructure/container_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/marketcap-service/infrastructure/container_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/diagnostic-service/infrastructure/container_v6_1_0.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/diagnostic-service/infrastructure/container_v6_1_0.py",
+      "type": "service_duplicate"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/legacy_modules_collection_v1_0_0_20250818.py",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/legacy_collections/legacy_modules_collection_v1_0_0_20250818.py",
+      "type": "legacy_collection"
+    },
+    {
+      "source": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/infrastructure/legacy_adapters",
+      "destination": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/legacy_collections/legacy_adapters",
+      "type": "legacy_collection"
+    }
+  ],
+  "files_deleted": [
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/backups/unified-profit-engine-enhanced_backup_20250825.tar.gz",
+      "type": "archive_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/backups/cleanup_20250826/versioned_files_backup.tar.gz",
+      "type": "archive_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/clean_architecture.tar.gz",
+      "type": "archive_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/services/ml-analytics-service/ml-analytics-refactored.tar.gz",
+      "type": "archive_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/archive/critical_cleanup_20250827_044120/service_duplicates/frontend-service/main.py.backup_20250826_190147",
+      "type": "backup_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/temp_frontend_main_soll_ist.py",
+      "type": "backup_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/temp_prediction_tracking.py",
+      "type": "backup_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/temp_frontend_main.py",
+      "type": "backup_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/temp_production_main.py",
+      "type": "backup_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/venv/lib/python3.11/site-packages/pip/_internal/utils/temp_dir.py",
+      "type": "backup_file"
+    },
+    {
+      "file": "/home/mdoehler/aktienanalyse-ökosystem/services/portfolio-management-service/venv/lib/python3.11/site-packages/pip/_internal/utils/temp_dir.py",
+      "type": "backup_file"
+    }
+  ],
+  "services_consolidated": [
+    {
+      "service": "frontend-service",
+      "duplicates_moved": 0
+    },
+    {
+      "service": "ml-analytics-service",
+      "duplicates_moved": 0
+    },
+    {
+      "service": "prediction-tracking-service",
+      "duplicates_moved": 0
+    },
+    {
+      "service": "data-processing-service",
+      "duplicates_moved": 0
+    },
+    {
+      "service": "marketcap-service",
+      "duplicates_moved": 0
+    },
+    {
+      "service": "diagnostic-service",
+      "duplicates_moved": 0
+    }
+  ],
+  "errors": []
+}

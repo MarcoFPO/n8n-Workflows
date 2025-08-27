@@ -244,7 +244,7 @@ class EventStoreModule(BackendBaseModule):
         try:
             # Redis-Verbindung für Event-Store
             self.redis_client = aioredis.from_url(
-                "redis://localhost:6379/1",  # Separate DB für Event-Store
+                os.getenv("REDIS_URL", "redis://10.1.1.174:6379/1"),  # Separate DB für Event-Store
                 encoding="utf-8",
                 decode_responses=True
             )
