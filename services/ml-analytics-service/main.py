@@ -15,6 +15,27 @@ Autor: Claude Code
 Datum: 18. August 2025
 """
 
+#!/usr/bin/env python3
+
+# Import Management - Standard Import Manager v1.0.0 (Issue #57)
+import os
+import sys
+from pathlib import Path
+
+# Add project root to path (temporary for import manager loading)
+project_root = str(Path(__file__).parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Initialize Standard Import Manager
+from shared.standard_import_manager_v1_0_0_20250824 import StandardImportManager
+import_manager = StandardImportManager()
+import_manager.setup_imports()
+
+# Remove temporary path modification (Clean Architecture)
+if project_root in sys.path:
+    sys.path.remove(project_root)
+
 import asyncio
 import logging
 import os
@@ -34,7 +55,6 @@ from contextlib import asynccontextmanager
 
 # Add project root to Python path
 project_root = str(Path(__file__).parent.parent.parent)
-sys.path.insert(0, project_root)
 
 # Service configuration
 ML_SERVICE_CONFIG = {
@@ -114,7 +134,6 @@ logging.basicConfig(
     format='{"service": "ml-analytics", "level": "%(levelname)s", "message": "%(message)s", "timestamp": "%(asctime)s"}'
 )
 logger = logging.getLogger("ml-analytics")
-
 
 class MLAnalyticsService:
     """
@@ -552,10 +571,8 @@ class MLAnalyticsService:
         except Exception as e:
             logger.error(f"Shutdown error: {str(e)}")
 
-
 # Global service instance
 ml_service = MLAnalyticsService()
-
 
 # FastAPI Lifecycle Management
 @asynccontextmanager
@@ -587,7 +604,6 @@ async def lifespan(app: FastAPI):
         logger.error(traceback.format_exc())
         sys.exit(1)
 
-
 # Initialize FastAPI app
 app = FastAPI(
     title="ML Analytics Service",
@@ -606,7 +622,6 @@ app.add_middleware(
 )
 
 ml_service.app = app
-
 
 # ===================== HEALTH & STATUS ENDPOINTS =====================
 
@@ -683,7 +698,6 @@ async def get_models_status():
             "timestamp": datetime.utcnow().isoformat()
         }
 
-
 # ===================== PHASE 6: VERSION MANAGEMENT ENDPOINTS =====================
 
 @app.get("/api/v1/versions/status")
@@ -750,7 +764,6 @@ async def compare_model_versions(model_type: str, version1: str, version2: str):
     except Exception as e:
         logger.error(f"Failed to compare versions {version1} vs {version2} for {model_type}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 6: AUTOMATED RETRAINING ENDPOINTS =====================
 
@@ -830,7 +843,6 @@ async def stop_retraining_scheduler():
     except Exception as e:
         logger.error(f"Failed to stop retraining scheduler: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 7: STREAMING ANALYTICS ENDPOINTS =====================
 
@@ -920,7 +932,6 @@ async def get_recent_signals(limit: int = 20):
     except Exception as e:
         logger.error(f"Failed to get recent signals: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 8: PORTFOLIO RISK MANAGEMENT ENDPOINTS =====================
 
@@ -1099,7 +1110,6 @@ async def get_correlation_analysis():
         logger.error(f"Correlation analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== PHASE 9: MULTI-ASSET CROSS-CORRELATION ENDPOINTS =====================
 
 @app.get("/api/v1/multi-asset/status")
@@ -1245,7 +1255,6 @@ async def get_risk_contagion_analysis():
         logger.error(f"Failed to get risk contagion analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== PHASE 9: GLOBAL PORTFOLIO OPTIMIZATION ENDPOINTS =====================
 
 @app.post("/api/v1/global-portfolio/optimize")
@@ -1340,7 +1349,6 @@ async def get_asset_universe():
     except Exception as e:
         logger.error(f"Failed to get asset universe: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 10: MARKET MICROSTRUCTURE ANALYTICS ENDPOINTS =====================
 
@@ -1541,7 +1549,6 @@ async def get_microstructure_symbols():
     except Exception as e:
         logger.error(f"Failed to get microstructure symbols: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 11: AI OPTIONS PRICING ANALYTICS ENDPOINTS =====================
 
@@ -1860,7 +1867,6 @@ async def get_strategy_templates():
     except Exception as e:
         logger.error(f"Failed to get strategy templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 12: EXOTIC DERIVATIVES PRICING ENDPOINTS =====================
 
@@ -2307,7 +2313,6 @@ async def get_simulation_methods():
         logger.error(f"Failed to get simulation methods: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== PHASE 13: ADVANCED RISK MANAGEMENT ENDPOINTS =====================
 
 @app.get("/api/v1/risk/status")
@@ -2559,7 +2564,6 @@ async def get_available_stress_scenarios():
         logger.error(f"Failed to get stress scenarios: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== PHASE 14: ESG ANALYTICS & SUSTAINABLE FINANCE ENDPOINTS =====================
 
 @app.get("/api/v1/esg/status")
@@ -2767,7 +2771,6 @@ async def get_esg_categories():
         logger.error(f"Failed to get ESG categories: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== MULTI-HORIZON TRAINING & ENSEMBLE ENDPOINTS =====================
 
 @app.post("/api/v1/models/train/multi-horizon/{symbol}")
@@ -2869,7 +2872,6 @@ async def get_multi_horizon_ensemble_analysis(symbol: str):
         logger.error(f"Failed to get ensemble analysis for {symbol}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== LEGACY TRAINING ENDPOINTS =====================
 
 @app.post("/api/v1/models/train/lstm/{symbol}")
@@ -2952,7 +2954,6 @@ async def train_meta_ensemble_model(symbol: str):
         logger.error(f"Failed to train Meta ensemble for {symbol}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== PREDICTION ENDPOINTS =====================
 
 @app.get("/api/v1/predictions/lstm/{symbol}")
@@ -3029,7 +3030,6 @@ async def get_ensemble_prediction(symbol: str):
     except Exception as e:
         logger.error(f"Failed to get ensemble prediction for {symbol}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 15: MARKET INTELLIGENCE & EVENT-DRIVEN ANALYTICS ENDPOINTS =====================
 
@@ -3233,7 +3233,6 @@ async def stop_market_intelligence_streaming():
     except Exception as e:
         logger.error(f"Failed to stop market intelligence streaming: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ===================== PHASE 16: QUANTUM COMPUTING ML MODELS & ADVANCED NEURAL NETWORKS ENDPOINTS =====================
 
@@ -3488,7 +3487,6 @@ async def get_supported_quantum_algorithms():
         logger.error(f"Failed to get supported quantum algorithms: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ===================== SIGNAL HANDLING =====================
 
 def signal_handler(signum, frame):
@@ -3499,7 +3497,6 @@ def signal_handler(signum, frame):
 # Register signal handlers
 signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
-
 
 # ===================== MAIN ENTRY POINT =====================
 

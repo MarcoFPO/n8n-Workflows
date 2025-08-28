@@ -4,6 +4,27 @@ Clean Architecture - Infrastructure Layer
 Migrated to use centralized database pool
 """
 
+#!/usr/bin/env python3
+
+# Import Management - Standard Import Manager v1.0.0 (Issue #57)
+import os
+import sys
+from pathlib import Path
+
+# Add project root to path (temporary for import manager loading)
+project_root = str(Path(__file__).parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Initialize Standard Import Manager
+from shared.standard_import_manager_v1_0_0_20250824 import StandardImportManager
+import_manager = StandardImportManager()
+import_manager.setup_imports()
+
+# Remove temporary path modification (Clean Architecture)
+if project_root in sys.path:
+    sys.path.remove(project_root)
+
 import asyncio
 from typing import Dict, Any
 from datetime import datetime
@@ -12,11 +33,10 @@ import sys
 import os
 
 # Add shared to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../'))
+
 from shared.database_pool import db_pool
 
 logger = logging.getLogger(__name__)
-
 
 class PostgreSQLHealthCheck:
     """Health Check für PostgreSQL Event Store - Using Connection Pool"""

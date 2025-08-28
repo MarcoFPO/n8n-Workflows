@@ -1,0 +1,184 @@
+# Pre-commit hooks für Code-Qualität - Aktienanalyse Ökosystem
+# Installieren mit: pre-commit install
+
+repos:
+  # Code Formatting
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        name: "Code Formatting (Black)"
+        language_version: python3.11
+
+  # Import Sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: "Import Sorting (isort)"
+        args: ["--profile", "black"]
+
+  # Linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        name: "Linting (flake8)"
+        args: ["--max-line-length=127", "--extend-ignore=E203,W503"]
+
+  # Security
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        name: "Security Check (bandit)"
+        args: ["--severity-level", "medium"]
+        exclude: ^tests/
+
+  # Type Checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        name: "Type Checking (mypy)"
+        additional_dependencies: [types-requests, types-PyYAML]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: "Remove Trailing Whitespace"
+      - id: end-of-file-fixer
+        name: "Fix End of File"
+      - id: check-yaml
+        name: "Check YAML Syntax"
+      - id: check-toml
+        name: "Check TOML Syntax"
+      - id: check-json
+        name: "Check JSON Syntax"
+      - id: check-merge-conflict
+        name: "Check Merge Conflicts"
+      - id: check-added-large-files
+        name: "Check Large Files"
+        args: ["--maxkb=1000"]
+      - id: debug-statements
+        name: "Check Debug Statements"
+      - id: check-docstring-first
+        name: "Check Docstring First"
+
+  # Secrets Detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: "Secrets Detection"
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: package.lock.json
+
+  # Documentation
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        name: "Docstring Style Check"
+        args: ["--convention=google"]
+
+  # Architecture Compliance
+  - repo: local
+    hooks:
+      - id: architecture-check
+        name: "Clean Architecture Compliance"
+        entry: python
+        language: python
+        files: \.py$
+        args:
+          - -c
+          - |
+            import sys
+            import os
+            
+            violations = []
+            
+            for filename in sys.argv[1:]:
+                if not filename.endswith('.py'):
+                    continue
+                    
+                with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                    
+                    # Check for sys.path.insert anti-pattern
+                    if 'sys.path.insert' in content:
+                        violations.append(f'{filename}: sys.path.insert anti-pattern detected')
+                    
+                    # Check for direct database imports in domain layer  
+                    if 'domain' in filename and any(db_import in content for db_import in ['import sqlite3', 'import psycopg2', 'from django.db', 'from sqlalchemy']):
+                        violations.append(f'{filename}: Domain layer should not import database dependencies')
+                    
+                    # Check function length
+                    lines = content.split('\n')
+                    in_function = False
+                    function_lines = 0
+                    function_name = ''
+                    
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith('def '):
+                            if in_function and function_lines > 50:
+                                violations.append(f'{filename}:{i}: Function {function_name} too long ({function_lines} lines)')
+                            in_function = True
+                            function_lines = 1
+                            function_name = line.strip().split('(')[0].replace('def ', '')
+                        elif in_function:
+                            if line.strip() and not line.startswith(' ' * 4) and not line.startswith('\t'):
+                                if function_lines > 50:
+                                    violations.append(f'{filename}:{i}: Function {function_name} too long ({function_lines} lines)')
+                                in_function = False
+                                function_lines = 0
+                            else:
+                                function_lines += 1
+            
+            if violations:
+                print('❌ Architecture violations:')
+                for violation in violations:
+                    print(f'  - {violation}')
+                sys.exit(1)
+            else:
+                print('✅ Architecture compliance verified')
+
+      - id: dependency-check
+        name: "No-Docker Policy Check"  
+        entry: bash
+        language: bash
+        files: |
+          (?x)^(
+            docker-compose\.ya?ml$|
+            Dockerfile.*$|
+            \.dockerignore$|
+            requirements.*\.txt$|
+            pyproject\.toml$|
+            setup\.py$
+          )$
+        args:
+          - -c
+          - |
+            for file in "$@"; do
+              if [[ "$file" =~ ^(docker-compose|Dockerfile) ]]; then
+                echo "❌ Docker files are prohibited: $file"
+                echo "Use native Linux services instead"
+                exit 1
+              fi
+              
+              if [[ "$file" =~ requirements.*\.txt$ ]] || [[ "$file" == "pyproject.toml" ]] || [[ "$file" == "setup.py" ]]; then
+                if grep -qi 'docker\|podman\|container' "$file"; then
+                  echo "❌ Container dependencies found in $file"
+                  echo "Remove container-related dependencies"
+                  exit 1
+                fi
+              fi
+            done
+            echo "✅ No-Docker policy compliance verified"
+
+# Configuration for specific tools
+default_stages: [commit]
+fail_fast: false
+minimum_pre_commit_version: "2.15.0"

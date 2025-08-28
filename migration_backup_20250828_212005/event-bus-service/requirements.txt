@@ -1,0 +1,46 @@
+# Event-Bus Service Requirements v7.0.0
+# Clean Architecture Implementation Dependencies
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Redis Integration
+redis[hiredis]>=4.0.0
+
+# PostgreSQL Integration  
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Data Validation
+pydantic==2.5.0
+
+# Async Support
+asyncio-mqtt==0.13.0
+
+# Logging and Monitoring
+structlog==23.2.0
+
+# HTTP Client für Service Communication
+httpx==0.25.2
+aiohttp==3.9.0
+
+# Environment Configuration
+python-dotenv==1.0.0
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# Code Quality
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.0
+
+# Security
+cryptography>=40.0.0
+
+# Performance Monitoring
+psutil==5.9.6

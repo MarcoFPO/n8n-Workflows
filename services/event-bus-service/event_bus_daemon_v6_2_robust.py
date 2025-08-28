@@ -11,6 +11,27 @@ KRITISCHE FIXES:
 - Structured Logging
 """
 
+#!/usr/bin/env python3
+
+# Import Management - Standard Import Manager v1.0.0 (Issue #57)
+import os
+import sys
+from pathlib import Path
+
+# Add project root to path (temporary for import manager loading)
+project_root = str(Path(__file__).parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Initialize Standard Import Manager
+from shared.standard_import_manager_v1_0_0_20250824 import StandardImportManager
+import_manager = StandardImportManager()
+import_manager.setup_imports()
+
+# Remove temporary path modification (Clean Architecture)
+if project_root in sys.path:
+    sys.path.remove(project_root)
+
 import asyncio
 import logging
 import sys
@@ -26,8 +47,6 @@ from pydantic import BaseModel
 import uvicorn
 
 # Add shared to Python path - ROBUST
-sys.path.insert(0, '/opt/aktienanalyse-ökosystem')
-sys.path.insert(0, '/opt/aktienanalyse-ökosystem/shared')
 
 # Robust imports with fallback
 try:
@@ -53,7 +72,6 @@ class EventMessage(BaseModel):
     source: str = "manual"
     correlation_id: Optional[str] = None
     timestamp: Optional[str] = None
-
 
 class EventBusService:
     """Robust Event Bus Service"""
@@ -250,7 +268,6 @@ class EventBusService:
         except:
             return False
 
-
 def setup_logging():
     """Setup Basic Logging"""
     if USE_STRUCTURED_LOGGING:
@@ -266,7 +283,6 @@ def setup_logging():
             ]
         )
         return logging.getLogger("event-bus-service")
-
 
 def main():
     """Main Entry Point"""
@@ -299,7 +315,6 @@ def main():
     except Exception as e:
         logger.error(f"Event-Bus Service crashed: {str(e)}")
         raise
-
 
 if __name__ == "__main__":
     main()
