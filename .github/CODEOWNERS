@@ -1,0 +1,29 @@
+# Code Owners für Aktienanalyse Ökosystem
+# Alle PRs benötigen mindestens eine Review vom Code Owner
+
+# Global code ownership
+* @MarcoFPO
+
+# Critical architecture files require additional review  
+/src/domain/ @MarcoFPO
+/src/application/ @MarcoFPO  
+/src/infrastructure/ @MarcoFPO
+
+# Configuration and deployment files
+/.github/ @MarcoFPO
+/docker-compose*.yml @MarcoFPO
+/requirements*.txt @MarcoFPO
+/pyproject.toml @MarcoFPO
+/setup.py @MarcoFPO
+
+# Documentation
+/docs/ @MarcoFPO
+*.md @MarcoFPO
+
+# CI/CD and automation
+/.github/workflows/ @MarcoFPO
+/.github/actions/ @MarcoFPO
+
+# Database migrations and schemas
+**/migrations/ @MarcoFPO
+**/schemas/ @MarcoFPO
