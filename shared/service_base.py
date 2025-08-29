@@ -34,6 +34,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+# Exception-Framework Integration
+from .exceptions import (
+    BaseServiceException, 
+    DatabaseException, 
+    EventBusException,
+    ValidationException,
+    ConfigurationException,
+    get_error_response,
+    RecoveryStrategy
+)
+from .exception_handler import (
+    ExceptionHandler,
+    ExceptionHandlerConfig,
+    create_fastapi_exception_handler,
+    configure_exception_handler
+)
+
 
 # =============================================================================
 # SERVICE CONFIGURATION BASE
@@ -56,6 +73,15 @@ class ServiceConfig(BaseModel):
     
     # Health Endpoint Configuration
     health_endpoint: str = "/health"
+    
+    # Exception-Framework Configuration
+    exception_framework_enabled: bool = True
+    exception_logging: bool = True
+    exception_metrics: bool = True
+    exception_rollback: bool = True
+    exception_max_retries: int = 3
+    exception_circuit_breaker_threshold: int = 5
+    exception_default_recovery: str = "retry"  # retry, fallback, none
     include_root_endpoint: bool = True
     
     # Custom Environment Variables
@@ -117,6 +143,52 @@ class BaseServiceOrchestrator(ABC):
         logger.setLevel(log_level)
         return logger
     
+    def _setup_exception_framework(self) -> None:
+        """
+        EXCEPTION-FRAMEWORK SETUP - Template Method
+        Eliminiert Exception-Handling Setup Duplikation
+        """
+        if not self.config.exception_framework_enabled:
+            self.logger.info("🚫 Exception-Framework disabled")
+            return
+        
+        # Recovery-Strategy mapping
+        recovery_strategies = {
+            "retry": RecoveryStrategy.RETRY,
+            "fallback": RecoveryStrategy.FALLBACK,
+            "rollback": RecoveryStrategy.ROLLBACK,
+            "circuit_breaker": RecoveryStrategy.CIRCUIT_BREAKER,
+            "graceful_degradation": RecoveryStrategy.GRACEFUL_DEGRADATION,
+            "none": RecoveryStrategy.NONE
+        }
+        
+        recovery_strategy = recovery_strategies.get(
+            self.config.exception_default_recovery.lower(), 
+            RecoveryStrategy.RETRY
+        )
+        
+        # Exception-Handler Konfiguration
+        exception_config = ExceptionHandlerConfig(
+            log_exceptions=self.config.exception_logging,
+            raise_on_unhandled=True,
+            default_recovery_strategy=recovery_strategy,
+            rollback_on_error=self.config.exception_rollback,
+            max_retries=self.config.exception_max_retries,
+            circuit_breaker_threshold=self.config.exception_circuit_breaker_threshold,
+            metrics_enabled=self.config.exception_metrics
+        )
+        
+        configure_exception_handler(exception_config)
+        
+        # FastAPI Exception-Handler registrieren
+        if self.app:
+            fastapi_handler = create_fastapi_exception_handler()
+            self.app.add_exception_handler(BaseServiceException, fastapi_handler)
+            
+            self.logger.info(f"✅ Exception-Framework konfiguriert [Recovery: {recovery_strategy.value}]")
+        else:
+            self.logger.warning("⚠️ Exception-Framework setup: FastAPI app not yet initialized")
+    
     def create_app(self) -> FastAPI:
         """
         CREATE FASTAPI APP - Template Method
@@ -150,6 +222,9 @@ class BaseServiceOrchestrator(ABC):
             allow_methods=self.config.cors_methods,
             allow_headers=self.config.cors_headers,
         )
+        
+        # Exception-Framework Setup - Eliminiert Exception-Handling Duplikation
+        self._setup_exception_framework()
         
         # Service-spezifische Konfiguration
         self.configure_service()
