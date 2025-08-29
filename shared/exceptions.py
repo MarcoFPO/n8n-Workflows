@@ -240,13 +240,12 @@ class EventBusException(BaseServiceException):
     """Basis-Exception für Event-Bus-Fehler"""
     
     def __init__(self, message: str, **kwargs):
-        super().__init__(
-            message,
-            category=ErrorCategory.SYSTEM,
-            http_status_code=500,
-            severity=ErrorSeverity.HIGH,
-            **kwargs
-        )
+        # Setze Defaults nur wenn nicht bereits in kwargs vorhanden
+        kwargs.setdefault('category', ErrorCategory.SYSTEM)
+        kwargs.setdefault('http_status_code', 500)
+        kwargs.setdefault('severity', ErrorSeverity.HIGH)
+        
+        super().__init__(message, **kwargs)
 
 
 class PublishException(EventBusException):
@@ -257,15 +256,14 @@ class PublishException(EventBusException):
         if event_type:
             context['event_type'] = event_type
         
-        super().__init__(
-            message,
-            user_message="Event konnte nicht publiziert werden.",
-            http_status_code=500,
-            severity=ErrorSeverity.HIGH,
-            recovery_strategy=RecoveryStrategy.RETRY,
-            context=context,
-            **kwargs
-        )
+        # Setze spezifische Defaults für PublishException
+        kwargs.setdefault('user_message', "Event konnte nicht publiziert werden.")
+        kwargs.setdefault('http_status_code', 500)
+        kwargs.setdefault('severity', ErrorSeverity.HIGH)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.RETRY)
+        kwargs['context'] = context
+        
+        super().__init__(message, **kwargs)
 
 
 class SubscribeException(EventBusException):
@@ -276,15 +274,14 @@ class SubscribeException(EventBusException):
         if subscription_id:
             context['subscription_id'] = subscription_id
         
-        super().__init__(
-            message,
-            user_message="Event-Subscription konnte nicht erstellt werden.",
-            http_status_code=500,
-            severity=ErrorSeverity.HIGH,
-            recovery_strategy=RecoveryStrategy.FALLBACK,
-            context=context,
-            **kwargs
-        )
+        # Setze spezifische Defaults für SubscribeException
+        kwargs.setdefault('user_message', "Event-Subscription konnte nicht erstellt werden.")
+        kwargs.setdefault('http_status_code', 500)
+        kwargs.setdefault('severity', ErrorSeverity.HIGH)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.FALLBACK)
+        kwargs['context'] = context
+        
+        super().__init__(message, **kwargs)
 
 
 class EventRoutingException(EventBusException):
@@ -295,15 +292,14 @@ class EventRoutingException(EventBusException):
         if routing_rule:
             context['routing_rule'] = routing_rule
         
-        super().__init__(
-            message,
-            user_message="Event-Routing fehlgeschlagen.",
-            http_status_code=500,
-            severity=ErrorSeverity.MEDIUM,
-            recovery_strategy=RecoveryStrategy.FALLBACK,
-            context=context,
-            **kwargs
-        )
+        # Setze spezifische Defaults für EventRoutingException
+        kwargs.setdefault('user_message', "Event-Routing fehlgeschlagen.")
+        kwargs.setdefault('http_status_code', 500)
+        kwargs.setdefault('severity', ErrorSeverity.MEDIUM)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.FALLBACK)
+        kwargs['context'] = context
+        
+        super().__init__(message, **kwargs)
 
 
 # =============================================================================
@@ -314,42 +310,39 @@ class ExternalAPIException(BaseServiceException):
     """Basis-Exception für externe API-Fehler"""
     
     def __init__(self, message: str, **kwargs):
-        super().__init__(
-            message,
-            category=ErrorCategory.EXTERNAL_API,
-            http_status_code=502,
-            severity=ErrorSeverity.HIGH,
-            recovery_strategy=RecoveryStrategy.RETRY,
-            **kwargs
-        )
+        # Setze Defaults nur wenn nicht bereits in kwargs vorhanden
+        kwargs.setdefault('category', ErrorCategory.EXTERNAL_API)
+        kwargs.setdefault('http_status_code', 502)
+        kwargs.setdefault('severity', ErrorSeverity.HIGH)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.RETRY)
+        
+        super().__init__(message, **kwargs)
 
 
 class RateLimitException(ExternalAPIException):
     """Exception für API-Rate-Limit-Fehler"""
     
     def __init__(self, message: str = "API-Rate-Limit erreicht", **kwargs):
-        super().__init__(
-            message,
-            user_message="Service temporär nicht verfügbar. Bitte versuchen Sie es später erneut.",
-            http_status_code=429,
-            severity=ErrorSeverity.MEDIUM,
-            recovery_strategy=RecoveryStrategy.CIRCUIT_BREAKER,
-            **kwargs
-        )
+        # Setze spezifische Defaults für RateLimitException
+        kwargs.setdefault('user_message', "Service temporär nicht verfügbar. Bitte versuchen Sie es später erneut.")
+        kwargs.setdefault('http_status_code', 429)
+        kwargs.setdefault('severity', ErrorSeverity.MEDIUM)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.CIRCUIT_BREAKER)
+        
+        super().__init__(message, **kwargs)
 
 
 class AuthenticationException(ExternalAPIException):
     """Exception für API-Authentifizierungsfehler"""
     
     def __init__(self, message: str = "API-Authentifizierung fehlgeschlagen", **kwargs):
-        super().__init__(
-            message,
-            user_message="Authentifizierungsfehler. Bitte wenden Sie sich an den Support.",
-            http_status_code=401,
-            severity=ErrorSeverity.CRITICAL,
-            recovery_strategy=RecoveryStrategy.NONE,
-            **kwargs
-        )
+        # Setze spezifische Defaults für AuthenticationException
+        kwargs.setdefault('user_message', "Authentifizierungsfehler. Bitte wenden Sie sich an den Support.")
+        kwargs.setdefault('http_status_code', 401)
+        kwargs.setdefault('severity', ErrorSeverity.CRITICAL)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.NONE)
+        
+        super().__init__(message, **kwargs)
 
 
 # =============================================================================
@@ -369,16 +362,15 @@ class ValidationException(BaseServiceException):
         if field_errors:
             context['field_errors'] = field_errors
         
-        super().__init__(
-            message,
-            user_message="Eingabedaten sind ungültig. Bitte prüfen Sie Ihre Eingabe.",
-            category=ErrorCategory.VALIDATION,
-            http_status_code=400,
-            severity=ErrorSeverity.LOW,
-            recovery_strategy=RecoveryStrategy.NONE,
-            context=context,
-            **kwargs
-        )
+        # Setze spezifische Defaults für ValidationException
+        kwargs.setdefault('user_message', "Eingabedaten sind ungültig. Bitte prüfen Sie Ihre Eingabe.")
+        kwargs.setdefault('category', ErrorCategory.VALIDATION)
+        kwargs.setdefault('http_status_code', 400)
+        kwargs.setdefault('severity', ErrorSeverity.LOW)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.NONE)
+        kwargs['context'] = context
+        
+        super().__init__(message, **kwargs)
 
 
 # =============================================================================
@@ -431,15 +423,14 @@ class NetworkException(BaseServiceException):
     """Exception für Netzwerkfehler"""
     
     def __init__(self, message: str, **kwargs):
-        super().__init__(
-            message,
-            user_message="Netzwerkfehler. Bitte versuchen Sie es später erneut.",
-            category=ErrorCategory.NETWORK,
-            http_status_code=503,
-            severity=ErrorSeverity.HIGH,
-            recovery_strategy=RecoveryStrategy.RETRY,
-            **kwargs
-        )
+        # Setze Defaults nur wenn nicht bereits in kwargs vorhanden
+        kwargs.setdefault('user_message', "Netzwerkfehler. Bitte versuchen Sie es später erneut.")
+        kwargs.setdefault('category', ErrorCategory.NETWORK)
+        kwargs.setdefault('http_status_code', 503)
+        kwargs.setdefault('severity', ErrorSeverity.HIGH)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.RETRY)
+        
+        super().__init__(message, **kwargs)
 
 
 class TimeoutException(NetworkException):
@@ -450,15 +441,14 @@ class TimeoutException(NetworkException):
         if timeout_duration:
             context['timeout_duration'] = timeout_duration
         
-        super().__init__(
-            message,
-            user_message="Anfrage dauert zu lange. Bitte versuchen Sie es erneut.",
-            http_status_code=408,
-            severity=ErrorSeverity.MEDIUM,
-            recovery_strategy=RecoveryStrategy.RETRY,
-            context=context,
-            **kwargs
-        )
+        # Setze spezifische Defaults für TimeoutException
+        kwargs.setdefault('user_message', "Anfrage dauert zu lange. Bitte versuchen Sie es erneut.")
+        kwargs.setdefault('http_status_code', 408)
+        kwargs.setdefault('severity', ErrorSeverity.MEDIUM)
+        kwargs.setdefault('recovery_strategy', RecoveryStrategy.RETRY)
+        kwargs['context'] = context
+        
+        super().__init__(message, **kwargs)
 
 
 # =============================================================================

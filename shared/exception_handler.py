@@ -124,7 +124,14 @@ class ExceptionHandler:
         
         # Rollback wenn erforderlich
         if exc.rollback_required and self.config.rollback_on_error:
-            asyncio.create_task(self.execute_rollback())
+            # Prüfe ob wir in einem Event-Loop sind
+            try:
+                loop = asyncio.get_running_loop()
+                # Falls in Event-Loop, erstelle Task
+                asyncio.create_task(self.execute_rollback())
+            except RuntimeError:
+                # Falls kein Event-Loop, führe synchron aus (für Tests)
+                asyncio.run(self.execute_rollback())
         
         # Recovery versuchen
         try:
@@ -140,6 +147,13 @@ class ExceptionHandler:
         context: Optional[Dict[str, Any]] = None
     ) -> BaseServiceException:
         """Konvertiert Standard-Exception zu BaseServiceException"""
+        
+        # Stelle sicher dass Context vorhanden ist
+        context = context or {}
+        
+        # Füge recovery_strategy zum Context hinzu falls nicht vorhanden
+        if 'recovery_strategy' not in context:
+            context['recovery_strategy'] = self.config.default_recovery_strategy
         
         # Exception-Type-Mapping
         exception_mapping = {

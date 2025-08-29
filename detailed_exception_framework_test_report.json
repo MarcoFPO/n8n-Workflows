@@ -1,0 +1,252 @@
+{
+  "timestamp": "2025-08-29T18:55:54.421494",
+  "test_suite": "Detailed Exception Framework Analysis",
+  "total_tests": 23,
+  "passed_tests": 21,
+  "failed_tests": 2,
+  "success_rate": "91.30%",
+  "test_results": {
+    "recovery_strategy_handling": {
+      "passed": false,
+      "error": "Unexpected error: Test generic error",
+      "details": {},
+      "timestamp": "2025-08-29T18:55:54.406057"
+    },
+    "database_exception_factory": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "http_status": 503
+      },
+      "timestamp": "2025-08-29T18:55:54.406821"
+    },
+    "event_bus_exception_factory": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "http_status": 500
+      },
+      "timestamp": "2025-08-29T18:55:54.406924"
+    },
+    "api_exception_factory": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "http_status": 429
+      },
+      "timestamp": "2025-08-29T18:55:54.407015"
+    },
+    "fastapi_handler_import": {
+      "passed": false,
+      "error": "Import error: Cannot run the event loop while another loop is running",
+      "details": {},
+      "timestamp": "2025-08-29T18:55:54.407311"
+    },
+    "exception_hierarchy_ConnectionException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 503,
+        "actual_status": 503,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.408574"
+    },
+    "exception_hierarchy_QueryException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 500,
+        "actual_status": 500,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.408660"
+    },
+    "exception_hierarchy_TransactionException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 500,
+        "actual_status": 500,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.408748"
+    },
+    "exception_hierarchy_DataIntegrityException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 409,
+        "actual_status": 409,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.408828"
+    },
+    "exception_hierarchy_PublishException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 500,
+        "actual_status": 500,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.408909"
+    },
+    "exception_hierarchy_SubscribeException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 500,
+        "actual_status": 500,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.408983"
+    },
+    "exception_hierarchy_EventRoutingException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 500,
+        "actual_status": 500,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409058"
+    },
+    "exception_hierarchy_RateLimitException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 429,
+        "actual_status": 429,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409134"
+    },
+    "exception_hierarchy_AuthenticationException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 401,
+        "actual_status": 401,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409207"
+    },
+    "exception_hierarchy_ValidationException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 400,
+        "actual_status": 400,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409275"
+    },
+    "exception_hierarchy_ConfigurationException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 503,
+        "actual_status": 503,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409344"
+    },
+    "exception_hierarchy_BusinessLogicException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 422,
+        "actual_status": 422,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409413"
+    },
+    "exception_hierarchy_NetworkException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 503,
+        "actual_status": 503,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409480"
+    },
+    "exception_hierarchy_TimeoutException": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "expected_status": 408,
+        "actual_status": 408,
+        "has_error_code": true
+      },
+      "timestamp": "2025-08-29T18:55:54.409563"
+    },
+    "performance_benchmarks": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "exception_creation_ms": 0.054023354314267635,
+        "to_dict_ms": 0.0021913694217801094,
+        "handler_overhead_ms": 0.11159850284457207
+      },
+      "timestamp": "2025-08-29T18:55:54.420903"
+    },
+    "retry_strategy_can_retry": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "initial_retry_count": 0,
+        "max_retries": 2
+      },
+      "timestamp": "2025-08-29T18:55:54.421030"
+    },
+    "circuit_breaker_strategy": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "circuit_breaker_activations": 5
+      },
+      "timestamp": "2025-08-29T18:55:54.421419"
+    },
+    "rollback_strategy_flag": {
+      "passed": true,
+      "error": null,
+      "details": {
+        "recovery_strategy": "rollback"
+      },
+      "timestamp": "2025-08-29T18:55:54.421482"
+    }
+  },
+  "critical_issues": [
+    {
+      "test": "recovery_strategy_handling",
+      "error": "Unexpected error: Test generic error",
+      "stacktrace": "Traceback (most recent call last):\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/shared/exception_handler.py\", line 255, in sync_wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/detailed_exception_framework_test.py\", line 97, in test_function\n    raise ValueError(\"Test generic error\")\nValueError: Test generic error\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/detailed_exception_framework_test.py\", line 100, in test_recovery_strategy_attribute_error\n    result = test_function()\n             ^^^^^^^^^^^^^^^\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/shared/exception_handler.py\", line 268, in sync_wrapper\n    return handler.handle_exception(exc, context, recovery_func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/shared/exception_handler.py\", line 138, in handle_exception\n    return handle_exception_with_recovery(exc, recovery_func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/shared/exceptions.py\", line 581, in handle_exception_with_recovery\n    raise exc\nshared.exceptions.ValidationException: Test generic error\n"
+    },
+    {
+      "test": "fastapi_handler_import",
+      "error": "Import error: Cannot run the event loop while another loop is running",
+      "stacktrace": "Traceback (most recent call last):\n  File \"/home/mdoehler/aktienanalyse-\u00f6kosystem/detailed_exception_framework_test.py\", line 242, in test_asyncio_event_loop_conflicts\n    response = loop.run_until_complete(handler(request, exc))\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/asyncio/base_events.py\", line 629, in run_until_complete\n    self._check_running()\n  File \"/usr/lib/python3.11/asyncio/base_events.py\", line 590, in _check_running\n    raise RuntimeError(\nRuntimeError: Cannot run the event loop while another loop is running\n"
+    }
+  ],
+  "performance_metrics": {
+    "exception_creation": {
+      "duration_ms": 0.054023354314267635,
+      "threshold_ms": 5.0,
+      "passed": true
+    },
+    "to_dict_serialization": {
+      "duration_ms": 0.0021913694217801094,
+      "threshold_ms": 2.0,
+      "passed": true
+    },
+    "handler_overhead": {
+      "duration_ms": 0.11159850284457207,
+      "threshold_ms": 2.0,
+      "passed": true
+    }
+  },
+  "fixes_needed": [],
+  "overall_status": "CRITICAL_FIXES_NEEDED"
+}
