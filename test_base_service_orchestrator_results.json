@@ -1,0 +1,125 @@
+{
+  "test_run_timestamp": "2025-08-29T18:06:06.282973",
+  "categories": {
+    "unit_tests": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "results": [
+        {
+          "test": "test_service_config_creation",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_service_config_defaults",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_orchestrator_initialization",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_module_registration",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "integration_tests": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "results": [
+        {
+          "test": "test_app_creation_template_method",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_startup_template_method",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_shutdown_template_method",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_health_check_template_method",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "backward_compatibility": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "results": [
+        {
+          "test": "test_legacy_base_service",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_legacy_modular_service",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "performance_tests": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "results": [
+        {
+          "test": "test_startup_performance",
+          "status": "PASSED",
+          "duration": 0.1008005142211914
+        },
+        {
+          "test": "test_memory_usage_baseline",
+          "status": "PASSED",
+          "memory_overhead_mb": 0.0
+        },
+        {
+          "test": "test_health_endpoint_response_time",
+          "status": "PASSED",
+          "avg_response_time_ms": 1.1669635772705078
+        }
+      ]
+    },
+    "edge_cases": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "results": [
+        {
+          "test": "test_startup_failure_handling",
+          "status": "PASSED"
+        },
+        {
+          "test": "test_shutdown_with_background_tasks",
+          "status": "PASSED",
+          "shutdown_duration": 0.10049057006835938
+        },
+        {
+          "test": "test_abstract_methods_enforcement",
+          "status": "PASSED"
+        }
+      ]
+    }
+  },
+  "performance_metrics": {
+    "test_startup_performance_duration": 0.1008005142211914,
+    "test_memory_usage_baseline_memory_mb": 0.0,
+    "test_health_endpoint_response_time_response_ms": 1.1669635772705078
+  },
+  "overall_status": "PASSED",
+  "recommendation": "GO_FOR_PRODUCTION",
+  "summary": {
+    "total_tests": 16,
+    "total_passed": 16,
+    "total_failed": 0,
+    "total_skipped": 0,
+    "success_rate": 100.0,
+    "duration_seconds": 0.8539848327636719
+  }
+}

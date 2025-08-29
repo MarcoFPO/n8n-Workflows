@@ -132,7 +132,7 @@ class BaseServiceOrchestrator(ABC):
             await self._startup_event()
             yield
             # Shutdown  
-            await self._shutdown_event()
+            await self._handle_shutdown()
         
         # FastAPI App mit Lifespan
         self.app = FastAPI(
@@ -220,7 +220,7 @@ class BaseServiceOrchestrator(ABC):
             self.is_healthy = False
             raise RuntimeError(f"Service startup failed: {str(e)}")
     
-    async def _shutdown_event(self):
+    async def _handle_shutdown(self):
         """
         SHUTDOWN EVENT HANDLER - Template Method  
         Eliminiert Shutdown Handler Duplikation
@@ -354,7 +354,7 @@ class BaseServiceOrchestrator(ABC):
         # Signal Handler für graceful shutdown
         def signal_handler(signum, frame):
             self.logger.info(f"Received signal {signum}, initiating shutdown...")
-            asyncio.create_task(self._shutdown_event())
+            self._shutdown_event.set()
         
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)

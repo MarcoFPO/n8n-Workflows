@@ -1,0 +1,129 @@
+{
+  "migration_test_timestamp": 1756490539.8126056,
+  "service_url": "http://10.1.1.174:8014",
+  "test_results": {
+    "Service Accessibility": {
+      "status": "SUCCESS",
+      "service_info": {
+        "service": "event-bus-service",
+        "version": "6.2.0",
+        "architecture": "Robust Production",
+        "status": "running",
+        "port": 8014,
+        "uptime": 257142.640097
+      },
+      "accessible": true
+    },
+    "Health Endpoint": {
+      "status": "SUCCESS",
+      "health_data": {
+        "status": "healthy",
+        "service": "event-bus-service",
+        "version": "6.2.0",
+        "timestamp": "2025-08-29T20:02:19.794614",
+        "components": {
+          "redis": "healthy"
+        },
+        "uptime_seconds": 257142.642083,
+        "redis_url": "redis://localhost:6379/0"
+      },
+      "valid_structure": true,
+      "missing_fields": []
+    },
+    "API Routes": {
+      "status": "PARTIAL",
+      "route_results": {
+        "/": {
+          "accessible": true,
+          "status_code": 200,
+          "response_time_ms": 0.906
+        },
+        "/health": {
+          "accessible": true,
+          "status_code": 200,
+          "response_time_ms": 1.065
+        },
+        "/events/query": {
+          "accessible": false,
+          "status_code": 404,
+          "response_time_ms": 0.8130000000000001
+        },
+        "/routing/rules": {
+          "accessible": false,
+          "status_code": 404,
+          "response_time_ms": 0.736
+        },
+        "/statistics": {
+          "accessible": false,
+          "status_code": 404,
+          "response_time_ms": 0.78
+        }
+      },
+      "successful_routes": 2,
+      "total_routes": 5
+    },
+    "CORS Functionality": {
+      "status": "SUCCESS",
+      "status_code": 200,
+      "cors_headers": {
+        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Methods": "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "cors_enabled": true
+    },
+    "Event Publishing": {
+      "status": "SUCCESS",
+      "response_data": {
+        "status": "published",
+        "event_type": "test.event.created",
+        "timestamp": "2025-08-29T20:02:19.804511",
+        "correlation_id": null
+      },
+      "event_accepted": true
+    },
+    "Event Querying": {
+      "status": "FAILED",
+      "status_code": 404,
+      "error": "{\"detail\":\"Not Found\"}"
+    },
+    "Routing Rules": {
+      "status": "FAILED",
+      "status_code": 404,
+      "error": "{\"detail\":\"Not Found\"}"
+    },
+    "Statistics Endpoint": {
+      "status": "FAILED",
+      "status_code": 404,
+      "error": "{\"detail\":\"Not Found\"}"
+    },
+    "Error Handling": {
+      "status": "SUCCESS",
+      "error_response": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"event_type\"],\"msg\":\"Field required\",\"input\":{\"invalid_field\":\"test\"},\"url\":\"https://errors.pydantic.dev/2.5/v/missing\"},{\"type\":\"missing\",\"loc\":[\"body\",\"data\"],\"msg\":\"Field required\",\"input\":{\"invalid_field\":\"test\"},\"url\":\"https://errors.pydantic.dev/2.5/v/missing\"}]}",
+      "proper_error_handling": true,
+      "status_code": 422
+    }
+  },
+  "summary": {
+    "total_tests": 9,
+    "successful": 5,
+    "partial": 1,
+    "failed": 3,
+    "success_rate": 61.111111111111114
+  },
+  "migration_status": "MIGRATION_FAILED",
+  "recommendation": "REQUIRES_FIXES",
+  "detailed_test_results": {
+    "service_startup": true,
+    "health_endpoint": true,
+    "api_routes": false,
+    "cors_functionality": true,
+    "event_publishing": true,
+    "event_querying": false,
+    "routing_rules": false,
+    "statistics": false,
+    "error_handling": true,
+    "shutdown_graceful": false
+  }
+}
