@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-08-29T18:50:17.988387",
+  "test_suite": "BaseServiceOrchestrator Exception-Framework Integration",
+  "total_tests": 8,
+  "passed_tests": 2,
+  "failed_tests": 6,
+  "success_rate": "25.00%",
+  "test_results": {
+    "base_service_orchestrator": {
+      "base_service_import": true,
+      "exception_framework_configuration": true,
+      "fastapi_handler_registration": false,
+      "service_instantiation": false,
+      "exception_handling_flow": false
+    },
+    "diagnostic_service_migration": {
+      "diagnostic_service_import": false,
+      "exception_framework_imported": false,
+      "service_methods_available": false
+    }
+  },
+  "overall_status": "INTEGRATION_ISSUES"
+}

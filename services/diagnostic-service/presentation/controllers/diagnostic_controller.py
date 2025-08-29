@@ -15,6 +15,28 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, BackgroundTasks, Query, Path
 
+# Import Exception-Framework
+from .....shared.exceptions import (
+    BaseServiceException, 
+    DatabaseException, 
+    EventBusException,
+    ExternalAPIException,
+    ValidationException,
+    ConfigurationException,
+    BusinessLogicException,
+    NetworkException,
+    get_error_response
+)
+from .....shared.exception_handler import (
+    exception_handler,
+    database_exception_handler,
+    event_bus_exception_handler,
+    api_exception_handler,
+    create_fastapi_exception_handler,
+    configure_exception_handler,
+    ExceptionHandlerConfig
+)
+
 from .models.diagnostic_models import (
     # Request models
     StartMonitoringRequest, CreateTestRequest, SendTestMessageRequest, EventFilterRequest,
@@ -57,10 +79,24 @@ class DiagnosticController:
             raise RuntimeError("Container must be initialized before creating controller")
     
     # Event Monitoring Endpoints
+    @event_bus_exception_handler()
     async def start_monitoring(self, request: StartMonitoringRequest) -> MonitoringStatusResponse:
         """Start event monitoring for specified event types"""
         try:
+            # Validierung der Eingabedaten
+            if not request.event_types:
+                raise ValidationException(
+                    "Event types are required",
+                    field_errors={"event_types": "At least one event type must be specified"}
+                )
+            
             monitoring_use_case = self.container.get_service('event_monitoring_use_case')
+            
+            if not monitoring_use_case:
+                raise ConfigurationException(
+                    "Event monitoring use case not available",
+                    config_key="event_monitoring_use_case"
+                )
             
             result = await monitoring_use_case.start_monitoring(request.event_types)
             
@@ -74,21 +110,36 @@ class DiagnosticController:
                     error_events=0
                 )
             else:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to start monitoring: {result.get('error', 'Unknown error')}"
+                raise EventBusException(
+                    f"Failed to start monitoring: {result.get('error', 'Unknown error')}",
+                    context={"event_types": request.event_types, "result": result}
                 )
                 
         except HTTPException:
             raise
+        except BaseServiceException as e:
+            logger.error(f"Service exception in start_monitoring: {e.message}")
+            raise HTTPException(status_code=e.http_status_code, detail=get_error_response(e))
         except Exception as e:
-            logger.error(f"Failed to start monitoring: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            # Unbekannte Exceptions werden zu BaseServiceExceptions konvertiert
+            service_exc = BusinessLogicException(
+                f"Unexpected error starting monitoring: {str(e)}",
+                context={"original_error": str(e), "event_types": request.event_types}
+            )
+            logger.error(f"Unexpected exception in start_monitoring: {e}")
+            raise HTTPException(status_code=service_exc.http_status_code, detail=get_error_response(service_exc))
     
+    @event_bus_exception_handler()
     async def stop_monitoring(self) -> MonitoringStatusResponse:
         """Stop event monitoring"""
         try:
             monitoring_use_case = self.container.get_service('event_monitoring_use_case')
+            
+            if not monitoring_use_case:
+                raise ConfigurationException(
+                    "Event monitoring use case not available",
+                    config_key="event_monitoring_use_case"
+                )
             
             result = await monitoring_use_case.stop_monitoring()
             
@@ -102,16 +153,23 @@ class DiagnosticController:
                     error_events=0
                 )
             else:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to stop monitoring: {result.get('error', 'Unknown error')}"
+                raise EventBusException(
+                    f"Failed to stop monitoring: {result.get('error', 'Unknown error')}",
+                    context={"result": result}
                 )
                 
         except HTTPException:
             raise
+        except BaseServiceException as e:
+            logger.error(f"Service exception in stop_monitoring: {e.message}")
+            raise HTTPException(status_code=e.http_status_code, detail=get_error_response(e))
         except Exception as e:
-            logger.error(f"Failed to stop monitoring: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            service_exc = BusinessLogicException(
+                f"Unexpected error stopping monitoring: {str(e)}",
+                context={"original_error": str(e)}
+            )
+            logger.error(f"Unexpected exception in stop_monitoring: {e}")
+            raise HTTPException(status_code=service_exc.http_status_code, detail=get_error_response(service_exc))
     
     async def get_monitoring_statistics(self) -> EventStatisticsResponse:
         """Get current monitoring statistics"""

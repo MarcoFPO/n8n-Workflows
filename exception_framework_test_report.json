@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-08-29T18:47:53.326537",
+  "test_suite": "Exception Framework Integration",
+  "total_tests": 6,
+  "passed_tests": 3,
+  "failed_tests": 3,
+  "success_rate": "50.00%",
+  "test_results": {
+    "imports": true,
+    "exception_creation": true,
+    "decorator": false,
+    "fastapi_handler": false,
+    "factory": false,
+    "error_response": true
+  },
+  "overall_status": "FAILED"
+}

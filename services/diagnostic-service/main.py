@@ -22,6 +22,14 @@ import os
 from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
 setup_aktienanalyse_imports()  # Replaces all sys.path.append statements
 
+# Exception-Framework Imports
+from shared.exceptions import BaseServiceException, RecoveryStrategy
+from shared.exception_handler import (
+    create_fastapi_exception_handler,
+    configure_exception_handler,
+    ExceptionHandlerConfig
+)
+
 # FIXED: sys.path.append('/home/mdoehler/aktienanalyse-ökosystem/shared') -> Import Manager
 from event_bus import EventBusConnector, EventBusConfig
 from diagnostic_module_v2_1_0_20250812 import DiagnosticModule
@@ -66,8 +74,33 @@ class DiagnosticOrchestrator:
             allow_headers=["*"],
         )
         
+        # Exception-Framework Setup
+        self._setup_exception_handlers()
+        
         # API Routes registrieren
         self._register_routes()
+    
+    def _setup_exception_handlers(self):
+        """Konfiguriert Exception-Framework für FastAPI"""
+        
+        # Exception-Handler Konfiguration
+        config = ExceptionHandlerConfig(
+            log_exceptions=True,
+            raise_on_unhandled=True,
+            default_recovery_strategy=RecoveryStrategy.RETRY,
+            rollback_on_error=True,
+            max_retries=3,
+            circuit_breaker_threshold=5,
+            metrics_enabled=True
+        )
+        
+        configure_exception_handler(config)
+        
+        # FastAPI Exception-Handler registrieren
+        fastapi_handler = create_fastapi_exception_handler()
+        self.app.add_exception_handler(BaseServiceException, fastapi_handler)
+        
+        logger.info("✅ Exception-Framework für Diagnostic Service konfiguriert")
     
     def _register_routes(self):
         """Registriere alle API Routes"""
