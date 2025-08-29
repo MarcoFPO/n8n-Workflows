@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
-import structlog
+import logging
 import sys
 import os
 
@@ -26,7 +26,8 @@ setup_aktienanalyse_imports()  # Replaces all sys.path.append statements
 from event_bus import EventBusConnector, EventBusConfig
 from diagnostic_module_v2_1_0_20250812 import DiagnosticModule
 
-logger = structlog.get_logger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Pydantic Models für API
 class TestMessageRequest(BaseModel):

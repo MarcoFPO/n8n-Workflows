@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-import structlog
+import logging
 
 # Import Management - CLEAN ARCHITECTURE
 from shared.standard_import_manager_v1_0_0_20250824 import setup_aktienanalyse_imports
@@ -32,25 +32,13 @@ setup_aktienanalyse_imports()  # Replaces all sys.path.append statements
 from backend_base_module import BackendBaseModule
 from event_bus import EventBusConnector, EventType, Event
 
-# Configure structured logging
-structlog.configure(
-    processors=[
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer()
-    ],
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    wrapper_class=structlog.stdlib.BoundLogger,
-    cache_logger_on_first_use=True,
+# Configure standard logging (fallback)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [event-bus-modular] [%(levelname)s] %(name)s: %(message)s"
 )
 
-logger = structlog.get_logger("event-bus-modular")
+logger = logging.getLogger("event-bus-modular")
 
 # Pydantic Models für API
 class EventMessage(BaseModel):
