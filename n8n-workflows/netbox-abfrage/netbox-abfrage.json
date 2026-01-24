@@ -1,0 +1,167 @@
+{
+  "name": "Primitive: NetBox-Abfrage",
+  "description": "Primitive Sub-Workflow für NetBox Infrastruktur-Abfragen (VMs, LXCs, Devices)",
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "hostname",
+              "type": "string"
+            },
+            {
+              "name": "filter_by_type"
+            },
+            {
+              "name": "filter_by_ids"
+            }
+          ]
+        }
+      },
+      "id": "input-trigger",
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst filters = {\n  hostname: input.hostname || null,\n  filter_by_type: input.filter_by_type || null,\n  filter_by_ids: input.filter_by_ids ? JSON.parse(input.filter_by_ids) : null\n};\nconsole.log('NetBox-Abfrage: Input Parameters =', JSON.stringify(filters));\nif (filters.hostname) {\n  console.log(`🎯 Suche nach Hostname: \"${filters.hostname}\"`);\n} else if (filters.filter_by_type) {\n  console.log(`🎯 Suche nach Type: \"${filters.filter_by_type}\"`);\n} else if (filters.filter_by_ids) {\n  console.log(`🎯 Suche nach IDs: ${JSON.stringify(filters.filter_by_ids)}`);\n} else {\n  console.log(`📋 Keine Filter - alle Objekte werden zurückgegeben`);\n}\nreturn { json: filters };"
+      },
+      "id": "parse-input",
+      "name": "🔧 Parse Input Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 240]
+    },
+    {
+      "parameters": {
+        "domain": "virtualization",
+        "returnAll": false,
+        "limit": 250,
+        "filters": {
+          "status": "active"
+        }
+      },
+      "id": "netbox-vms",
+      "name": "🔍 NetBox: Query Virtuelle Maschinen",
+      "type": "n8n-nodes-netbox.netBox",
+      "typeVersion": 1,
+      "position": [800, 100],
+      "credentials": {
+        "netBoxApi": {
+          "id": "CILcbhRbPqixLi1c",
+          "name": "NetBox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "returnAll": false,
+        "limit": 250,
+        "filters": {
+          "status": "active",
+          "has_primary_ip": true
+        }
+      },
+      "id": "netbox-devices",
+      "name": "🔍 NetBox: Query Devices",
+      "type": "n8n-nodes-netbox.netBox",
+      "typeVersion": 1,
+      "position": [800, 380],
+      "credentials": {
+        "netBoxApi": {
+          "id": "CILcbhRbPqixLi1c",
+          "name": "NetBox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine"
+      },
+      "id": "merge-results",
+      "name": "🔗 Merge All Objects",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1200, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst filterByType = $('🔧 Parse Input Parameters').first().json.filter_by_type;\nconst filterByIds = $('🔧 Parse Input Parameters').first().json.filter_by_ids;\nconst hostname = $('🔧 Parse Input Parameters').first().json.hostname;\n\nlet processed = items.map(item => {\n  const obj = item.json;\n  let ip = null;\n  if (obj.primary_ip4 && obj.primary_ip4.address) {\n    ip = obj.primary_ip4.address.split('/')[0];\n  }\n  \n  // Objekte ohne IP werden gefiltert (NetBox Query hat has_primary_ip=true für Devices)\n  if (!ip) return null;\n  \n  const cf = obj.custom_fields || {};\n  const default_user = obj.type === 'device' ? 'admin' : 'root';\n  const ssh_user = cf.ssh_username || default_user;\n  const ssh_password = cf.ssh_password || null;\n  \n  return {\n    json: {\n      id: obj.id,\n      type: obj.type || 'unknown',\n      hostname: obj.name,\n      ip: ip,\n      ssh_user: ssh_user,\n      ssh_password: ssh_password\n    }\n  };\n}).filter(item => item !== null);\n\nconsole.log(`📋 Verarbeitet: ${processed.length} Objekte mit IP`);\n\nlet filtered = processed;\n\n// Wenn Hostname gegeben ist: ONLY dieses Objekt zurückgeben\nif (hostname) {\n  console.log(`🎯 Hostname-Filter aktiv: \"${hostname}\"`);\n  filtered = filtered.filter(item => item.json.hostname === hostname);\n  console.log(`✅ Hostname-Filter Ergebnis: ${filtered.length} Objekt(e) gefunden`);\n} else {\n  // Hostname nicht gegeben: Fallback-Filter anwenden (nur wenn hostname=null)\n  if (filterByType) {\n    console.log(`🎯 Filter nach Type: \"${filterByType}\"`);\n    filtered = filtered.filter(item => item.json.type === filterByType);\n  }\n  if (filterByIds && Array.isArray(filterByIds)) {\n    console.log(`🎯 Filter nach IDs: ${JSON.stringify(filterByIds)}`);\n    filtered = filtered.filter(item => filterByIds.includes(item.json.id));\n  }\n}\n\nconst output = filtered.map(item => ({\n  json: {\n    hostname: item.json.hostname,\n    ip: item.json.ip,\n    ssh_user: item.json.ssh_user,\n    ssh_password: item.json.ssh_password\n  }\n}));\n\nconsole.log(`📊 NetBox-Abfrage: Total zurückgegeben = ${output.length}`);\nreturn output;"
+      },
+      "id": "apply-filters",
+      "name": "🎯 Apply Filters & Finalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 240]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Input Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Input Parameters": {
+      "main": [
+        [
+          {
+            "node": "🔍 NetBox: Query Virtuelle Maschinen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔍 NetBox: Query Devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query Virtuelle Maschinen": {
+      "main": [
+        [
+          {
+            "node": "🔗 Merge All Objects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query Devices": {
+      "main": [
+        [
+          {
+            "node": "🔗 Merge All Objects",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔗 Merge All Objects": {
+      "main": [
+        [
+          {
+            "node": "🎯 Apply Filters & Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
