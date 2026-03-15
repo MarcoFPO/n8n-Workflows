@@ -23,7 +23,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Token PLACEHOLDER_BOOKSTACK_TOKEN_ID:PLACEHOLDER_BOOKSTACK_TOKEN_SECRET" },
+            { "name": "Authorization", "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -79,7 +79,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Token PLACEHOLDER_BOOKSTACK_TOKEN_ID:PLACEHOLDER_BOOKSTACK_TOKEN_SECRET" },
+            { "name": "Authorization", "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -110,7 +110,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Token PLACEHOLDER_BOOKSTACK_TOKEN_ID:PLACEHOLDER_BOOKSTACK_TOKEN_SECRET" },
+            { "name": "Authorization", "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
