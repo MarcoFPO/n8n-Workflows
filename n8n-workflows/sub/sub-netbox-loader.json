@@ -1,0 +1,176 @@
+{
+  "name": "SUB: NetBox Infrastructure Loader",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "filter_by_type",
+              "type": "string"
+            },
+            {
+              "name": "filter_by_ids",
+              "type": "string"
+            },
+            {
+              "name": "hostname",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse filter parameters from master workflow input\nconst input = $input.first().json;\n\nconst filterByType = input.filter_by_type || null;\nconst filterByIds = input.filter_by_ids ? JSON.parse(input.filter_by_ids) : null;\nconst hostname = input.hostname || input.wer || null;\n\nreturn [{\n  json: {\n    filter_by_type: filterByType,\n    filter_by_ids: filterByIds,\n    hostname: hostname,\n    netbox_token: '6e517f4e4fd4b3f3d3de63770bd79e6faacf0fe4',\n    netbox_base: 'http://10.1.1.104'\n  }\n}];"
+      },
+      "name": "🔧 Parse Filter Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://10.1.1.104/api/virtualization/virtual-machines/?limit=500",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token 6e517f4e4fd4b3f3d3de63770bd79e6faacf0fe4"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "name": "🔍 NetBox: Query VMs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://10.1.1.104/api/virtualization/virtual-machines/?cf_vm_type=lxc&limit=500",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token 6e517f4e4fd4b3f3d3de63770bd79e6faacf0fe4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔍 NetBox: Query LXCs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 350],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://10.1.1.104/api/dcim/devices/?has_primary_ip=true&limit=500",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token 6e517f4e4fd4b3f3d3de63770bd79e6faacf0fe4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "🔍 NetBox: Query Devices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge and normalize all NetBox results into unified format\nconst allItems = $input.all();\n\n// allItems[0] = VMs, allItems[1] = LXCs, allItems[2] = Devices\n// Note: In splitInBatches context we get all results merged\n\nfunction extractIP(primaryIp) {\n  if (!primaryIp || !primaryIp.address) return null;\n  return primaryIp.address.split('/')[0];\n}\n\nfunction normalizeVM(vm, typeOverride) {\n  const cfVmType = vm.custom_fields && vm.custom_fields.vm_type;\n  const type = typeOverride || (cfVmType === 'lxc' ? 'lxc' : 'vm');\n  return {\n    id: vm.id,\n    name: vm.name,\n    ip: extractIP(vm.primary_ip4 || vm.primary_ip),\n    type: type,\n    ssh_user: (vm.custom_fields && vm.custom_fields.ssh_user) || 'root',\n    ssh_password: (vm.custom_fields && vm.custom_fields.ssh_password) || '',\n    cluster: vm.cluster ? vm.cluster.name : null,\n    status: vm.status ? vm.status.value : 'unknown'\n  };\n}\n\nfunction normalizeDevice(dev) {\n  return {\n    id: dev.id,\n    name: dev.name,\n    ip: extractIP(dev.primary_ip4 || dev.primary_ip),\n    type: 'device',\n    ssh_user: (dev.custom_fields && dev.custom_fields.ssh_user) || 'root',\n    ssh_password: (dev.custom_fields && dev.custom_fields.ssh_password) || '',\n    cluster: dev.site ? dev.site.name : null,\n    status: dev.status ? dev.status.value : 'unknown'\n  };\n}\n\nconst normalized = [];\n\nfor (const item of allItems) {\n  const data = item.json;\n  if (data && data.results) {\n    for (const entry of data.results) {\n      // Detect if device (has device_type) or VM\n      if (entry.device_type !== undefined) {\n        normalized.push(normalizeDevice(entry));\n      } else {\n        normalized.push(normalizeVM(entry, null));\n      }\n    }\n  }\n}\n\n// Deduplicate by id+type\nconst seen = new Set();\nconst deduped = normalized.filter(item => {\n  const key = `${item.type}_${item.id}`;\n  if (seen.has(key)) return false;\n  seen.add(key);\n  return true;\n});\n\nreturn [{ json: { systems: deduped, total: deduped.length } }];"
+      },
+      "name": "🔧 Merge & Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apply filters to the normalized system list\nconst data = $input.first().json;\nconst systems = data.systems || [];\n\n// Get filter params from earlier in the workflow\nconst filterNode = $('🔧 Parse Filter Parameters').first().json;\nconst filterByType = filterNode.filter_by_type;\nconst filterByIds = filterNode.filter_by_ids;\nconst hostname = filterNode.hostname;\n\nlet filtered = [...systems];\n\n// Filter by type (vm, lxc, device)\nif (filterByType && filterByType !== '') {\n  filtered = filtered.filter(s => s.type === filterByType);\n}\n\n// Filter by specific IDs\nif (filterByIds && Array.isArray(filterByIds) && filterByIds.length > 0) {\n  const idSet = new Set(filterByIds.map(String));\n  filtered = filtered.filter(s => idSet.has(String(s.id)));\n}\n\n// Filter by hostname (partial match)\nif (hostname && hostname !== '') {\n  const hn = hostname.toLowerCase();\n  filtered = filtered.filter(s => s.name && s.name.toLowerCase().includes(hn));\n}\n\n// Filter out systems without IP (can't SSH)\nconst withIp = filtered.filter(s => s.ip);\nconst withoutIp = filtered.filter(s => !s.ip);\n\n// Return each system as individual item for loop processing\nconst output = withIp.map(system => ({ json: system }));\n\nif (output.length === 0) {\n  return [{ json: { id: null, name: 'NO_SYSTEMS_FOUND', ip: null, type: null, ssh_user: null, ssh_password: null, cluster: null, _empty: true } }];\n}\n\nreturn output;"
+      },
+      "name": "🔧 Apply Filters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 350]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          { "node": "🔧 Parse Filter Parameters", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "🔧 Parse Filter Parameters": {
+      "main": [
+        [
+          { "node": "🔍 NetBox: Query VMs", "type": "main", "index": 0 },
+          { "node": "🔍 NetBox: Query LXCs", "type": "main", "index": 0 },
+          { "node": "🔍 NetBox: Query Devices", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query VMs": {
+      "main": [
+        [
+          { "node": "🔧 Merge & Normalize", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query LXCs": {
+      "main": [
+        [
+          { "node": "🔧 Merge & Normalize", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query Devices": {
+      "main": [
+        [
+          { "node": "🔧 Merge & Normalize", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "🔧 Merge & Normalize": {
+      "main": [
+        [
+          { "node": "🔧 Apply Filters", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

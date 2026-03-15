@@ -8,7 +8,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "name": "\ud83c\udf10 Webhook: Znuny Ticket",
+      "name": "🌐 Webhook: Znuny Ticket",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -19,7 +19,7 @@
     },
     {
       "parameters": {},
-      "name": "\u25b6\ufe0f Manual Trigger",
+      "name": "▶️ Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -29,9 +29,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normalize input \u2013 unterst\u00fctzt 3 Trigger-Formate:\n//\n// Format A \u2013 Znuny Invoker (Ticket::Generic):\n//   { Event: { Event: 'TicketCreate', TicketID: '42' }, Ticket: { TicketID: 42, Title: '...', DynamicField_Wer: '...', ... } }\n//   \u2192 ticket_id extrahieren + volles Ticket-Objekt direkt weitergeben (kein separater API-Call n\u00f6tig)\n//\n// Format B \u2013 GenericAgent / Simple Webhook:\n//   { ticket_id: 42 }  oder  { TicketID: 42 }\n//   \u2192 nur ticket_id, Ticket muss via SUB: Znuny Ticket Reader geholt werden\n//\n// Format C \u2013 Manual Trigger:\n//   kein Payload \u2192 Test-Ticket-ID 1\n\nconst raw = $input.first().json;\n// n8n Webhook-Node wraps payload in .body; manual trigger/other has it directly\nconst input = raw.body && (raw.body.Event || raw.body.Ticket || raw.body.ticket_id || raw.body.TicketID) ? raw.body : raw;\n\nlet ticket_id = null;\nlet ticket_data = null; // volles Ticket-Objekt falls vorhanden\nlet source = 'unknown';\n\n// Format A: Znuny Invoker-Payload mit vollem Ticket-Objekt\nif (input.Event && input.Ticket) {\n  const t = Array.isArray(input.Ticket) ? input.Ticket[0] : input.Ticket;\n  ticket_id = Number(t.TicketID || input.Event?.TicketID);\n  source = 'znuny_invoker';\n  // DynamicFields direkt aus Invoker-Payload extrahieren\n  const getDynField = (name) => t[`DynamicField_${name}`] ?? null;\n  ticket_data = {\n    ticket_id,\n    ticket_number: t.TicketNumber || `TN-${ticket_id}`,\n    title: t.Title || `Ticket ${ticket_id}`,\n    wer: getDynField('ZabbixWer') || getDynField('Wer') || getDynField('Device') || getDynField('Hostname') || 'unknown',\n    was: getDynField('ZabbixWas') || getDynField('Was') || getDynField('ProbableCause') || t.Title || 'unknown',\n    wan: getDynField('ZabbixWann') || getDynField('Wan') || getDynField('IncidentTime') || t.Created || new Date().toISOString(),\n    priority: t.Priority || 'normal',\n    status: t.State || 'new',\n    queue: t.Queue || 'unknown',\n    owner: t.Owner || 'unknown'\n  };\n}\n\n// Format B: Einfache Webhook-Payload mit ticket_id\nelse if (input.ticket_id || input.TicketID || input.body?.ticket_id) {\n  ticket_id = Number(input.ticket_id || input.TicketID || input.body?.ticket_id);\n  source = 'webhook_simple';\n}\n\n// Format C: Manueller Trigger (Test)\nelse {\n  ticket_id = 1;\n  source = 'manual';\n}\n\nreturn [{\n  json: {\n    ticket_id,\n    source,\n    triggered_at: new Date().toISOString(),\n    ticket_data_prefilled: ticket_data !== null, // Flag: kein Znuny-Reader-Call n\u00f6tig\n    ticket_data // null wenn nicht vorhanden\n  }\n}];"
+        "jsCode": "// Normalize input – unterstützt 3 Trigger-Formate:\n//\n// Format A – Znuny Invoker (Ticket::Generic):\n//   { Event: { Event: 'TicketCreate', TicketID: '42' }, Ticket: { TicketID: 42, Title: '...', DynamicField_Wer: '...', ... } }\n//   → ticket_id extrahieren + volles Ticket-Objekt direkt weitergeben (kein separater API-Call nötig)\n//\n// Format B – GenericAgent / Simple Webhook:\n//   { ticket_id: 42 }  oder  { TicketID: 42 }\n//   → nur ticket_id, Ticket muss via SUB: Znuny Ticket Reader geholt werden\n//\n// Format C – Manual Trigger:\n//   kein Payload → Test-Ticket-ID 1\n\nconst raw = $input.first().json;\n// n8n Webhook-Node wraps payload in .body; manual trigger/other has it directly\nconst input = raw.body && (raw.body.Event || raw.body.Ticket || raw.body.ticket_id || raw.body.TicketID) ? raw.body : raw;\n\nlet ticket_id = null;\nlet ticket_data = null; // volles Ticket-Objekt falls vorhanden\nlet source = 'unknown';\n\n// Format A: Znuny Invoker-Payload mit vollem Ticket-Objekt\nif (input.Event && input.Ticket) {\n  const t = Array.isArray(input.Ticket) ? input.Ticket[0] : input.Ticket;\n  ticket_id = Number(t.TicketID || input.Event?.TicketID);\n  source = 'znuny_invoker';\n  // DynamicFields direkt aus Invoker-Payload extrahieren\n  const getDynField = (name) => t[`DynamicField_${name}`] ?? null;\n  ticket_data = {\n    ticket_id,\n    ticket_number: t.TicketNumber || `TN-${ticket_id}`,\n    title: t.Title || `Ticket ${ticket_id}`,\n    wer: getDynField('ZabbixWer') || getDynField('Wer') || getDynField('Device') || getDynField('Hostname') || 'unknown',\n    was: getDynField('ZabbixWas') || getDynField('Was') || getDynField('ProbableCause') || t.Title || 'unknown',\n    wan: getDynField('ZabbixWann') || getDynField('Wan') || getDynField('IncidentTime') || t.Created || new Date().toISOString(),\n    priority: t.Priority || 'normal',\n    status: t.State || 'new',\n    queue: t.Queue || 'unknown',\n    owner: t.Owner || 'unknown'\n  };\n}\n\n// Format B: Einfache Webhook-Payload mit ticket_id\nelse if (input.ticket_id || input.TicketID || input.body?.ticket_id) {\n  ticket_id = Number(input.ticket_id || input.TicketID || input.body?.ticket_id);\n  source = 'webhook_simple';\n}\n\n// Format C: Manueller Trigger (Test)\nelse {\n  ticket_id = 1;\n  source = 'manual';\n}\n\nreturn [{\n  json: {\n    ticket_id,\n    source,\n    triggered_at: new Date().toISOString(),\n    ticket_data_prefilled: ticket_data !== null, // Flag: kein Znuny-Reader-Call nötig\n    ticket_data // null wenn nicht vorhanden\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Normalize Input",
+      "name": "🔧 Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -65,7 +65,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Znuny Ticket Reader",
+      "name": "🔗 SUB: Znuny Ticket Reader",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -119,7 +119,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: NetBox Lookup",
+      "name": "🔗 SUB: NetBox Lookup",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -129,9 +129,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge ticket data + NetBox system info into unified context\nconst trigger = $('\ud83d\udd27 Normalize Input').first().json;\n// Bei Invoker-Payload: Ticket-Daten kommen direkt aus Normalize Input\n// Bei Simple-Webhook: Ticket-Daten kommen aus SUB: Znuny Ticket Reader\nconst ticketData = trigger.ticket_data_prefilled\n  ? trigger.ticket_data\n  : $('\ud83d\udd17 SUB: Znuny Ticket Reader').first().json;\nconst netboxItems = $('\ud83d\udd17 SUB: NetBox Lookup').all();\n\n// Get first system with IP from NetBox\nconst systemInfo = netboxItems.find(i => i.json && i.json.ip && i.json.name !== 'NO_SYSTEMS_FOUND')\n  ? netboxItems.find(i => i.json && i.json.ip && i.json.name !== 'NO_SYSTEMS_FOUND').json\n  : netboxItems[0]?.json || {};\n\nconst systemFound = systemInfo.ip && systemInfo.name !== 'NO_SYSTEMS_FOUND';\n\nreturn [{\n  json: {\n    // Ticket info\n    ticket_id: ticketData.ticket_id || trigger.ticket_id,\n    title: ticketData.title || `Ticket ${trigger.ticket_id}`,\n    wer: ticketData.wer || 'unknown',\n    was: ticketData.was || 'unknown',\n    wan: ticketData.wan || new Date().toISOString(),\n    priority: ticketData.priority || 'normal',\n    // System info from NetBox\n    system_found: systemFound,\n    system_id: systemInfo.id || null,\n    system_name: systemInfo.name || ticketData.wer || 'unknown',\n    system_ip: systemInfo.ip || null,\n    system_type: systemInfo.type || 'unknown',\n    ssh_user: systemInfo.ssh_user || 'root',\n    ssh_password: systemInfo.ssh_password || '',\n    topology: JSON.stringify({ type: systemInfo.type, cluster: systemInfo.cluster, id: systemInfo.id }),\n    // Proxmox SSH access for LXC\n    proxmox_host: '10.1.1.100',\n    lxc_id: systemInfo.type === 'lxc' ? systemInfo.id : null,\n    // Workflow tracking\n    attempt: 1,\n    retry_count: 0,\n    incident_id: `INC-${trigger.ticket_id}-${Date.now()}`,\n    started_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "// Merge ticket data + NetBox system info into unified context\nconst trigger = $('🔧 Normalize Input').first().json;\n// Bei Invoker-Payload: Ticket-Daten kommen direkt aus Normalize Input\n// Bei Simple-Webhook: Ticket-Daten kommen aus SUB: Znuny Ticket Reader\nconst ticketData = trigger.ticket_data_prefilled\n  ? trigger.ticket_data\n  : $('🔗 SUB: Znuny Ticket Reader').first().json;\nconst netboxItems = $('🔗 SUB: NetBox Lookup').all();\n\n// Get first system with IP from NetBox\nconst systemInfo = netboxItems.find(i => i.json && i.json.ip && i.json.name !== 'NO_SYSTEMS_FOUND')\n  ? netboxItems.find(i => i.json && i.json.ip && i.json.name !== 'NO_SYSTEMS_FOUND').json\n  : netboxItems[0]?.json || {};\n\nconst systemFound = systemInfo.ip && systemInfo.name !== 'NO_SYSTEMS_FOUND';\n\nreturn [{\n  json: {\n    // Ticket info\n    ticket_id: ticketData.ticket_id || trigger.ticket_id,\n    title: ticketData.title || `Ticket ${trigger.ticket_id}`,\n    wer: ticketData.wer || 'unknown',\n    was: ticketData.was || 'unknown',\n    wan: ticketData.wan || new Date().toISOString(),\n    priority: ticketData.priority || 'normal',\n    // System info from NetBox\n    system_found: systemFound,\n    system_id: systemInfo.id || null,\n    system_name: systemInfo.name || ticketData.wer || 'unknown',\n    system_ip: systemInfo.ip || null,\n    system_type: systemInfo.type || 'unknown',\n    ssh_user: systemInfo.ssh_user || 'root',\n    ssh_password: systemInfo.ssh_password || '',\n    topology: JSON.stringify({ type: systemInfo.type, cluster: systemInfo.cluster, id: systemInfo.id }),\n    // Proxmox SSH access for LXC\n    proxmox_host: '10.1.1.100',\n    lxc_id: systemInfo.type === 'lxc' ? systemInfo.id : null,\n    // Workflow tracking\n    attempt: 1,\n    retry_count: 0,\n    incident_id: `INC-${trigger.ticket_id}-${Date.now()}`,\n    started_at: new Date().toISOString()\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Initialize Context",
+      "name": "🔧 Initialize Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -141,9 +141,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build RCA prompt for Claude (Attempt 1)\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst sshInfo = ctx.lxc_id\n  ? `F\u00fcr LXC Container: ssh root@${ctx.proxmox_host} -t 'pct exec ${ctx.lxc_id} -- bash -c \"<cmd>\"'`\n  : ctx.system_ip\n    ? `Direktes SSH: ssh ${ctx.ssh_user}@${ctx.system_ip}`\n    : `Proxmox SSH: root@${ctx.proxmox_host} (System-ID unbekannt)`;\n\nconst prompt = `Du bist ein autonomer DevOps/Network-Engineer. Analysiere den folgenden Incident via SSH und f\u00fchre eine Root-Cause-Analysis (RCA) durch.\n\nIncident-Details:\n- Device/Host: ${ctx.wer}\n- Probable Cause: ${ctx.was}\n- Zeitpunkt: ${ctx.wan}\n- System IP: ${ctx.system_ip || 'unbekannt'}\n- System-Typ: ${ctx.system_type || 'unbekannt'}\n- Topologie: ${ctx.topology}\n\nSSH-Zugang:\n${sshInfo}\n\nSammle Logs, Metriken und Systemstatus. Analysiere was wirklich passiert ist.\n\nAntworte NUR als JSON (KEIN Markdown-Codeblock darum):\n{\n  \"rca_text\": \"<detaillierte Root-Cause-Analyse>\",\n  \"confidence_pct\": <0-100>,\n  \"affected_component\": \"<betroffene Komponente>\",\n  \"suggested_approach\": \"<empfohlener L\u00f6sungsansatz>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    prompt,\n    system_prompt: 'You are an expert DevOps/Network incident response engineer. Perform SSH-based root cause analysis and respond ONLY with valid JSON, no markdown formatting.',\n    context: `Device: ${ctx.wer}, Issue: ${ctx.was}, Time: ${ctx.wan}`\n  }\n}];"
+        "jsCode": "// Build RCA prompt for Claude (Attempt 1)\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst sshInfo = ctx.lxc_id\n  ? `Für LXC Container: ssh root@${ctx.proxmox_host} -t 'pct exec ${ctx.lxc_id} -- bash -c \"<cmd>\"'`\n  : ctx.system_ip\n    ? `Direktes SSH: ssh ${ctx.ssh_user}@${ctx.system_ip}`\n    : `Proxmox SSH: root@${ctx.proxmox_host} (System-ID unbekannt)`;\n\nconst prompt = `Du bist ein autonomer DevOps/Network-Engineer. Analysiere den folgenden Incident via SSH und führe eine Root-Cause-Analysis (RCA) durch.\n\nIncident-Details:\n- Device/Host: ${ctx.wer}\n- Probable Cause: ${ctx.was}\n- Zeitpunkt: ${ctx.wan}\n- System IP: ${ctx.system_ip || 'unbekannt'}\n- System-Typ: ${ctx.system_type || 'unbekannt'}\n- Topologie: ${ctx.topology}\n\nSSH-Zugang:\n${sshInfo}\n\nSammle Logs, Metriken und Systemstatus. Analysiere was wirklich passiert ist.\n\nAntworte NUR als JSON (KEIN Markdown-Codeblock darum):\n{\n  \"rca_text\": \"<detaillierte Root-Cause-Analyse>\",\n  \"confidence_pct\": <0-100>,\n  \"affected_component\": \"<betroffene Komponente>\",\n  \"suggested_approach\": \"<empfohlener Lösungsansatz>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    prompt,\n    system_prompt: 'You are an expert DevOps/Network incident response engineer. Perform SSH-based root cause analysis and respond ONLY with valid JSON, no markdown formatting.',\n    context: `Device: ${ctx.wer}, Issue: ${ctx.was}, Time: ${ctx.wan}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build RCA Prompt",
+      "name": "🔧 Build RCA Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -197,7 +197,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude RCA",
+      "name": "🤖 SUB: Claude RCA",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -207,9 +207,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude RCA response\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nlet rca = {\n  rca_text: 'Analyse fehlgeschlagen \u2013 keine verwertbare Antwort',\n  confidence_pct: 0,\n  affected_component: 'unbekannt',\n  suggested_approach: 'Manuelle \u00dcberpr\u00fcfung erforderlich'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) rca = { ...rca, ...JSON.parse(match[0]) };\n} catch(e) {\n  rca.rca_text = `Parse-Fehler: ${e.message}. Raw: ${String(claude_output.response_text || '').slice(0, 300)}`;\n}\n\nconst note_body = `## RCA Analyse (Versuch 1)\\n\\n**Root Cause:**\\n${rca.rca_text}\\n\\n**Betroffene Komponente:** ${rca.affected_component}\\n\\n**Confidence:** ${rca.confidence_pct}%\\n\\n**Empfohlener L\u00f6sungsansatz:**\\n${rca.suggested_approach}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    note_title: '\ud83d\udd0d RCA Analyse \u2013 Versuch 1',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude RCA response\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nlet rca = {\n  rca_text: 'Analyse fehlgeschlagen – keine verwertbare Antwort',\n  confidence_pct: 0,\n  affected_component: 'unbekannt',\n  suggested_approach: 'Manuelle Überprüfung erforderlich'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) rca = { ...rca, ...JSON.parse(match[0]) };\n} catch(e) {\n  rca.rca_text = `Parse-Fehler: ${e.message}. Raw: ${String(claude_output.response_text || '').slice(0, 300)}`;\n}\n\nconst note_body = `## RCA Analyse (Versuch 1)\\n\\n**Root Cause:**\\n${rca.rca_text}\\n\\n**Betroffene Komponente:** ${rca.affected_component}\\n\\n**Confidence:** ${rca.confidence_pct}%\\n\\n**Empfohlener Lösungsansatz:**\\n${rca.suggested_approach}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    note_title: '🔍 RCA Analyse – Versuch 1',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse RCA Result",
+      "name": "🔧 Parse RCA Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -263,7 +263,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note RCA",
+      "name": "🔗 SUB: Note RCA",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -273,9 +273,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build Guide prompt using RCA results\nconst rca_data = $('\ud83d\udd27 Parse RCA Result').first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst prompt = `Basierend auf der RCA-Analyse soll ein konkreter L\u00f6sungs-Guide erstellt werden.\n\nRCA Ergebnis:\n- Root Cause: ${rca_data.rca?.rca_text}\n- Betroffene Komponente: ${rca_data.rca?.affected_component}\n- Empfohlener Ansatz: ${rca_data.rca?.suggested_approach}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip || 'unbekannt'}, Typ: ${ctx.system_type})\n\nErstelle einen Schritt-f\u00fcr-Schritt L\u00f6sungs-Guide mit konkreten Befehlen.\n\nAntworte NUR als JSON:\n{\n  \"guide_title\": \"<Titel>\",\n  \"guide_steps\": [\n    {\n      \"step_nr\": 1,\n      \"description\": \"<Beschreibung>\",\n      \"commands\": [\"<befehl1>\", \"<befehl2>\"],\n      \"expected_result\": \"<erwartetes Ergebnis>\",\n      \"risk_level\": \"low|medium|high\"\n    }\n  ]\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca: rca_data.rca,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer creating a step-by-step remediation guide. Respond ONLY with valid JSON.',\n    context: `RCA: ${rca_data.rca?.rca_text?.slice(0, 200)}`\n  }\n}];"
+        "jsCode": "// Build Guide prompt using RCA results\nconst rca_data = $('🔧 Parse RCA Result').first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst prompt = `Basierend auf der RCA-Analyse soll ein konkreter Lösungs-Guide erstellt werden.\n\nRCA Ergebnis:\n- Root Cause: ${rca_data.rca?.rca_text}\n- Betroffene Komponente: ${rca_data.rca?.affected_component}\n- Empfohlener Ansatz: ${rca_data.rca?.suggested_approach}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip || 'unbekannt'}, Typ: ${ctx.system_type})\n\nErstelle einen Schritt-für-Schritt Lösungs-Guide mit konkreten Befehlen.\n\nAntworte NUR als JSON:\n{\n  \"guide_title\": \"<Titel>\",\n  \"guide_steps\": [\n    {\n      \"step_nr\": 1,\n      \"description\": \"<Beschreibung>\",\n      \"commands\": [\"<befehl1>\", \"<befehl2>\"],\n      \"expected_result\": \"<erwartetes Ergebnis>\",\n      \"risk_level\": \"low|medium|high\"\n    }\n  ]\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca: rca_data.rca,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer creating a step-by-step remediation guide. Respond ONLY with valid JSON.',\n    context: `RCA: ${rca_data.rca?.rca_text?.slice(0, 200)}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Guide Prompt",
+      "name": "🔧 Build Guide Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -329,7 +329,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude Guide",
+      "name": "🤖 SUB: Claude Guide",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -339,9 +339,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude Guide response\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca = $('\ud83d\udd27 Parse RCA Result').first().json.rca;\n\nlet guide = { guide_title: 'L\u00f6sungs-Guide', guide_steps: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) guide = { ...guide, ...JSON.parse(match[0]) };\n} catch(e) {\n  guide.guide_steps = [{ step_nr: 1, description: `Parse error: ${e.message}`, commands: [], expected_result: '', risk_level: 'unknown' }];\n}\n\nconst stepsFormatted = guide.guide_steps.map(s =>\n  `**Step ${s.step_nr}:** ${s.description}\\n\\`\\`\\`\\n${(s.commands || []).join('\\n')}\\n\\`\\`\\`\\nErwartet: ${s.expected_result} | Risiko: ${s.risk_level}`\n).join('\\n\\n');\n\nconst note_body = `## L\u00f6sungs-Guide (Versuch 1)\\n\\n**${guide.guide_title}**\\n\\n${stepsFormatted}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    guide,\n    note_title: '\ud83d\udccb L\u00f6sungs-Guide \u2013 Versuch 1',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude Guide response\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca = $('🔧 Parse RCA Result').first().json.rca;\n\nlet guide = { guide_title: 'Lösungs-Guide', guide_steps: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) guide = { ...guide, ...JSON.parse(match[0]) };\n} catch(e) {\n  guide.guide_steps = [{ step_nr: 1, description: `Parse error: ${e.message}`, commands: [], expected_result: '', risk_level: 'unknown' }];\n}\n\nconst stepsFormatted = guide.guide_steps.map(s =>\n  `**Step ${s.step_nr}:** ${s.description}\\n\\`\\`\\`\\n${(s.commands || []).join('\\n')}\\n\\`\\`\\`\\nErwartet: ${s.expected_result} | Risiko: ${s.risk_level}`\n).join('\\n\\n');\n\nconst note_body = `## Lösungs-Guide (Versuch 1)\\n\\n**${guide.guide_title}**\\n\\n${stepsFormatted}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    guide,\n    note_title: '📋 Lösungs-Guide – Versuch 1',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse Guide Result",
+      "name": "🔧 Parse Guide Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -395,7 +395,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Guide",
+      "name": "🔗 SUB: Note Guide",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -405,9 +405,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build Execute prompt\nconst guide_data = $('\ud83d\udd27 Parse Guide Result').first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst stepsJson = JSON.stringify(guide_data.guide?.guide_steps || []);\nconst sshCmd = ctx.lxc_id\n  ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>'  (auf Proxmox ${ctx.proxmox_host})`\n  : `ssh ${ctx.ssh_user}@${ctx.system_ip}`;\n\nconst prompt = `Setze den folgenden L\u00f6sungs-Guide via SSH um.\n\nGuide-Steps: ${stepsJson}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip || 'unbekannt'})\nSSH-Zugang: ${sshCmd}\n\nF\u00fchre jeden Schritt aus und dokumentiere das Ergebnis.\n\nAntworte NUR als JSON:\n{\n  \"steps_executed\": [\n    {\n      \"step_nr\": 1,\n      \"command_run\": \"<ausgef\u00fchrter Befehl>\",\n      \"stdout\": \"<Ausgabe (max 500 Zeichen)>\",\n      \"success\": true\n    }\n  ],\n  \"all_success\": true,\n  \"errors\": []\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca: guide_data.rca,\n    guide: guide_data.guide,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer executing remediation steps via SSH. Respond ONLY with valid JSON.',\n    context: `System: ${ctx.wer}, Guide: ${guide_data.guide?.guide_title}`\n  }\n}];"
+        "jsCode": "// Build Execute prompt\nconst guide_data = $('🔧 Parse Guide Result').first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst stepsJson = JSON.stringify(guide_data.guide?.guide_steps || []);\nconst sshCmd = ctx.lxc_id\n  ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>'  (auf Proxmox ${ctx.proxmox_host})`\n  : `ssh ${ctx.ssh_user}@${ctx.system_ip}`;\n\nconst prompt = `Setze den folgenden Lösungs-Guide via SSH um.\n\nGuide-Steps: ${stepsJson}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip || 'unbekannt'})\nSSH-Zugang: ${sshCmd}\n\nFühre jeden Schritt aus und dokumentiere das Ergebnis.\n\nAntworte NUR als JSON:\n{\n  \"steps_executed\": [\n    {\n      \"step_nr\": 1,\n      \"command_run\": \"<ausgeführter Befehl>\",\n      \"stdout\": \"<Ausgabe (max 500 Zeichen)>\",\n      \"success\": true\n    }\n  ],\n  \"all_success\": true,\n  \"errors\": []\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca: guide_data.rca,\n    guide: guide_data.guide,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer executing remediation steps via SSH. Respond ONLY with valid JSON.',\n    context: `System: ${ctx.wer}, Guide: ${guide_data.guide?.guide_title}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Execute Prompt",
+      "name": "🔧 Build Execute Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -461,7 +461,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude Execute",
+      "name": "🤖 SUB: Claude Execute",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -471,9 +471,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude Execute response\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca = $('\ud83d\udd27 Parse RCA Result').first().json.rca;\nconst guide = $('\ud83d\udd27 Parse Guide Result').first().json.guide;\n\nlet execution = { steps_executed: [], all_success: false, errors: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) execution = { ...execution, ...JSON.parse(match[0]) };\n} catch(e) {\n  execution.errors = [`Parse error: ${e.message}`];\n}\n\nconst stepsLog = (execution.steps_executed || []).map(s =>\n  `**Step ${s.step_nr}:** \\`${s.command_run}\\`\\n\u2192 ${s.success ? '\u2705' : '\u274c'} ${String(s.stdout || '').slice(0, 300)}`\n).join('\\n\\n');\n\nconst note_body = `## Ausf\u00fchrungs-Log (Versuch 1)\\n\\n**Alle Steps erfolgreich:** ${execution.all_success ? '\u2705 JA' : '\u274c NEIN'}\\n\\n${stepsLog}${execution.errors?.length > 0 ? '\\n\\n**Fehler:**\\n' + execution.errors.join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    guide,\n    execution,\n    note_title: '\ud83d\udcbb Ausf\u00fchrungs-Log \u2013 Versuch 1',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude Execute response\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca = $('🔧 Parse RCA Result').first().json.rca;\nconst guide = $('🔧 Parse Guide Result').first().json.guide;\n\nlet execution = { steps_executed: [], all_success: false, errors: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) execution = { ...execution, ...JSON.parse(match[0]) };\n} catch(e) {\n  execution.errors = [`Parse error: ${e.message}`];\n}\n\nconst stepsLog = (execution.steps_executed || []).map(s =>\n  `**Step ${s.step_nr}:** \\`${s.command_run}\\`\\n→ ${s.success ? '✅' : '❌'} ${String(s.stdout || '').slice(0, 300)}`\n).join('\\n\\n');\n\nconst note_body = `## Ausführungs-Log (Versuch 1)\\n\\n**Alle Steps erfolgreich:** ${execution.all_success ? '✅ JA' : '❌ NEIN'}\\n\\n${stepsLog}${execution.errors?.length > 0 ? '\\n\\n**Fehler:**\\n' + execution.errors.map(e => typeof e === 'object' ? JSON.stringify(e) : String(e)).join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    guide,\n    execution,\n    note_title: '💻 Ausführungs-Log – Versuch 1',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse Execute Result",
+      "name": "🔧 Parse Execute Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -527,7 +527,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Execute",
+      "name": "🔗 SUB: Note Execute",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -537,9 +537,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build Verify prompt\nconst exec_data = $('\ud83d\udd27 Parse Execute Result').first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst prompt = `Verifiziere ob der Incident behoben wurde.\n\nOriginal-Incident:\n- Device: ${ctx.wer}\n- Problem: ${ctx.was}\n- Zeitpunkt: ${ctx.wan}\n- Soll-Zustand: ${exec_data.rca?.suggested_approach || 'normaler Betrieb'}\n\nAusgef\u00fchrte Ma\u00dfnahmen: ${JSON.stringify(exec_data.execution?.steps_executed || [])}\n\nSSH-Zugang: ${ctx.lxc_id ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>' auf ${ctx.proxmox_host}` : `ssh ${ctx.ssh_user}@${ctx.system_ip}`}\n\nPr\u00fcfe via SSH ob das Problem behoben ist. Vergleiche Soll vs Ist.\n\nAntworte NUR als JSON:\n{\n  \"resolved\": true,\n  \"soll_ist_comparison\": \"<Soll vs Ist Vergleich>\",\n  \"remaining_issues\": [],\n  \"verification_method\": \"<wie wurde gepr\u00fcft>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca: exec_data.rca,\n    guide: exec_data.guide,\n    execution: exec_data.execution,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer verifying incident resolution via SSH. Respond ONLY with valid JSON.',\n    context: `System: ${ctx.wer}, Original issue: ${ctx.was}`\n  }\n}];"
+        "jsCode": "// Build Verify prompt\nconst exec_data = $('🔧 Parse Execute Result').first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst prompt = `Verifiziere ob der Incident behoben wurde.\n\nOriginal-Incident:\n- Device: ${ctx.wer}\n- Problem: ${ctx.was}\n- Zeitpunkt: ${ctx.wan}\n- Soll-Zustand: ${exec_data.rca?.suggested_approach || 'normaler Betrieb'}\n\nAusgeführte Maßnahmen: ${JSON.stringify(exec_data.execution?.steps_executed || [])}\n\nSSH-Zugang: ${ctx.lxc_id ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>' auf ${ctx.proxmox_host}` : `ssh ${ctx.ssh_user}@${ctx.system_ip}`}\n\nPrüfe via SSH ob das Problem behoben ist. Vergleiche Soll vs Ist.\n\nAntworte NUR als JSON:\n{\n  \"resolved\": true,\n  \"soll_ist_comparison\": \"<Soll vs Ist Vergleich>\",\n  \"remaining_issues\": [],\n  \"verification_method\": \"<wie wurde geprüft>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca: exec_data.rca,\n    guide: exec_data.guide,\n    execution: exec_data.execution,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer verifying incident resolution via SSH. Respond ONLY with valid JSON.',\n    context: `System: ${ctx.wer}, Original issue: ${ctx.was}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Verify Prompt",
+      "name": "🔧 Build Verify Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -593,7 +593,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude Verify",
+      "name": "🤖 SUB: Claude Verify",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -603,9 +603,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude Verify response (Attempt 1)\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca = $('\ud83d\udd27 Parse RCA Result').first().json.rca;\n\nlet verify = {\n  resolved: false,\n  soll_ist_comparison: 'Verifikation fehlgeschlagen',\n  remaining_issues: [],\n  verification_method: 'unbekannt'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) verify = { ...verify, ...JSON.parse(match[0]) };\n} catch(e) {\n  verify.remaining_issues = [`Parse error: ${e.message}`];\n}\n\nconst note_body = `## Verifikation (Versuch 1)\\n\\n**Behoben:** ${verify.resolved ? '\u2705 JA' : '\u274c NEIN'}\\n\\n**Soll/Ist-Vergleich:**\\n${verify.soll_ist_comparison}\\n\\n**Pr\u00fcfmethode:** ${verify.verification_method}${verify.remaining_issues?.length > 0 ? '\\n\\n**Verbleibende Issues:**\\n' + verify.remaining_issues.join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    verify,\n    resolved: verify.resolved,\n    note_title: '\u2705 Verifikation \u2013 Versuch 1',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude Verify response (Attempt 1)\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca = $('🔧 Parse RCA Result').first().json.rca;\n\nlet verify = {\n  resolved: false,\n  soll_ist_comparison: 'Verifikation fehlgeschlagen',\n  remaining_issues: [],\n  verification_method: 'unbekannt'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) verify = { ...verify, ...JSON.parse(match[0]) };\n} catch(e) {\n  verify.remaining_issues = [`Parse error: ${e.message}`];\n}\n\nconst note_body = `## Verifikation (Versuch 1)\\n\\n**Behoben:** ${verify.resolved ? '✅ JA' : '❌ NEIN'}\\n\\n**Soll/Ist-Vergleich:**\\n${verify.soll_ist_comparison}\\n\\n**Prüfmethode:** ${verify.verification_method}${verify.remaining_issues?.length > 0 ? '\\n\\n**Verbleibende Issues:**\\n' + verify.remaining_issues.join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    verify,\n    resolved: verify.resolved,\n    note_title: '✅ Verifikation – Versuch 1',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse Verify Result",
+      "name": "🔧 Parse Verify Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -659,7 +659,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Verify",
+      "name": "🔗 SUB: Note Verify",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -676,7 +676,7 @@
           "conditions": [
             {
               "id": "resolved-check-1",
-              "leftValue": "={{ $('\ud83d\udd27 Parse Verify Result').first().json.resolved }}",
+              "leftValue": "={{ $('🔧 Parse Verify Result').first().json.resolved }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -688,7 +688,7 @@
         },
         "options": {}
       },
-      "name": "\u2705 IF: Resolved?",
+      "name": "✅ IF: Resolved?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -698,9 +698,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build close note summary for successful resolution\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca = $('\ud83d\udd27 Parse RCA Result').first().json.rca;\nconst verify = $('\ud83d\udd27 Parse Verify Result').first().json.verify;\n\nconst close_note = `# Incident automatisch gel\u00f6st \u2705\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n**Zeitpunkt:** ${ctx.wan}\\n\\n## Root Cause\\n${rca?.rca_text}\\n\\n## L\u00f6sung\\n${rca?.suggested_approach}\\n\\n## Verifikation\\n${verify?.soll_ist_comparison}\\n\\nAutomatisch gel\u00f6st in Versuch 1 durch n8n Incident Response Workflow.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    verify,\n    close_note,\n    attempt_successful: 1,\n    bookstack_title: `Incident ${ctx.ticket_id}: ${ctx.title}`,\n    bookstack_content: `# ${ctx.title}\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n**Zeit:** ${ctx.wan}\\n**Gel\u00f6st:** ${new Date().toISOString()}\\n\\n## Root Cause Analysis\\n${rca?.rca_text}\\n\\n**Betroffene Komponente:** ${rca?.affected_component}\\n**Confidence:** ${rca?.confidence_pct}%\\n\\n## L\u00f6sung\\n${rca?.suggested_approach}\\n\\n## Verifikation\\n${verify?.soll_ist_comparison}\\n\\n**Pr\u00fcfmethode:** ${verify?.verification_method}\\n\\n---\\n*Automatisch gel\u00f6st durch n8n Incident Response Workflow \u2013 Versuch 1*`,\n    bookstack_tags: JSON.stringify(['incident-response', 'auto-resolved', ctx.system_type, ctx.wer])\n  }\n}];"
+        "jsCode": "// Build close note summary for successful resolution\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca = $('🔧 Parse RCA Result').first().json.rca;\nconst verify = $('🔧 Parse Verify Result').first().json.verify;\n\nconst close_note = `# Incident automatisch gelöst ✅\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n**Zeitpunkt:** ${ctx.wan}\\n\\n## Root Cause\\n${rca?.rca_text}\\n\\n## Lösung\\n${rca?.suggested_approach}\\n\\n## Verifikation\\n${verify?.soll_ist_comparison}\\n\\nAutomatisch gelöst in Versuch 1 durch n8n Incident Response Workflow.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca,\n    verify,\n    close_note,\n    attempt_successful: 1,\n    bookstack_title: `Incident ${ctx.ticket_id}: ${ctx.title}`,\n    bookstack_content: `# ${ctx.title}\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n**Zeit:** ${ctx.wan}\\n**Gelöst:** ${new Date().toISOString()}\\n\\n## Root Cause Analysis\\n${rca?.rca_text}\\n\\n**Betroffene Komponente:** ${rca?.affected_component}\\n**Confidence:** ${rca?.confidence_pct}%\\n\\n## Lösung\\n${rca?.suggested_approach}\\n\\n## Verifikation\\n${verify?.soll_ist_comparison}\\n\\n**Prüfmethode:** ${verify?.verification_method}\\n\\n---\\n*Automatisch gelöst durch n8n Incident Response Workflow – Versuch 1*`,\n    bookstack_tags: JSON.stringify(['incident-response', 'auto-resolved', ctx.system_type, ctx.wer])\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Success Data",
+      "name": "🔧 Build Success Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -744,7 +744,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Close Ticket",
+      "name": "🔗 SUB: Close Ticket",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -762,9 +762,9 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "={{ $('\ud83d\udd27 Build Success Data').first().json.bookstack_title }}",
-            "content_markdown": "={{ $('\ud83d\udd27 Build Success Data').first().json.bookstack_content }}",
-            "tags": "={{ $('\ud83d\udd27 Build Success Data').first().json.bookstack_tags }}"
+            "title": "={{ $('🔧 Build Success Data').first().json.bookstack_title }}",
+            "content_markdown": "={{ $('🔧 Build Success Data').first().json.bookstack_content }}",
+            "tags": "={{ $('🔧 Build Success Data').first().json.bookstack_tags }}"
           },
           "schema": [
             {
@@ -798,7 +798,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: BookStack Report",
+      "name": "🔗 SUB: BookStack Report",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -816,8 +816,8 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "=\u2705 Incident {{ $('\ud83d\udd27 Initialize Context').first().json.ticket_id }} automatisch gel\u00f6st",
-            "message": "=Device: {{ $('\ud83d\udd27 Initialize Context').first().json.wer }}\nProblem: {{ $('\ud83d\udd27 Initialize Context').first().json.was }}\nRCA: {{ $('\ud83d\udd27 Parse RCA Result').first().json.rca?.rca_text?.slice(0, 300) }}\nVerifikation: {{ $('\ud83d\udd27 Parse Verify Result').first().json.verify?.soll_ist_comparison?.slice(0, 200) }}",
+            "title": "=✅ Incident {{ $('🔧 Initialize Context').first().json.ticket_id }} automatisch gelöst",
+            "message": "=Device: {{ $('🔧 Initialize Context').first().json.wer }}\nProblem: {{ $('🔧 Initialize Context').first().json.was }}\nRCA: {{ $('🔧 Parse RCA Result').first().json.rca?.rca_text?.slice(0, 300) }}\nVerifikation: {{ $('🔧 Parse Verify Result').first().json.verify?.soll_ist_comparison?.slice(0, 200) }}",
             "severity": "success",
             "channels": "[\"matrix\"]"
           },
@@ -862,7 +862,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd14 SUB: Notify Success",
+      "name": "🔔 SUB: Notify Success",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -880,9 +880,9 @@
         },
         "workflowInputs": {
           "value": {
-            "ticket_id": "={{ $('\ud83d\udd27 Parse Verify Result').first().json.ticket_id }}",
-            "note_title": "\ud83d\udd04 Retry: Versuch 2 wird gestartet",
-            "note_body": "=## Retry initiiert\n\nVersuch 1 hat das Problem nicht behoben.\n\n**Verbleibende Issues:**\n{{ $('\ud83d\udd27 Parse Verify Result').first().json.verify?.remaining_issues?.join('\\n') || 'unbekannt' }}\n\nVersuch 2 (RCA \u2192 Guide \u2192 Execute \u2192 Verify) wird jetzt gestartet."
+            "ticket_id": "={{ $json.ticket_id }}",
+            "note_title": "={{ $json.note_title }}",
+            "note_body": "={{ $json.note_body }}"
           },
           "schema": [
             {
@@ -916,7 +916,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Retry",
+      "name": "🔗 SUB: Note Retry",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -926,9 +926,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build RCA prompt for Attempt 2 \u2013 includes Attempt 1 context\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca1 = $('\ud83d\udd27 Parse RCA Result').first().json.rca;\nconst verify1 = $('\ud83d\udd27 Parse Verify Result').first().json.verify;\n\nconst sshCmd = ctx.lxc_id\n  ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>'  (auf Proxmox ${ctx.proxmox_host})`\n  : `ssh ${ctx.ssh_user}@${ctx.system_ip}`;\n\nconst prompt = `Du bist ein autonomer DevOps/Network-Engineer. Versuch 1 der Incident-Behebung ist fehlgeschlagen.\n\nIncident-Details:\n- Device/Host: ${ctx.wer}\n- Probable Cause: ${ctx.was}\n- Zeitpunkt: ${ctx.wan}\n- System IP: ${ctx.system_ip || 'unbekannt'}, Typ: ${ctx.system_type}\n\nErgebnisse aus Versuch 1:\n- RCA: ${rca1?.rca_text}\n- Bisheriger Ansatz: ${rca1?.suggested_approach}\n- Verifikation Ergebnis: ${verify1?.soll_ist_comparison}\n- Verbleibende Issues: ${JSON.stringify(verify1?.remaining_issues || [])}\n\nSSH-Zugang:\n${sshCmd}\n\nAnalysiere TIEFER warum Versuch 1 fehlgeschlagen ist. F\u00fchre eine erweiterte Diagnose durch.\n\nAntworte NUR als JSON:\n{\n  \"rca_text\": \"<erweiterte Root-Cause-Analyse inkl. warum Versuch 1 scheiterte>\",\n  \"confidence_pct\": <0-100>,\n  \"affected_component\": \"<betroffene Komponente>\",\n  \"suggested_approach\": \"<neuer, alternativer L\u00f6sungsansatz>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    verify1,\n    attempt: 2,\n    retry_count: 1,\n    prompt,\n    system_prompt: 'You are an expert DevOps/Network incident response engineer. This is attempt 2 after attempt 1 failed. Perform deeper SSH-based root cause analysis. Respond ONLY with valid JSON.',\n    context: `Attempt 2 | Device: ${ctx.wer}, Issue: ${ctx.was}, Previous RCA: ${rca1?.rca_text?.slice(0, 100)}`\n  }\n}];"
+        "jsCode": "// Build RCA prompt for Attempt 2 – includes Attempt 1 context\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca1 = $('🔧 Parse RCA Result').first().json.rca;\nconst verify1 = $('🔧 Parse Verify Result').first().json.verify;\n\nconst sshCmd = ctx.lxc_id\n  ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>'  (auf Proxmox ${ctx.proxmox_host})`\n  : `ssh ${ctx.ssh_user}@${ctx.system_ip}`;\n\nconst prompt = `Du bist ein autonomer DevOps/Network-Engineer. Versuch 1 der Incident-Behebung ist fehlgeschlagen.\n\nIncident-Details:\n- Device/Host: ${ctx.wer}\n- Probable Cause: ${ctx.was}\n- Zeitpunkt: ${ctx.wan}\n- System IP: ${ctx.system_ip || 'unbekannt'}, Typ: ${ctx.system_type}\n\nErgebnisse aus Versuch 1:\n- RCA: ${rca1?.rca_text}\n- Bisheriger Ansatz: ${rca1?.suggested_approach}\n- Verifikation Ergebnis: ${verify1?.soll_ist_comparison}\n- Verbleibende Issues: ${JSON.stringify(verify1?.remaining_issues || [])}\n\nSSH-Zugang:\n${sshCmd}\n\nAnalysiere TIEFER warum Versuch 1 fehlgeschlagen ist. Führe eine erweiterte Diagnose durch.\n\nAntworte NUR als JSON:\n{\n  \"rca_text\": \"<erweiterte Root-Cause-Analyse inkl. warum Versuch 1 scheiterte>\",\n  \"confidence_pct\": <0-100>,\n  \"affected_component\": \"<betroffene Komponente>\",\n  \"suggested_approach\": \"<neuer, alternativer Lösungsansatz>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    verify1,\n    attempt: 2,\n    retry_count: 1,\n    prompt,\n    system_prompt: 'You are an expert DevOps/Network incident response engineer. This is attempt 2 after attempt 1 failed. Perform deeper SSH-based root cause analysis. Respond ONLY with valid JSON.',\n    context: `Attempt 2 | Device: ${ctx.wer}, Issue: ${ctx.was}, Previous RCA: ${rca1?.rca_text?.slice(0, 100)}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build RCA Prompt 2",
+      "name": "🔧 Build RCA Prompt 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -982,7 +982,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude RCA 2",
+      "name": "🤖 SUB: Claude RCA 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -992,9 +992,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude RCA response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca1 = $('\ud83d\udd27 Parse RCA Result').first().json.rca;\n\nlet rca2 = {\n  rca_text: 'Analyse fehlgeschlagen',\n  confidence_pct: 0,\n  affected_component: 'unbekannt',\n  suggested_approach: 'Manuelle Eskalation erforderlich'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) rca2 = { ...rca2, ...JSON.parse(match[0]) };\n} catch(e) {\n  rca2.rca_text = `Parse-Fehler Versuch 2: ${e.message}. Raw: ${String(claude_output.response_text || '').slice(0, 200)}`;\n}\n\nconst note_body = `## RCA Analyse (Versuch 2)\\n\\n**Root Cause (erweitert):**\\n${rca2.rca_text}\\n\\n**Betroffene Komponente:** ${rca2.affected_component}\\n\\n**Confidence:** ${rca2.confidence_pct}%\\n\\n**Neuer L\u00f6sungsansatz:**\\n${rca2.suggested_approach}\\n\\n*(Versuch 1 RCA: ${rca1?.rca_text?.slice(0, 200)})*`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    note_title: '\ud83d\udd0d RCA Analyse \u2013 Versuch 2',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude RCA response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca1 = $('🔧 Parse RCA Result').first().json.rca;\n\nlet rca2 = {\n  rca_text: 'Analyse fehlgeschlagen',\n  confidence_pct: 0,\n  affected_component: 'unbekannt',\n  suggested_approach: 'Manuelle Eskalation erforderlich'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) rca2 = { ...rca2, ...JSON.parse(match[0]) };\n} catch(e) {\n  rca2.rca_text = `Parse-Fehler Versuch 2: ${e.message}. Raw: ${String(claude_output.response_text || '').slice(0, 200)}`;\n}\n\nconst note_body = `## RCA Analyse (Versuch 2)\\n\\n**Root Cause (erweitert):**\\n${rca2.rca_text}\\n\\n**Betroffene Komponente:** ${rca2.affected_component}\\n\\n**Confidence:** ${rca2.confidence_pct}%\\n\\n**Neuer Lösungsansatz:**\\n${rca2.suggested_approach}\\n\\n*(Versuch 1 RCA: ${rca1?.rca_text?.slice(0, 200)})*`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    note_title: '🔍 RCA Analyse – Versuch 2',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse RCA Result 2",
+      "name": "🔧 Parse RCA Result 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1048,7 +1048,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note RCA 2",
+      "name": "🔗 SUB: Note RCA 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1058,9 +1058,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build Guide prompt for Attempt 2\nconst rca2_data = $('\ud83d\udd27 Parse RCA Result 2').first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst prompt = `Basierend auf der erweiterten RCA (Versuch 2) einen neuen L\u00f6sungs-Guide erstellen.\n\nRCA Versuch 2:\n- Root Cause: ${rca2_data.rca2?.rca_text}\n- Neuer Ansatz: ${rca2_data.rca2?.suggested_approach}\n- Betroffene Komponente: ${rca2_data.rca2?.affected_component}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip}, Typ: ${ctx.system_type})\n\nErstelle einen ANDEREN L\u00f6sungs-Guide als beim ersten Versuch (der erste hat nicht funktioniert).\n\nAntworte NUR als JSON:\n{\n  \"guide_title\": \"<Titel>\",\n  \"guide_steps\": [\n    {\n      \"step_nr\": 1,\n      \"description\": \"<Beschreibung>\",\n      \"commands\": [\"<befehl>\"],\n      \"expected_result\": \"<erwartetes Ergebnis>\",\n      \"risk_level\": \"low|medium|high\"\n    }\n  ]\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1: rca2_data.rca1,\n    rca2: rca2_data.rca2,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer. This is attempt 2. Create a DIFFERENT remediation guide than attempt 1. Respond ONLY with valid JSON.',\n    context: `Attempt 2 Guide | RCA: ${rca2_data.rca2?.rca_text?.slice(0, 150)}`\n  }\n}];"
+        "jsCode": "// Build Guide prompt for Attempt 2\nconst rca2_data = $('🔧 Parse RCA Result 2').first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst prompt = `Basierend auf der erweiterten RCA (Versuch 2) einen neuen Lösungs-Guide erstellen.\n\nRCA Versuch 2:\n- Root Cause: ${rca2_data.rca2?.rca_text}\n- Neuer Ansatz: ${rca2_data.rca2?.suggested_approach}\n- Betroffene Komponente: ${rca2_data.rca2?.affected_component}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip}, Typ: ${ctx.system_type})\n\nErstelle einen ANDEREN Lösungs-Guide als beim ersten Versuch (der erste hat nicht funktioniert).\n\nAntworte NUR als JSON:\n{\n  \"guide_title\": \"<Titel>\",\n  \"guide_steps\": [\n    {\n      \"step_nr\": 1,\n      \"description\": \"<Beschreibung>\",\n      \"commands\": [\"<befehl>\"],\n      \"expected_result\": \"<erwartetes Ergebnis>\",\n      \"risk_level\": \"low|medium|high\"\n    }\n  ]\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1: rca2_data.rca1,\n    rca2: rca2_data.rca2,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer. This is attempt 2. Create a DIFFERENT remediation guide than attempt 1. Respond ONLY with valid JSON.',\n    context: `Attempt 2 Guide | RCA: ${rca2_data.rca2?.rca_text?.slice(0, 150)}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Guide Prompt 2",
+      "name": "🔧 Build Guide Prompt 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1114,7 +1114,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude Guide 2",
+      "name": "🤖 SUB: Claude Guide 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1124,9 +1124,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude Guide response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca2 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2;\nconst rca1 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca1;\n\nlet guide2 = { guide_title: 'L\u00f6sungs-Guide Versuch 2', guide_steps: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) guide2 = { ...guide2, ...JSON.parse(match[0]) };\n} catch(e) {\n  guide2.guide_steps = [{ step_nr: 1, description: `Parse error: ${e.message}`, commands: [], expected_result: '', risk_level: 'unknown' }];\n}\n\nconst stepsFormatted = guide2.guide_steps.map(s =>\n  `**Step ${s.step_nr}:** ${s.description}\\n\\`\\`\\`\\n${(s.commands || []).join('\\n')}\\n\\`\\`\\`\\nErwartet: ${s.expected_result} | Risiko: ${s.risk_level}`\n).join('\\n\\n');\n\nconst note_body = `## L\u00f6sungs-Guide (Versuch 2)\\n\\n**${guide2.guide_title}**\\n\\n${stepsFormatted}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    guide2,\n    note_title: '\ud83d\udccb L\u00f6sungs-Guide \u2013 Versuch 2',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude Guide response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca2 = $('🔧 Parse RCA Result 2').first().json.rca2;\nconst rca1 = $('🔧 Parse RCA Result 2').first().json.rca1;\n\nlet guide2 = { guide_title: 'Lösungs-Guide Versuch 2', guide_steps: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) guide2 = { ...guide2, ...JSON.parse(match[0]) };\n} catch(e) {\n  guide2.guide_steps = [{ step_nr: 1, description: `Parse error: ${e.message}`, commands: [], expected_result: '', risk_level: 'unknown' }];\n}\n\nconst stepsFormatted = guide2.guide_steps.map(s =>\n  `**Step ${s.step_nr}:** ${s.description}\\n\\`\\`\\`\\n${(s.commands || []).join('\\n')}\\n\\`\\`\\`\\nErwartet: ${s.expected_result} | Risiko: ${s.risk_level}`\n).join('\\n\\n');\n\nconst note_body = `## Lösungs-Guide (Versuch 2)\\n\\n**${guide2.guide_title}**\\n\\n${stepsFormatted}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    guide2,\n    note_title: '📋 Lösungs-Guide – Versuch 2',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse Guide Result 2",
+      "name": "🔧 Parse Guide Result 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1180,7 +1180,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Guide 2",
+      "name": "🔗 SUB: Note Guide 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1190,9 +1190,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build Execute prompt for Attempt 2\nconst guide2_data = $('\ud83d\udd27 Parse Guide Result 2').first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst stepsJson = JSON.stringify(guide2_data.guide2?.guide_steps || []);\nconst sshCmd = ctx.lxc_id\n  ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>'  (auf Proxmox ${ctx.proxmox_host})`\n  : `ssh ${ctx.ssh_user}@${ctx.system_ip}`;\n\nconst prompt = `Setze den L\u00f6sungs-Guide (Versuch 2) via SSH um.\n\nGuide-Steps: ${stepsJson}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip || 'unbekannt'})\nSSH-Zugang: ${sshCmd}\n\nF\u00fchre alle Schritte aus und dokumentiere detailliert.\n\nAntworte NUR als JSON:\n{\n  \"steps_executed\": [\n    {\n      \"step_nr\": 1,\n      \"command_run\": \"<Befehl>\",\n      \"stdout\": \"<Ausgabe>\",\n      \"success\": true\n    }\n  ],\n  \"all_success\": true,\n  \"errors\": []\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1: guide2_data.rca1,\n    rca2: guide2_data.rca2,\n    guide2: guide2_data.guide2,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer executing remediation steps (attempt 2). Respond ONLY with valid JSON.',\n    context: `Attempt 2 Execute | System: ${ctx.wer}, Guide: ${guide2_data.guide2?.guide_title}`\n  }\n}];"
+        "jsCode": "// Build Execute prompt for Attempt 2\nconst guide2_data = $('🔧 Parse Guide Result 2').first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst stepsJson = JSON.stringify(guide2_data.guide2?.guide_steps || []);\nconst sshCmd = ctx.lxc_id\n  ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>'  (auf Proxmox ${ctx.proxmox_host})`\n  : `ssh ${ctx.ssh_user}@${ctx.system_ip}`;\n\nconst prompt = `Setze den Lösungs-Guide (Versuch 2) via SSH um.\n\nGuide-Steps: ${stepsJson}\n\nSystem: ${ctx.wer} (IP: ${ctx.system_ip || 'unbekannt'})\nSSH-Zugang: ${sshCmd}\n\nFühre alle Schritte aus und dokumentiere detailliert.\n\nAntworte NUR als JSON:\n{\n  \"steps_executed\": [\n    {\n      \"step_nr\": 1,\n      \"command_run\": \"<Befehl>\",\n      \"stdout\": \"<Ausgabe>\",\n      \"success\": true\n    }\n  ],\n  \"all_success\": true,\n  \"errors\": []\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1: guide2_data.rca1,\n    rca2: guide2_data.rca2,\n    guide2: guide2_data.guide2,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer executing remediation steps (attempt 2). Respond ONLY with valid JSON.',\n    context: `Attempt 2 Execute | System: ${ctx.wer}, Guide: ${guide2_data.guide2?.guide_title}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Execute Prompt 2",
+      "name": "🔧 Build Execute Prompt 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1246,7 +1246,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude Execute 2",
+      "name": "🤖 SUB: Claude Execute 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1256,9 +1256,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude Execute response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca2 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2;\nconst rca1 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca1;\nconst guide2 = $('\ud83d\udd27 Parse Guide Result 2').first().json.guide2;\n\nlet execution2 = { steps_executed: [], all_success: false, errors: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) execution2 = { ...execution2, ...JSON.parse(match[0]) };\n} catch(e) {\n  execution2.errors = [`Parse error attempt 2: ${e.message}`];\n}\n\nconst stepsLog = (execution2.steps_executed || []).map(s =>\n  `**Step ${s.step_nr}:** \\`${s.command_run}\\`\\n\u2192 ${s.success ? '\u2705' : '\u274c'} ${String(s.stdout || '').slice(0, 300)}`\n).join('\\n\\n');\n\nconst note_body = `## Ausf\u00fchrungs-Log (Versuch 2)\\n\\n**Alle Steps erfolgreich:** ${execution2.all_success ? '\u2705 JA' : '\u274c NEIN'}\\n\\n${stepsLog}${execution2.errors?.length > 0 ? '\\n\\n**Fehler:**\\n' + execution2.errors.join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    guide2,\n    execution2,\n    note_title: '\ud83d\udcbb Ausf\u00fchrungs-Log \u2013 Versuch 2',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude Execute response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca2 = $('🔧 Parse RCA Result 2').first().json.rca2;\nconst rca1 = $('🔧 Parse RCA Result 2').first().json.rca1;\nconst guide2 = $('🔧 Parse Guide Result 2').first().json.guide2;\n\nlet execution2 = { steps_executed: [], all_success: false, errors: [] };\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) execution2 = { ...execution2, ...JSON.parse(match[0]) };\n} catch(e) {\n  execution2.errors = [`Parse error attempt 2: ${e.message}`];\n}\n\nconst stepsLog = (execution2.steps_executed || []).map(s =>\n  `**Step ${s.step_nr}:** \\`${s.command_run}\\`\\n→ ${s.success ? '✅' : '❌'} ${String(s.stdout || '').slice(0, 300)}`\n).join('\\n\\n');\n\nconst note_body = `## Ausführungs-Log (Versuch 2)\\n\\n**Alle Steps erfolgreich:** ${execution2.all_success ? '✅ JA' : '❌ NEIN'}\\n\\n${stepsLog}${execution2.errors?.length > 0 ? '\\n\\n**Fehler:**\\n' + execution2.errors.map(e => typeof e === 'object' ? JSON.stringify(e) : String(e)).join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    guide2,\n    execution2,\n    note_title: '💻 Ausführungs-Log – Versuch 2',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse Execute Result 2",
+      "name": "🔧 Parse Execute Result 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1312,7 +1312,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Execute 2",
+      "name": "🔗 SUB: Note Execute 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1322,9 +1322,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build Verify prompt for Attempt 2\nconst exec2_data = $('\ud83d\udd27 Parse Execute Result 2').first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\n\nconst prompt = `Verifiziere ob der Incident nach Versuch 2 behoben wurde.\n\nOriginal-Incident:\n- Device: ${ctx.wer}, Problem: ${ctx.was}\n- Soll-Zustand: ${exec2_data.rca2?.suggested_approach || 'normaler Betrieb'}\n\nAusgef\u00fchrte Ma\u00dfnahmen (Versuch 2): ${JSON.stringify(exec2_data.execution2?.steps_executed || [])}\n\nSSH-Zugang: ${ctx.lxc_id ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>' auf ${ctx.proxmox_host}` : `ssh ${ctx.ssh_user}@${ctx.system_ip}`}\n\nPr\u00fcfe via SSH genau ob das Problem wirklich behoben ist.\n\nAntworte NUR als JSON:\n{\n  \"resolved\": true,\n  \"soll_ist_comparison\": \"<Soll vs Ist Vergleich>\",\n  \"remaining_issues\": [],\n  \"verification_method\": \"<wie gepr\u00fcft>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1: exec2_data.rca1,\n    rca2: exec2_data.rca2,\n    guide2: exec2_data.guide2,\n    execution2: exec2_data.execution2,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer verifying incident resolution (attempt 2). Respond ONLY with valid JSON.',\n    context: `Attempt 2 Verify | System: ${ctx.wer}, Issue: ${ctx.was}`\n  }\n}];"
+        "jsCode": "// Build Verify prompt for Attempt 2\nconst exec2_data = $('🔧 Parse Execute Result 2').first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\n\nconst prompt = `Verifiziere ob der Incident nach Versuch 2 behoben wurde.\n\nOriginal-Incident:\n- Device: ${ctx.wer}, Problem: ${ctx.was}\n- Soll-Zustand: ${exec2_data.rca2?.suggested_approach || 'normaler Betrieb'}\n\nAusgeführte Maßnahmen (Versuch 2): ${JSON.stringify(exec2_data.execution2?.steps_executed || [])}\n\nSSH-Zugang: ${ctx.lxc_id ? `pct exec ${ctx.lxc_id} -- bash -c '<cmd>' auf ${ctx.proxmox_host}` : `ssh ${ctx.ssh_user}@${ctx.system_ip}`}\n\nPrüfe via SSH genau ob das Problem wirklich behoben ist.\n\nAntworte NUR als JSON:\n{\n  \"resolved\": true,\n  \"soll_ist_comparison\": \"<Soll vs Ist Vergleich>\",\n  \"remaining_issues\": [],\n  \"verification_method\": \"<wie geprüft>\"\n}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1: exec2_data.rca1,\n    rca2: exec2_data.rca2,\n    guide2: exec2_data.guide2,\n    execution2: exec2_data.execution2,\n    prompt,\n    system_prompt: 'You are an expert DevOps engineer verifying incident resolution (attempt 2). Respond ONLY with valid JSON.',\n    context: `Attempt 2 Verify | System: ${ctx.wer}, Issue: ${ctx.was}`\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Verify Prompt 2",
+      "name": "🔧 Build Verify Prompt 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1378,7 +1378,7 @@
         },
         "options": {}
       },
-      "name": "\ud83e\udd16 SUB: Claude Verify 2",
+      "name": "🤖 SUB: Claude Verify 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1388,9 +1388,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse Claude Verify response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca2 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2;\nconst rca1 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca1;\n\nlet verify2 = {\n  resolved: false,\n  soll_ist_comparison: 'Verifikation 2 fehlgeschlagen',\n  remaining_issues: [],\n  verification_method: 'unbekannt'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) verify2 = { ...verify2, ...JSON.parse(match[0]) };\n} catch(e) {\n  verify2.remaining_issues = [`Parse error attempt 2: ${e.message}`];\n}\n\nconst note_body = `## Verifikation (Versuch 2)\\n\\n**Behoben:** ${verify2.resolved ? '\u2705 JA' : '\u274c NEIN'}\\n\\n**Soll/Ist-Vergleich:**\\n${verify2.soll_ist_comparison}\\n\\n**Pr\u00fcfmethode:** ${verify2.verification_method}${verify2.remaining_issues?.length > 0 ? '\\n\\n**Verbleibende Issues:**\\n' + verify2.remaining_issues.join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    verify2,\n    resolved2: verify2.resolved,\n    note_title: '\u2705 Verifikation \u2013 Versuch 2',\n    note_body\n  }\n}];"
+        "jsCode": "// Parse Claude Verify response (Attempt 2)\nconst claude_output = $input.first().json;\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca2 = $('🔧 Parse RCA Result 2').first().json.rca2;\nconst rca1 = $('🔧 Parse RCA Result 2').first().json.rca1;\n\nlet verify2 = {\n  resolved: false,\n  soll_ist_comparison: 'Verifikation 2 fehlgeschlagen',\n  remaining_issues: [],\n  verification_method: 'unbekannt'\n};\n\ntry {\n  const text = claude_output.response_text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) verify2 = { ...verify2, ...JSON.parse(match[0]) };\n} catch(e) {\n  verify2.remaining_issues = [`Parse error attempt 2: ${e.message}`];\n}\n\nconst note_body = `## Verifikation (Versuch 2)\\n\\n**Behoben:** ${verify2.resolved ? '✅ JA' : '❌ NEIN'}\\n\\n**Soll/Ist-Vergleich:**\\n${verify2.soll_ist_comparison}\\n\\n**Prüfmethode:** ${verify2.verification_method}${verify2.remaining_issues?.length > 0 ? '\\n\\n**Verbleibende Issues:**\\n' + verify2.remaining_issues.join('\\n') : ''}`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca1,\n    rca2,\n    verify2,\n    resolved2: verify2.resolved,\n    note_title: '✅ Verifikation – Versuch 2',\n    note_body\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Parse Verify Result 2",
+      "name": "🔧 Parse Verify Result 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1444,7 +1444,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Verify 2",
+      "name": "🔗 SUB: Note Verify 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1461,7 +1461,7 @@
           "conditions": [
             {
               "id": "resolved-check-2",
-              "leftValue": "={{ $('\ud83d\udd27 Parse Verify Result 2').first().json.resolved2 }}",
+              "leftValue": "={{ $('🔧 Parse Verify Result 2').first().json.resolved2 }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -1473,7 +1473,7 @@
         },
         "options": {}
       },
-      "name": "\u2705 IF: Resolved 2?",
+      "name": "✅ IF: Resolved 2?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -1483,9 +1483,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build close note for Attempt 2 success\nconst ctx = $('\ud83d\udd27 Initialize Context').first().json;\nconst rca2 = $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2;\nconst verify2 = $('\ud83d\udd27 Parse Verify Result 2').first().json.verify2;\n\nconst close_note = `# Incident gel\u00f6st \u2705 (Versuch 2)\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n\\n## Root Cause (Versuch 2)\\n${rca2?.rca_text}\\n\\n## L\u00f6sung\\n${rca2?.suggested_approach}\\n\\n## Verifikation\\n${verify2?.soll_ist_comparison}\\n\\nAutomatisch gel\u00f6st in Versuch 2 durch n8n Incident Response Workflow.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca2,\n    verify2,\n    close_note,\n    attempt_successful: 2,\n    bookstack_title: `Incident ${ctx.ticket_id} (Versuch 2): ${ctx.title}`,\n    bookstack_content: `# ${ctx.title}\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n**Zeit:** ${ctx.wan}\\n**Gel\u00f6st:** ${new Date().toISOString()} (Versuch 2)\\n\\n## Root Cause Analysis (Versuch 2)\\n${rca2?.rca_text}\\n\\n**Betroffene Komponente:** ${rca2?.affected_component}\\n\\n## L\u00f6sung\\n${rca2?.suggested_approach}\\n\\n## Verifikation\\n${verify2?.soll_ist_comparison}\\n\\n---\\n*Automatisch gel\u00f6st durch n8n Incident Response Workflow \u2013 2 Versuche ben\u00f6tigt*`,\n    bookstack_tags: JSON.stringify(['incident-response', 'auto-resolved', 'retry', ctx.system_type, ctx.wer])\n  }\n}];"
+        "jsCode": "// Build close note for Attempt 2 success\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca2 = $('🔧 Parse RCA Result 2').first().json.rca2;\nconst verify2 = $('🔧 Parse Verify Result 2').first().json.verify2;\n\nconst close_note = `# Incident gelöst ✅ (Versuch 2)\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n\\n## Root Cause (Versuch 2)\\n${rca2?.rca_text}\\n\\n## Lösung\\n${rca2?.suggested_approach}\\n\\n## Verifikation\\n${verify2?.soll_ist_comparison}\\n\\nAutomatisch gelöst in Versuch 2 durch n8n Incident Response Workflow.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    rca2,\n    verify2,\n    close_note,\n    attempt_successful: 2,\n    bookstack_title: `Incident ${ctx.ticket_id} (Versuch 2): ${ctx.title}`,\n    bookstack_content: `# ${ctx.title}\\n\\n**Incident-ID:** ${ctx.incident_id}\\n**Device:** ${ctx.wer}\\n**Problem:** ${ctx.was}\\n**Zeit:** ${ctx.wan}\\n**Gelöst:** ${new Date().toISOString()} (Versuch 2)\\n\\n## Root Cause Analysis (Versuch 2)\\n${rca2?.rca_text}\\n\\n**Betroffene Komponente:** ${rca2?.affected_component}\\n\\n## Lösung\\n${rca2?.suggested_approach}\\n\\n## Verifikation\\n${verify2?.soll_ist_comparison}\\n\\n---\\n*Automatisch gelöst durch n8n Incident Response Workflow – 2 Versuche benötigt*`,\n    bookstack_tags: JSON.stringify(['incident-response', 'auto-resolved', 'retry', ctx.system_type, ctx.wer])\n  }\n}];"
       },
-      "name": "\ud83d\udd27 Build Success Data 2",
+      "name": "🔧 Build Success Data 2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1529,7 +1529,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Close Ticket 2",
+      "name": "🔗 SUB: Close Ticket 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1547,9 +1547,9 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "={{ $('\ud83d\udd27 Build Success Data 2').first().json.bookstack_title }}",
-            "content_markdown": "={{ $('\ud83d\udd27 Build Success Data 2').first().json.bookstack_content }}",
-            "tags": "={{ $('\ud83d\udd27 Build Success Data 2').first().json.bookstack_tags }}"
+            "title": "={{ $('🔧 Build Success Data 2').first().json.bookstack_title }}",
+            "content_markdown": "={{ $('🔧 Build Success Data 2').first().json.bookstack_content }}",
+            "tags": "={{ $('🔧 Build Success Data 2').first().json.bookstack_tags }}"
           },
           "schema": [
             {
@@ -1583,7 +1583,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: BookStack Report 2",
+      "name": "🔗 SUB: BookStack Report 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1601,8 +1601,8 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "=\u2705 Incident {{ $('\ud83d\udd27 Initialize Context').first().json.ticket_id }} gel\u00f6st (Versuch 2)",
-            "message": "=Device: {{ $('\ud83d\udd27 Initialize Context').first().json.wer }}\nProblem: {{ $('\ud83d\udd27 Initialize Context').first().json.was }}\nRCA (V2): {{ $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2?.rca_text?.slice(0, 200) }}\nVerifikation: {{ $('\ud83d\udd27 Parse Verify Result 2').first().json.verify2?.soll_ist_comparison?.slice(0, 150) }}",
+            "title": "=✅ Incident {{ $('🔧 Initialize Context').first().json.ticket_id }} gelöst (Versuch 2)",
+            "message": "=Device: {{ $('🔧 Initialize Context').first().json.wer }}\nProblem: {{ $('🔧 Initialize Context').first().json.was }}\nRCA (V2): {{ $('🔧 Parse RCA Result 2').first().json.rca2?.rca_text?.slice(0, 200) }}\nVerifikation: {{ $('🔧 Parse Verify Result 2').first().json.verify2?.soll_ist_comparison?.slice(0, 150) }}",
             "severity": "success",
             "channels": "[\"matrix\"]"
           },
@@ -1647,7 +1647,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd14 SUB: Notify Success 2",
+      "name": "🔔 SUB: Notify Success 2",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1665,9 +1665,9 @@
         },
         "workflowInputs": {
           "value": {
-            "ticket_id": "={{ $('\ud83d\udd27 Parse Verify Result 2').first().json.ticket_id }}",
-            "note_title": "\ud83d\udea8 ESKALATION \u2013 Automatische Behebung fehlgeschlagen",
-            "note_body": "=## ESKALATION nach 2 Versuchen\\n\\n**Beide automatischen Versuche konnten den Incident nicht beheben.**\\n\\n**Ticket wird an Egon eskaliert.**\\n\\n### Zusammenfassung:\\n- **Device:** {{ $('\ud83d\udd27 Initialize Context').first().json.wer }}\\n- **Problem:** {{ $('\ud83d\udd27 Initialize Context').first().json.was }}\\n\\n### Verbleibende Issues (Versuch 2):\\n{{ $('\ud83d\udd27 Parse Verify Result 2').first().json.verify2?.remaining_issues?.join('\\n') || 'unbekannt' }}\\n\\n### RCA Versuch 1:\\n{{ $('\ud83d\udd27 Parse RCA Result').first().json.rca?.rca_text?.slice(0, 300) }}\\n\\n### RCA Versuch 2:\\n{{ $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2?.rca_text?.slice(0, 300) }}\\n\\nBitte manuelle \u00dcberpr\u00fcfung und Behebung durchf\u00fchren."
+            "ticket_id": "={{ $json.ticket_id }}",
+            "note_title": "={{ $json.note_title }}",
+            "note_body": "={{ $json.note_body }}"
           },
           "schema": [
             {
@@ -1701,7 +1701,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd17 SUB: Note Escalation",
+      "name": "🔗 SUB: Note Escalation",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1719,8 +1719,8 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "=\ud83d\udea8 Incident {{ $('\ud83d\udd27 Initialize Context').first().json.ticket_id }} ESKALIERT an Egon",
-            "message": "=**ESKALATION nach 2 fehlgeschlagenen Versuchen**\n\nDevice: {{ $('\ud83d\udd27 Initialize Context').first().json.wer }}\nProblem: {{ $('\ud83d\udd27 Initialize Context').first().json.was }}\nZeitpunkt: {{ $('\ud83d\udd27 Initialize Context').first().json.wan }}\n\nRCA V1: {{ $('\ud83d\udd27 Parse RCA Result').first().json.rca?.rca_text?.slice(0, 150) }}\nRCA V2: {{ $('\ud83d\udd27 Parse RCA Result 2').first().json.rca2?.rca_text?.slice(0, 150) }}\n\nVerbleibende Issues: {{ $('\ud83d\udd27 Parse Verify Result 2').first().json.verify2?.remaining_issues?.join(', ') || 'unbekannt' }}\n\nBitte manuell eingreifen! Ticket bleibt ge\u00f6ffnet.",
+            "title": "=🚨 Incident {{ $('🔧 Initialize Context').first().json.ticket_id }} ESKALIERT an Egon",
+            "message": "=**ESKALATION nach 2 fehlgeschlagenen Versuchen**\n\nDevice: {{ $('🔧 Initialize Context').first().json.wer }}\nProblem: {{ $('🔧 Initialize Context').first().json.was }}\nZeitpunkt: {{ $('🔧 Initialize Context').first().json.wan }}\n\nRCA V1: {{ $('🔧 Parse RCA Result').first().json.rca?.rca_text?.slice(0, 150) }}\nRCA V2: {{ $('🔧 Parse RCA Result 2').first().json.rca2?.rca_text?.slice(0, 150) }}\n\nVerbleibende Issues: {{ $('🔧 Parse Verify Result 2').first().json.verify2?.remaining_issues?.join(', ') || 'unbekannt' }}\n\nBitte manuell eingreifen! Ticket bleibt geöffnet.",
             "severity": "critical",
             "channels": "[\"matrix\"]"
           },
@@ -1765,7 +1765,7 @@
         },
         "options": {}
       },
-      "name": "\ud83d\udd14 SUB: Notify Escalation",
+      "name": "🔔 SUB: Notify Escalation",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -1781,557 +1781,626 @@
           "responseCode": 200
         }
       },
-      "name": "\ud83d\udcdd Respond to Webhook",
+      "name": "📝 Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
         600,
         200
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const noteInput = $input.first().json;\nconst verify1 = $('🔧 Parse Verify Result').first().json;\nconst wer = verify1.wer || 'unbekannt';\nconst was = verify1.was || 'unbekannt';\nconst ticket_id = verify1.ticket_id || noteInput.ticket_id;\nconst soll_ist = verify1.verify?.soll_ist_comparison || 'Nicht behoben';\n\nconst note_body = `## 🔄 Retry-Versuch\\n\\nVersuch 1 nicht erfolgreich. Starte automatischen Retry (Versuch 2).\\n\\n**Bisheriger Status:**\\n- Device: ${wer}\\n- Problem: ${was}\\n- Verify-Ergebnis: ${soll_ist}\\n\\n**Automatischer Neustart der RCA wird durchgeführt...**`;\n\nreturn [{ json: { ...verify1, note_title: '🔄 Automatischer Retry – Versuch 2', note_body } }];"
+      },
+      "name": "🔧 Build Retry Note",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4500,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const noteInput = $input.first().json;\nconst verify1 = $('🔧 Parse Verify Result').first().json;\nconst verify2 = $('🔧 Parse Verify Result 2').first().json;\nconst wer = verify2.wer || verify1.wer || 'unbekannt';\nconst was = verify2.was || verify1.was || 'unbekannt';\nconst system_ip = verify2.system_ip || verify1.system_ip || 'unbekannt';\nconst ticket_id = verify2.ticket_id || verify1.ticket_id || noteInput.ticket_id;\n\nconst note_body = `## 🚨 Eskalation an Egon\\n\\nNach 2 automatischen Lösungsversuchen konnte der Incident nicht behoben werden.\\n\\n**Incident-Details:**\\n- Device: ${wer}\\n- Problem: ${was}\\n- System-IP: ${system_ip}\\n\\n**Versuch 1 Ergebnis:**\\n${verify1.verify?.soll_ist_comparison || 'Nicht verfügbar'}\\n\\n**Versuch 2 Ergebnis:**\\n${verify2.verify2?.soll_ist_comparison || verify2.soll_ist_comparison || verify2.verify?.soll_ist_comparison || 'Nicht behoben'}\\n\\n**Status:** Manuelle Intervention durch Egon erforderlich.`;\n\nreturn [{ json: { ...verify2, note_title: '🚨 Eskalation nach 2 Versuchen', note_body } }];"
+      },
+      "name": "🔧 Build Escalation Note",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8100,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const noteInput = $input.first().json;\nconst verify2 = $('🔧 Parse Verify Result 2').first().json;\nconst wer = verify2.wer || 'unbekannt';\nconst was = verify2.was || 'unbekannt';\nconst system_name = verify2.system_name || 'unbekannt';\nconst system_ip = verify2.system_ip || 'unbekannt';\nconst ticket_id = verify2.ticket_id || noteInput.ticket_id;\nconst title = verify2.title || `Ticket ${ticket_id}`;\n\nconst message = `🚨 INCIDENT ESKALIERT\\n\\nTicket #${ticket_id} (${title})\\n\\n**Device:** ${wer}\\n**Problem:** ${was}\\n**System:** ${system_name} (${system_ip})\\n\\n**2 automatische Lösungsversuche fehlgeschlagen.**\\n\\nManuelle Intervention durch Egon erforderlich.`;\n\nreturn [{ json: { ...verify2, message, title: \\`🚨 Incident #\\${ticket_id} eskaliert: \\${wer}\\`, severity: 'critical', channels: ['matrix'] } }];"
+      },
+      "name": "🔧 Build Escalation Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8300,
+        700
+      ]
     }
   ],
   "connections": {
-    "\ud83c\udf10 Webhook: Znuny Ticket": {
+    "🌐 Webhook: Znuny Ticket": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Normalize Input",
+            "node": "🔧 Normalize Input",
             "type": "main",
             "index": 0
           },
           {
-            "node": "\ud83d\udcdd Respond to Webhook",
+            "node": "📝 Respond to Webhook",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\u25b6\ufe0f Manual Trigger": {
+    "▶️ Manual Trigger": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Normalize Input",
+            "node": "🔧 Normalize Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Normalize Input": {
+    "🔧 Normalize Input": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Znuny Ticket Reader",
+            "node": "🔗 SUB: Znuny Ticket Reader",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Znuny Ticket Reader": {
+    "🔗 SUB: Znuny Ticket Reader": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: NetBox Lookup",
+            "node": "🔗 SUB: NetBox Lookup",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: NetBox Lookup": {
+    "🔗 SUB: NetBox Lookup": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Initialize Context",
+            "node": "🔧 Initialize Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Initialize Context": {
+    "🔧 Initialize Context": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build RCA Prompt",
+            "node": "🔧 Build RCA Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build RCA Prompt": {
+    "🔧 Build RCA Prompt": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude RCA",
+            "node": "🤖 SUB: Claude RCA",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude RCA": {
+    "🤖 SUB: Claude RCA": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse RCA Result",
+            "node": "🔧 Parse RCA Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse RCA Result": {
+    "🔧 Parse RCA Result": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note RCA",
+            "node": "🔗 SUB: Note RCA",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note RCA": {
+    "🔗 SUB: Note RCA": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Guide Prompt",
+            "node": "🔧 Build Guide Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Guide Prompt": {
+    "🔧 Build Guide Prompt": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude Guide",
+            "node": "🤖 SUB: Claude Guide",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude Guide": {
+    "🤖 SUB: Claude Guide": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse Guide Result",
+            "node": "🔧 Parse Guide Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse Guide Result": {
+    "🔧 Parse Guide Result": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Guide",
+            "node": "🔗 SUB: Note Guide",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Guide": {
+    "🔗 SUB: Note Guide": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Execute Prompt",
+            "node": "🔧 Build Execute Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Execute Prompt": {
+    "🔧 Build Execute Prompt": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude Execute",
+            "node": "🤖 SUB: Claude Execute",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude Execute": {
+    "🤖 SUB: Claude Execute": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse Execute Result",
+            "node": "🔧 Parse Execute Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse Execute Result": {
+    "🔧 Parse Execute Result": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Execute",
+            "node": "🔗 SUB: Note Execute",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Execute": {
+    "🔗 SUB: Note Execute": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Verify Prompt",
+            "node": "🔧 Build Verify Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Verify Prompt": {
+    "🔧 Build Verify Prompt": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude Verify",
+            "node": "🤖 SUB: Claude Verify",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude Verify": {
+    "🤖 SUB: Claude Verify": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse Verify Result",
+            "node": "🔧 Parse Verify Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse Verify Result": {
+    "🔧 Parse Verify Result": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Verify",
+            "node": "🔗 SUB: Note Verify",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Verify": {
+    "🔗 SUB: Note Verify": {
       "main": [
         [
           {
-            "node": "\u2705 IF: Resolved?",
+            "node": "✅ IF: Resolved?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\u2705 IF: Resolved?": {
+    "✅ IF: Resolved?": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Success Data",
+            "node": "🔧 Build Success Data",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Retry",
+            "node": "🔧 Build Retry Note",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Success Data": {
+    "🔧 Build Success Data": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Close Ticket",
+            "node": "🔗 SUB: Close Ticket",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Close Ticket": {
+    "🔗 SUB: Close Ticket": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: BookStack Report",
+            "node": "🔗 SUB: BookStack Report",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: BookStack Report": {
+    "🔗 SUB: BookStack Report": {
       "main": [
         [
           {
-            "node": "\ud83d\udd14 SUB: Notify Success",
+            "node": "🔔 SUB: Notify Success",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Retry": {
+    "🔗 SUB: Note Retry": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build RCA Prompt 2",
+            "node": "🔧 Build RCA Prompt 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build RCA Prompt 2": {
+    "🔧 Build RCA Prompt 2": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude RCA 2",
+            "node": "🤖 SUB: Claude RCA 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude RCA 2": {
+    "🤖 SUB: Claude RCA 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse RCA Result 2",
+            "node": "🔧 Parse RCA Result 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse RCA Result 2": {
+    "🔧 Parse RCA Result 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note RCA 2",
+            "node": "🔗 SUB: Note RCA 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note RCA 2": {
+    "🔗 SUB: Note RCA 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Guide Prompt 2",
+            "node": "🔧 Build Guide Prompt 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Guide Prompt 2": {
+    "🔧 Build Guide Prompt 2": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude Guide 2",
+            "node": "🤖 SUB: Claude Guide 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude Guide 2": {
+    "🤖 SUB: Claude Guide 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse Guide Result 2",
+            "node": "🔧 Parse Guide Result 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse Guide Result 2": {
+    "🔧 Parse Guide Result 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Guide 2",
+            "node": "🔗 SUB: Note Guide 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Guide 2": {
+    "🔗 SUB: Note Guide 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Execute Prompt 2",
+            "node": "🔧 Build Execute Prompt 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Execute Prompt 2": {
+    "🔧 Build Execute Prompt 2": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude Execute 2",
+            "node": "🤖 SUB: Claude Execute 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude Execute 2": {
+    "🤖 SUB: Claude Execute 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse Execute Result 2",
+            "node": "🔧 Parse Execute Result 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse Execute Result 2": {
+    "🔧 Parse Execute Result 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Execute 2",
+            "node": "🔗 SUB: Note Execute 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Execute 2": {
+    "🔗 SUB: Note Execute 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Verify Prompt 2",
+            "node": "🔧 Build Verify Prompt 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Verify Prompt 2": {
+    "🔧 Build Verify Prompt 2": {
       "main": [
         [
           {
-            "node": "\ud83e\udd16 SUB: Claude Verify 2",
+            "node": "🤖 SUB: Claude Verify 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83e\udd16 SUB: Claude Verify 2": {
+    "🤖 SUB: Claude Verify 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Parse Verify Result 2",
+            "node": "🔧 Parse Verify Result 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Parse Verify Result 2": {
+    "🔧 Parse Verify Result 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Verify 2",
+            "node": "🔗 SUB: Note Verify 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Verify 2": {
+    "🔗 SUB: Note Verify 2": {
       "main": [
         [
           {
-            "node": "\u2705 IF: Resolved 2?",
+            "node": "✅ IF: Resolved 2?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\u2705 IF: Resolved 2?": {
+    "✅ IF: Resolved 2?": {
       "main": [
         [
           {
-            "node": "\ud83d\udd27 Build Success Data 2",
+            "node": "🔧 Build Success Data 2",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "\ud83d\udd17 SUB: Note Escalation",
+            "node": "🔧 Build Escalation Note",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd27 Build Success Data 2": {
+    "🔧 Build Success Data 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: Close Ticket 2",
+            "node": "🔗 SUB: Close Ticket 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Close Ticket 2": {
+    "🔗 SUB: Close Ticket 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd17 SUB: BookStack Report 2",
+            "node": "🔗 SUB: BookStack Report 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: BookStack Report 2": {
+    "🔗 SUB: BookStack Report 2": {
       "main": [
         [
           {
-            "node": "\ud83d\udd14 SUB: Notify Success 2",
+            "node": "🔔 SUB: Notify Success 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udd17 SUB: Note Escalation": {
+    "🔗 SUB: Note Escalation": {
       "main": [
         [
           {
-            "node": "\ud83d\udd14 SUB: Notify Escalation",
+            "node": "🔧 Build Escalation Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Retry Note": {
+      "main": [
+        [
+          {
+            "node": "🔗 SUB: Note Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Escalation Note": {
+      "main": [
+        [
+          {
+            "node": "🔗 SUB: Note Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Escalation Notify": {
+      "main": [
+        [
+          {
+            "node": "🔔 SUB: Notify Escalation",
             "type": "main",
             "index": 0
           }
