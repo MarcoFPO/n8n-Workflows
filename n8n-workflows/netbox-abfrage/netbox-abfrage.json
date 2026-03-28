@@ -1,0 +1,139 @@
+{
+  "name": "Primitive: NetBox-Abfrage",
+  "description": "Primitive Sub-Workflow für NetBox Infrastruktur-Abfragen (VMs, LXCs, Devices)",
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "hostname",
+              "type": "string"
+            },
+            {
+              "name": "filter_by_type"
+            },
+            {
+              "name": "filter_by_ids"
+            }
+          ]
+        }
+      },
+      "id": "input-trigger",
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst filters = {\n  hostname: input.hostname || null,\n  filter_by_type: input.filter_by_type || null,\n  filter_by_ids: input.filter_by_ids ? JSON.parse(input.filter_by_ids) : null\n};\nconsole.log('NetBox-Abfrage: Input Parameters =', JSON.stringify(filters));\nif (filters.hostname) {\n  console.log(`🎯 Suche nach Hostname: \"${filters.hostname}\"`);\n} else if (filters.filter_by_type) {\n  console.log(`🎯 Suche nach Type: \"${filters.filter_by_type}\"`);\n} else if (filters.filter_by_ids) {\n  console.log(`🎯 Suche nach IDs: ${JSON.stringify(filters.filter_by_ids)}`);\n} else {\n  console.log(`📋 Keine Filter - alle Objekte werden zurückgegeben`);\n}\nreturn { json: filters };"
+      },
+      "id": "parse-input",
+      "name": "🔧 Parse Input Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 240]
+    },
+    {
+      "parameters": {
+        "domain": "virtualization",
+        "returnAll": false,
+        "limit": 500
+      },
+      "id": "netbox-vms",
+      "name": "🔍 NetBox: Query Virtuelle Maschinen",
+      "type": "n8n-nodes-netbox.netBox",
+      "typeVersion": 1,
+      "position": [800, 100],
+      "credentials": {
+        "netBoxApi": {
+          "id": "CILcbhRbPqixLi1c",
+          "name": "NetBox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "returnAll": false,
+        "limit": 500
+      },
+      "id": "netbox-devices",
+      "name": "🔍 NetBox: Query Devices",
+      "type": "n8n-nodes-netbox.netBox",
+      "typeVersion": 1,
+      "position": [800, 380],
+      "credentials": {
+        "netBoxApi": {
+          "id": "CILcbhRbPqixLi1c",
+          "name": "NetBox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst params = $('🔧 Parse Input Parameters').first().json;\nconst hostname = (params.hostname || '').trim().toLowerCase();\nconst filterByType = (params.filter_by_type || '').trim().toLowerCase();\nconst filterByIds = Array.isArray(params.filter_by_ids) ? params.filter_by_ids : [];\n\nconsole.log(`\\n📥 PARSER: ${items.length} Rohobjekte von NetBox`);\nconsole.log(`🔧 Filter: hostname=\"${hostname}\", type=\"${filterByType}\", ids=${JSON.stringify(filterByIds)}`);\n\n// Step 1: Extrahiere Hostname, IP, SSH-Daten\nlet processed = items.map(item => {\n  const obj = item.json;\n  const objHostname = (obj.name || '').trim().toLowerCase();\n  \n  // IP extrahieren\n  let ip = null;\n  if (obj.primary_ip4 && obj.primary_ip4.address) {\n    ip = obj.primary_ip4.address.split('/')[0];\n  } else if (obj.primary_ip && obj.primary_ip.address) {\n    ip = obj.primary_ip.address.split('/')[0];\n  }\n  \n  // Objekte OHNE IP filtern\n  if (!ip) {\n    console.log(`  ⏭️ \"${obj.name}\" hat keine IP - übersprungen`);\n    return null;\n  }\n  \n  // SSH-Daten\n  const cf = obj.custom_fields || {};\n  const default_user = obj.type === 'device' ? 'admin' : 'root';\n  const ssh_user = cf.ssh_username || default_user;\n  const ssh_password = cf.ssh_password || null;\n  \n  return {\n    json: {\n      id: obj.id,\n      type: (obj.type || 'unknown').trim().toLowerCase(),\n      hostname_raw: obj.name,\n      hostname: objHostname,\n      ip: ip,\n      ssh_user: ssh_user,\n      ssh_password: ssh_password\n    }\n  };\n}).filter(item => item !== null);\n\nconsole.log(`✅ Nach IP-Filter: ${processed.length} Objekte mit IP`);\n\n// Step 2: Wende Filterung an\nlet filtered = processed;\n\n// PRIORITÄT 1: Hostname-Filter (exakt und streng!)\nif (hostname && hostname.length > 0) {\n  const beforeFilter = filtered.length;\n  filtered = filtered.filter(item => {\n    const match = item.json.hostname === hostname;\n    if (!match) {\n      console.log(`  🔍 \"${item.json.hostname_raw}\" != \"${hostname}\" (Hostname-Filter)`);\n    }\n    return match;\n  });\n  console.log(`🎯 HOSTNAME FILTER: ${beforeFilter} → ${filtered.length} Objekt(e)`);\n  \n  // WICHTIG: Wenn Hostname gegeben, STOP hier! Keine anderen Filter!\n} else {\n  // PRIORITÄT 2: Type-Filter (nur wenn KEIN Hostname)\n  if (filterByType && filterByType.length > 0) {\n    const beforeFilter = filtered.length;\n    filtered = filtered.filter(item => item.json.type === filterByType);\n    console.log(`🎯 TYPE FILTER \"${filterByType}\": ${beforeFilter} → ${filtered.length} Objekt(e)`);\n  }\n  \n  // PRIORITÄT 3: ID-Filter (nur wenn KEIN Hostname)\n  if (filterByIds && filterByIds.length > 0) {\n    const beforeFilter = filtered.length;\n    filtered = filtered.filter(item => filterByIds.includes(item.json.id));\n    console.log(`🎯 ID FILTER: ${beforeFilter} → ${filtered.length} Objekt(e)`);\n  }\n}\n\n// Step 3: Formatiere Output (nur 4 Felder)\nconst output = filtered.map(item => ({\n  json: {\n    hostname: item.json.hostname_raw,\n    ip: item.json.ip,\n    ssh_user: item.json.ssh_user,\n    ssh_password: item.json.ssh_password\n  }\n}));\n\nconsole.log(`\\n✅ FINAL OUTPUT: ${output.length} Objekt(e) zurückgegeben\\n`);\nreturn output;"
+      },
+      "id": "apply-filters",
+      "name": "🎯 Apply Filters & Finalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 240]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Input Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Input Parameters": {
+      "main": [
+        [
+          {
+            "node": "🔍 NetBox: Query Virtuelle Maschinen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔍 NetBox: Query Devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query Virtuelle Maschinen": {
+      "main": [
+        [
+          {
+            "node": "🎯 Apply Filters & Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 NetBox: Query Devices": {
+      "main": [
+        [
+          {
+            "node": "🎯 Apply Filters & Finalize",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  }
+}

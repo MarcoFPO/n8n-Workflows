@@ -1,0 +1,59 @@
+{
+  "name": "Primitive: JSON Schema Validator",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "data",
+              "type": "object"
+            },
+            {
+              "name": "schema",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { data, schema } = $('📥 Input').first().json;\nif (!data || !schema) throw new Error('data und schema sind erforderlich');\nconst errors = [];\nfor (const [key, def] of Object.entries(schema.properties || {})) {\n  if (def.required && data[key] === undefined) errors.push(`${key} ist erforderlich`);\n  if (data[key] !== undefined && typeof data[key] !== def.type && def.type !== 'any') errors.push(`${key} muss ${def.type} sein`);\n}\nreturn { exit_code: errors.length === 0 ? 'success' : 'failed',\n  session_id: require('crypto').randomUUID(),\n  data: { valid: errors.length === 0, errors },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Validate Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

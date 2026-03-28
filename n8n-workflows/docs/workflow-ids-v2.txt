@@ -1,0 +1,5 @@
+# Zabbix Workflow V2 - Workflow IDs
+# Erstellt: 2025-10-13 17:58:04
+
+sub1-problem-erfassung-v2 → ID: webhook-trigger
+master-zabbix-orchestrator-v2 → ID: webhook-trigger

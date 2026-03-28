@@ -1,0 +1,72 @@
+{
+  "name": "SUB: Znuny Ticket Creator",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "title",    "type": "string" },
+            { "name": "body",     "type": "string" },
+            { "name": "queue",    "type": "string" },
+            { "name": "state",    "type": "string" },
+            { "name": "priority", "type": "string" }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nif (!input.title) throw new Error('title ist erforderlich');\nif (!input.body)  throw new Error('body ist erforderlich');\n\nconst queue    = input.queue    || 'Raw';\nconst state    = input.state    || 'neu';\nconst priority = input.priority || '3 normal';\n\nconst payload = {\n  UserLogin: 'root@localhost',\n  Password:  'ZnunyAdmin2026!',\n  Ticket: {\n    Title:        input.title,\n    Queue:        queue,\n    State:        state,\n    Priority:     priority,\n    CustomerUser: 'root@localhost'\n  },\n  Article: {\n    Subject:              input.title,\n    Body:                 input.body,\n    ContentType:          'text/plain; charset=utf8',\n    CommunicationChannel: 'Internal',\n    IsVisibleForCustomer: 0\n  }\n};\n\nreturn [{ json: { title: input.title, queue, state, priority, payload } }];"
+      },
+      "name": "🔧 Build Ticket Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 15000
+        }
+      },
+      "name": "🎫 Znuny API: Ticket erstellen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst d = $('🔧 Build Ticket Payload').first().json;\n\nconst success = !r.Error && (r.TicketID != null || r.TicketNumber != null);\n\nreturn [{ json: {\n  success,\n  ticket_id:     r.TicketID     || null,\n  ticket_number: r.TicketNumber || null,\n  title:         d.title,\n  queue:         d.queue,\n  state:         d.state,\n  error: r.Error ? `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}` : null\n} }];"
+      },
+      "name": "🔧 Parse Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master":      { "main": [[{ "node": "🔧 Build Ticket Payload",      "type": "main", "index": 0 }]] },
+    "🔧 Build Ticket Payload":   { "main": [[{ "node": "🎫 Znuny API: Ticket erstellen","type": "main", "index": 0 }]] },
+    "🎫 Znuny API: Ticket erstellen": { "main": [[{ "node": "🔧 Parse Result",          "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

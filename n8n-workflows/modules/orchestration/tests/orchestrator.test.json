@@ -1,0 +1,46 @@
+{
+  "name": "Test: Master Orchestrator",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const valid_types = ['log_analysis','health_check','system_update','incident'];\nconst test_type = 'health_check';\nif (!valid_types.includes(test_type)) throw new Error(`FAIL: ${test_type} nicht in ${valid_types}`);\nreturn [{ json: { test: 'Master Orchestrator', status: 'PASS', routed_to: 'Functional: Unified Health Checker' } }];"
+      },
+      "name": "🧪 Run Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🧪 Run Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

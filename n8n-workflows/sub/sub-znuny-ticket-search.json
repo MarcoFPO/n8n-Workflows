@@ -1,0 +1,70 @@
+{
+  "id": "XtpJW0B4twnclvtk",
+  "name": "SUB: Znuny Ticket Search",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "state",  "type": "string" },
+            { "name": "queue",  "type": "string" },
+            { "name": "limit",  "type": "number" }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nif (!input.state) throw new Error('state ist erforderlich (z.B. \"pausiert\")');\n\n// Znuny TicketSearch: State-Filter als Query-Parameter\nconst params = new URLSearchParams({\n  UserLogin: 'root@localhost',\n  Password: 'ZnunyAdmin2026!',\n  'States[0]': input.state,\n  Limit: String(input.limit || 100)\n});\n\n// Optional: Queue-Filter\nif (input.queue) params.append('Queues[0]', input.queue);\n\nreturn [{ json: { state: input.state, query_string: params.toString() } }];"
+      },
+      "name": "🔧 Build Search Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket?{{ $json.query_string }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 15000
+        }
+      },
+      "name": "🔍 Znuny API: TicketSearch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input from Master').first().json;\nconst r = $input.first().json;\n\n// Znuny liefert: { TicketID: [1, 2, 3] } oder { Error: {...} }\nif (r.Error) {\n  return [{ json: { ticket_ids: [], count: 0, state: input.state,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}` } }];\n}\n\n// TicketID kann Array oder einzelner Wert sein\nconst raw = r.TicketID;\nconst ticket_ids = Array.isArray(raw) ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\nreturn [{ json: { ticket_ids, count: ticket_ids.length, state: input.state, error: null } }];"
+      },
+      "name": "🔧 Parse Ticket IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [[{ "node": "🔧 Build Search Query", "type": "main", "index": 0 }]]
+    },
+    "🔧 Build Search Query": {
+      "main": [[{ "node": "🔍 Znuny API: TicketSearch", "type": "main", "index": 0 }]]
+    },
+    "🔍 Znuny API: TicketSearch": {
+      "main": [[{ "node": "🔧 Parse Ticket IDs", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

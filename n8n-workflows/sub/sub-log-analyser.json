@@ -1,0 +1,86 @@
+{
+  "name": "SUB: System Log Analyser",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "id", "type": "number" },
+            { "name": "name", "type": "string" },
+            { "name": "ip", "type": "string" },
+            { "name": "type", "type": "string" },
+            { "name": "ssh_user", "type": "string" },
+            { "name": "ssh_password", "type": "string" },
+            { "name": "lines", "type": "number" }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build analysis prompt based on system type\nconst input = $input.first().json;\n\nconst { id, name, ip, type, ssh_user, ssh_password } = input;\nconst lines = input.lines || 100;\n\nconst PROXMOX_HOST = '10.1.1.100';\nconst isLXC = type === 'lxc';\nconst isDevice = type === 'device';\n\nlet log_commands;\nif (isLXC) {\n  // For LXC: use pct exec via Proxmox\n  log_commands = [\n    `pct exec ${id} -- journalctl -n ${lines} --no-pager -p warning`,\n    `pct exec ${id} -- journalctl -n 50 --no-pager -p err`,\n    `pct exec ${id} -- tail -n ${lines} /var/log/syslog 2>/dev/null || true`,\n    `pct exec ${id} -- tail -n 20 /var/log/auth.log 2>/dev/null || true`\n  ].join(' && echo \"---SEPARATOR---\" && ');\n} else {\n  // For VM / physical device: direct SSH\n  log_commands = [\n    `journalctl -n ${lines} --no-pager -p warning 2>/dev/null || tail -n ${lines} /var/log/syslog 2>/dev/null`,\n    `journalctl -n 50 --no-pager -p err 2>/dev/null || true`,\n    `tail -n 20 /var/log/auth.log 2>/dev/null || true`,\n    `dmesg | tail -n 20 | grep -i -E 'error|fail|warn|crit' 2>/dev/null || true`\n  ].join(' && echo \"---SEPARATOR---\" && ');\n}\n\nconst connection_info = isLXC\n  ? `Connect to Proxmox host ${PROXMOX_HOST} as root and use pct exec commands.`\n  : `Connect directly to ${ip} as ${ssh_user}.`;\n\nconst prompt = `You are a Linux system administrator analyzing logs for: ${name} (${type}, ${ip || 'N/A'}).\n\n${connection_info}\n\nExecute the following log collection commands:\n${log_commands}\n\nAnalyze the output and identify:\n1. Critical errors (service crashes, kernel panics, OOM kills)\n2. Security issues (failed logins, sudo abuse, unauthorized access)\n3. Hardware warnings (disk errors, memory failures)\n4. Service failures and restarts\n5. Network connectivity problems\n\nRespond ONLY with valid JSON in this exact format:\n{\n  \"issues\": [\n    {\n      \"severity\": \"critical|error|warning\",\n      \"message\": \"<brief description>\",\n      \"timestamp\": \"<ISO timestamp or 'unknown'>\",\n      \"source\": \"<log source>\"\n    }\n  ],\n  \"has_issues\": true|false,\n  \"summary\": \"<one-line summary of system log health>\"\n}`;\n\nconst system_prompt = 'You are an expert Linux system administrator. Analyze logs and respond ONLY with valid JSON. No markdown, no code blocks, no explanations outside JSON.';\n\nreturn [{\n  json: {\n    id, name, ip, type, ssh_user, ssh_password, lines,\n    prompt,\n    system_prompt,\n    is_lxc: isLXC\n  }\n}];"
+      },
+      "name": "🔧 Build Analysis Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "Bearer dummy-key" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}],\"max_tokens\":2048}",
+        "options": { "timeout": 120000 }
+      },
+      "name": "🤖 Claude: Analyse Logs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude's log analysis result\nconst response = $input.first().json;\nconst promptData = $('🔧 Build Analysis Prompt').first().json;\n\nlet issues = [];\nlet has_issues = false;\nlet summary = 'Analysis completed';\nlet parse_error = null;\n\ntry {\n  const content = response.choices?.[0]?.message?.content || '{}';\n  // Strip markdown code blocks if present\n  const cleaned = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    issues = parsed.issues || [];\n    has_issues = parsed.has_issues || issues.length > 0;\n    summary = parsed.summary || 'Log analysis completed';\n  }\n} catch (e) {\n  parse_error = e.message;\n  issues = [{ severity: 'error', message: `Log analysis parse error: ${e.message}`, timestamp: new Date().toISOString(), source: 'analyser' }];\n  has_issues = true;\n}\n\n// Count by severity\nconst criticalCount = issues.filter(i => i.severity === 'critical').length;\nconst errorCount = issues.filter(i => i.severity === 'error').length;\nconst warningCount = issues.filter(i => i.severity === 'warning').length;\n\nreturn [{\n  json: {\n    name: promptData.name,\n    id: promptData.id,\n    type: promptData.type,\n    ip: promptData.ip,\n    issues,\n    has_issues,\n    summary,\n    counts: {\n      critical: criticalCount,\n      error: errorCount,\n      warning: warningCount,\n      total: issues.length\n    },\n    parse_error,\n    analysed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "🔧 Parse Analysis Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [{ "node": "🔧 Build Analysis Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "🔧 Build Analysis Prompt": {
+      "main": [
+        [{ "node": "🤖 Claude: Analyse Logs", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Claude: Analyse Logs": {
+      "main": [
+        [{ "node": "🔧 Parse Analysis Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

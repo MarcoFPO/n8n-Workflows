@@ -1,0 +1,163 @@
+{
+  "name": "Functional: Unified Health Checker",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "target_host",
+              "type": "string"
+            },
+            {
+              "name": "target_type",
+              "type": "string"
+            },
+            {
+              "name": "services",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { target_host, target_type, services, session_id } = $('📥 Input').first().json;\nif (!target_host) throw new Error('target_host erforderlich');\nconst cmd = `echo \"=DISK=\" && df -h && echo \"=MEM=\" && free -m && echo \"=LOAD=\" && uptime && echo \"=SERVICES=\" && systemctl list-units --state=failed --no-legend 2>/dev/null | head -20`;\nreturn { target_host, target_type: target_type || 'lxc', command: cmd,\n  services: services || [], session_id: session_id || require('crypto').randomUUID() };"
+      },
+      "name": "🔧 Build Health Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: SSH Command Executor"
+        }
+      },
+      "name": "💻 SUB: SSH Execute",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst ssh = $('💻 SUB: SSH Execute').first().json;\nconst output = ssh?.data?.stdout || '(keine Daten)';\nreturn { prompt: `Health-Check für ${input.target_host}:\\n\\n${output.substring(0,4000)}\\n\\nBewerte: Disk, Memory, Load, Services. Antworte als JSON: {health_score(0-100), status(healthy/warning/critical), issues:[{type,value,threshold,message}], recommendations:[]}`,\n  model: 'claude-sonnet-4-6', max_tokens: 1000, session_id: input.session_id };"
+      },
+      "name": "🔧 Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: Claude AI Executor"
+        }
+      },
+      "name": "🤖 SUB: Claude",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst claude = $('🤖 SUB: Claude').first().json;\nconst r = typeof claude.response === 'string' ? JSON.parse(claude.response) : claude.response || {};\nreturn { exit_code: 'success', session_id: input.session_id,\n  data: { target_host: input.target_host, health_score: r.health_score || 0,\n    status: r.status || 'unknown', issues: r.issues || [], recommendations: r.recommendations || [] },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Parse Health Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Health Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Health Command": {
+      "main": [
+        [
+          {
+            "node": "💻 SUB: SSH Execute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 SUB: SSH Execute": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 SUB: Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 SUB: Claude": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Health Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

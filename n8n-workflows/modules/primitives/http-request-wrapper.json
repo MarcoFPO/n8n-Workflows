@@ -1,0 +1,85 @@
+{
+  "name": "Primitive: HTTP Request Wrapper",
+  "description": "Wrapper für Web-API Aufrufe (Claude Code Wrapper, externe APIs)",
+  "settings": {},
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "prompt",
+              "type": "string",
+              "description": "Der Prompt/die Anfrage für die API",
+              "required": true
+            },
+            {
+              "name": "model",
+              "type": "string",
+              "description": "Modell (haiku, sonnet, opus)",
+              "default": "haiku",
+              "required": false
+            },
+            {
+              "name": "temperature",
+              "type": "number",
+              "description": "Temperature 0.0-1.0",
+              "default": 0.1,
+              "required": false,
+              "minimum": 0,
+              "maximum": 1
+            }
+          ]
+        }
+      },
+      "id": "input-trigger",
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": $json.model || 'haiku',\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": $json.prompt\n    }\n  ],\n  \"temperature\": $json.temperature || 0.1,\n  \"max_tokens\": 2000\n} }}",
+        "options": {}
+      },
+      "id": "http-call",
+      "name": "🌐 HTTP Call to Wrapper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [480, 240]
+    },
+    {
+      "parameters": {
+        "outputType": "object",
+        "value": "={{ $json }}"
+      },
+      "id": "return-output",
+      "name": "📤 Return Output",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [720, 240]
+    }
+  ],
+  "connections": {
+    "input-trigger": {
+      "main": [[{"node": "http-call", "branch": 0}]]
+    },
+    "http-call": {
+      "main": [[{"node": "return-output", "branch": 0}]]
+    }
+  }
+}

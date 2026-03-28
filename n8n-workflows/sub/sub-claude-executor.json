@@ -1,0 +1,135 @@
+{
+  "name": "SUB: Claude AI Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "prompt",
+              "type": "string"
+            },
+            {
+              "name": "system_prompt",
+              "type": "string"
+            },
+            {
+              "name": "context",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build OpenAI-compatible request for Claude Code API\nconst input = $input.first().json;\n\nconst prompt = input.prompt || '';\nconst system_prompt = input.system_prompt || 'You are a helpful Linux system administrator assistant. Respond concisely and technically.';\nconst context = input.context || '';\n\nif (!prompt) throw new Error('prompt is required');\n\nconst session_id = `claude_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;\n\n// Build user message (include context if provided)\nconst userContent = context ? `Context:\\n${context}\\n\\nTask:\\n${prompt}` : prompt;\n\nconst requestBody = {\n  model: 'default',\n  messages: [\n    {\n      role: 'system',\n      content: system_prompt\n    },\n    {\n      role: 'user',\n      content: userContent\n    }\n  ],\n  max_tokens: 4096,\n  temperature: 0.3\n};\n\nreturn [{\n  json: {\n    request_body: requestBody,\n    session_id,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "name": "🔧 Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer dummy-key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "name": "🤖 Claude API: Send Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract response from Claude API\nconst apiResponse = $input.first().json;\nconst buildData = $('🔧 Build Request').first().json;\n\nconst execution_time_ms = Date.now() - buildData.start_time;\nconst session_id = buildData.session_id;\n\nlet response_text = '';\nlet model = 'default';\nlet tokens_used = 0;\nlet error = null;\n\nif (apiResponse.error) {\n  error = apiResponse.error.message || String(apiResponse.error);\n  response_text = `ERROR: ${error}`;\n} else if (apiResponse.choices && apiResponse.choices.length > 0) {\n  response_text = apiResponse.choices[0].message?.content || '';\n  model = apiResponse.model || 'default';\n  tokens_used = apiResponse.usage?.total_tokens || 0;\n} else if (typeof apiResponse === 'string') {\n  response_text = apiResponse;\n} else {\n  error = 'Unexpected API response format';\n  response_text = JSON.stringify(apiResponse);\n}\n\nreturn [{\n  json: {\n    response_text,\n    model,\n    tokens_used,\n    session_id,\n    execution_time_ms,\n    error\n  }\n}];"
+      },
+      "name": "🔧 Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Request": {
+      "main": [
+        [
+          {
+            "node": "🤖 Claude API: Send Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Claude API: Send Prompt": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "id": "l4ee6BahShsiEXjI"
+}

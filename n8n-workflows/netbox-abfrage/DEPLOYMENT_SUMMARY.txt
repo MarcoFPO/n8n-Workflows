@@ -1,0 +1,168 @@
+================================================================================
+N8N WORKFLOW DEPLOYMENT - FINAL SUMMARY
+================================================================================
+
+Status: SUCCESS ✓
+
+================================================================================
+DEPLOYED WORKFLOW
+================================================================================
+
+Workflow ID:          qQXIZPWmuFR6ylWC
+Workflow Name:        Test: NetBox-Abfrage Sub-Workflow
+Server:               http://10.1.1.180
+Deployment Time:      2026-01-24 16:12:50 UTC
+API Method:           POST /api/v1/workflows
+
+================================================================================
+PROBLEM SOLVED
+================================================================================
+
+Original Error:
+  "request/body must NOT have additional properties"
+
+Root Cause:
+  The n8n API has strict schema validation. The original workflow file contained
+  the "description" field which is not allowed in the POST request body.
+
+Solution Applied:
+  1. Removed the "description" field from the request body
+  2. Ensured "settings" object with "executionOrder": "v1"
+  3. Only included required fields: name, nodes, connections, settings
+
+Fix Applied to Original File:
+  /opt/Projekte/n8n-workflows/netbox-abfrage/test-workflow.json
+  - Description field removed from JSON root level
+
+================================================================================
+WORKFLOW STRUCTURE
+================================================================================
+
+Nodes: 4
+  1. 🚀 Manual Trigger (n8n-nodes-base.manualTrigger)
+  2. 🔧 Define Test Parameters (n8n-nodes-base.code)
+  3. 📞 Call: Primitive NetBox-Abfrage (n8n-nodes-base.executeWorkflow)
+  4. 📊 Process Response (n8n-nodes-base.code)
+
+Connections: 3
+  - Manual Trigger → Define Test Parameters
+  - Define Test Parameters → Call: Primitive NetBox-Abfrage
+  - Call: Primitive NetBox-Abfrage → Process Response
+
+Settings:
+  - executionOrder: v1
+  - callerPolicy: workflowsFromSameOwner
+  - availableInMCP: false
+
+================================================================================
+WORKFLOW STATUS
+================================================================================
+
+State:                READY (Manual Trigger)
+Active:               FALSE (normal for manual triggers)
+Version:              1
+Version ID:           cc461ecc-0062-45af-8a9f-fcdb41d1916a
+Trigger Count:        0
+Created:              2026-01-24T16:12:50.415Z
+Updated:              2026-01-24T16:12:50.415Z
+
+================================================================================
+HOW TO USE
+================================================================================
+
+Option 1 - Via n8n Web UI:
+  1. Go to http://10.1.1.180
+  2. Search for "Test: NetBox-Abfrage Sub-Workflow"
+  3. Click "Test Workflow" button to execute
+
+Option 2 - Enable Continuous Execution:
+  1. Open workflow in UI
+  2. Click Settings (gear icon)
+  3. Toggle "Activate" to enable scheduling
+  4. Set trigger schedule if needed
+
+Option 3 - Via API:
+  GET http://10.1.1.180/api/v1/workflows/qQXIZPWmuFR6ylWC
+  (requires X-N8N-API-KEY header)
+
+================================================================================
+KEY INFORMATION
+================================================================================
+
+Sub-Workflow Dependency:
+  This workflow calls another workflow with ID: k8qsLh2kePMYWurk
+  Ensure this sub-workflow exists on the server.
+
+API Key Usage:
+  The provided API key is valid for public API endpoints only.
+  Some operations may require user login in the web interface.
+
+Logging:
+  View execution logs in the n8n UI under "Executions"
+  Each execution shows input, output, and any errors.
+
+Debug Code Nodes:
+  The workflow contains console.log() statements for debugging.
+  Check the execution logs to see debug output.
+
+================================================================================
+FILES CREATED/MODIFIED
+================================================================================
+
+Modified:
+  /opt/Projekte/n8n-workflows/netbox-abfrage/test-workflow.json
+  - Removed "description" field to fix API validation error
+
+Created:
+  /opt/Projekte/n8n-workflows/netbox-abfrage/DEPLOYMENT_REPORT.md
+  - Detailed deployment report with troubleshooting guide
+
+Created:
+  /opt/Projekte/n8n-workflows/netbox-abfrage/DEPLOYMENT_SUMMARY.txt
+  - This summary file
+
+================================================================================
+VERIFICATION
+================================================================================
+
+✓ Workflow deployed successfully
+✓ All 4 nodes are configured correctly
+✓ All 3 connections established
+✓ Settings configured with executionOrder v1
+✓ Workflow ready for testing/execution
+✓ Manual trigger available for on-demand execution
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Test the workflow by clicking "Test Workflow" in the n8n UI
+2. Monitor the execution logs for any errors
+3. Verify the sub-workflow (k8qsLh2kePMYWurk) is accessible
+4. Once verified, optionally activate the workflow for continuous operation
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If the workflow fails to execute:
+  1. Check that sub-workflow k8qsLh2kePMYWurk exists
+  2. Review execution logs in n8n UI
+  3. Verify API key has proper permissions
+  4. Check console logs from code nodes
+
+If parameters don't transfer correctly:
+  1. Inspect the "Define Test Parameters" node output
+  2. Verify the expression={{ $json }} in executeWorkflow node
+  3. Check data flow between nodes in the UI
+
+If Sub-Workflow call fails:
+  1. Verify workflow ID k8qsLh2kePMYWurk is correct
+  2. Check that sub-workflow is active
+  3. Review sub-workflow execution logs
+
+================================================================================
+End of Report
+================================================================================
+Deployment: 2026-01-24 16:12:50 UTC
+Status: SUCCESS - READY FOR EXECUTION

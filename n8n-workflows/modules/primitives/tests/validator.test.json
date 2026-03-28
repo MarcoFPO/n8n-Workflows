@@ -1,0 +1,46 @@
+{
+  "name": "Test: JSON Schema Validator",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const testData = { host: '10.1.1.100', command: 'hostname' };\nconst schema = { properties: { host: { type: 'string', required: true }, command: { type: 'string', required: true } } };\nif (!testData.host) throw new Error('FAIL: host fehlt');\nreturn [{ json: { test: 'JSON Schema Validator', status: 'PASS', data: testData } }];"
+      },
+      "name": "🧪 Run Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🧪 Run Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

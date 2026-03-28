@@ -1,0 +1,201 @@
+{
+  "name": "SUB: System Update Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "id", "type": "number" },
+            { "name": "name", "type": "string" },
+            { "name": "ip", "type": "string" },
+            { "name": "type", "type": "string" },
+            { "name": "ssh_user", "type": "string" },
+            { "name": "ssh_password", "type": "string" }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build prompts for the 3-phase update process\nconst input = $input.first().json;\n\nconst { id, name, ip, type, ssh_user, ssh_password } = input;\n\n// Proxmox host for LXC commands\nconst PROXMOX_HOST = '10.1.1.100';\nconst PROXMOX_USER = 'root';\n\nconst isLXC = type === 'lxc';\n\n// Phase 1: Check LXC status and start if stopped\nconst check_prompt = isLXC\n  ? `You are a Proxmox system administrator. Check if LXC container ${id} (${name}) is running and start it if stopped.\n\nExecute via SSH on Proxmox host ${PROXMOX_HOST} as root:\n1. Run: pct status ${id}\n2. If status is \"stopped\", run: pct start ${id} && sleep 15\n3. Report the original_state (running/stopped) and current_state\n\nSSH credentials for Proxmox: ${PROXMOX_HOST}, user: ${PROXMOX_USER}\nRespond with JSON: {\"original_state\": \"running|stopped\", \"current_state\": \"running|stopped\", \"action_taken\": \"none|started\", \"success\": true|false}`\n  : `Check if system ${name} (${ip}) is reachable via SSH.\nSSH: ${ip}, user: ${ssh_user}\nRun: echo \"ALIVE\" && uptime\nRespond with JSON: {\"original_state\": \"running\", \"current_state\": \"running\", \"action_taken\": \"none\", \"success\": true|false}`;\n\n// Phase 2: Execute apt updates\nconst update_prompt = isLXC\n  ? `Execute apt updates on LXC container ${id} (${name}) via Proxmox.\nRun on Proxmox host ${PROXMOX_HOST}: pct exec ${id} -- bash -c \"DEBIAN_FRONTEND=noninteractive apt-get update && apt-get -y upgrade && apt-get -y autoremove && apt-get clean\"\nAlso check: pct exec ${id} -- bash -c \"[ -f /var/run/reboot-required ] && echo REBOOT_NEEDED || echo NO_REBOOT\"\nRespond with JSON: {\"packages_updated\": <number>, \"reboot_required\": true|false, \"update_output\": \"<summary>\", \"success\": true|false, \"errors\": []}`\n  : `Execute apt updates on system ${name} (${ip}) via direct SSH.\nSSH: ${ip}, user: ${ssh_user}\nCommands:\n1. DEBIAN_FRONTEND=noninteractive apt-get update\n2. apt-get -y upgrade\n3. apt-get -y autoremove && apt-get clean\n4. [ -f /var/run/reboot-required ] && echo REBOOT_NEEDED || echo NO_REBOOT\nRespond with JSON: {\"packages_updated\": <number>, \"reboot_required\": true|false, \"update_output\": \"<summary>\", \"success\": true|false, \"errors\": []}`;\n\n// Phase 3: Restore original state (only used if was stopped)\nconst restore_prompt = isLXC\n  ? `Stop LXC container ${id} (${name}) on Proxmox host ${PROXMOX_HOST} to restore original stopped state.\nRun: pct stop ${id}\nRespond with JSON: {\"action\": \"stopped\", \"success\": true|false}`\n  : `No restore needed for non-LXC system. Respond with JSON: {\"action\": \"none\", \"success\": true}`;\n\nconst system_prompt = 'You are an expert Linux/Proxmox system administrator. Execute the requested operations and respond ONLY with valid JSON. No markdown, no explanations.';\n\nreturn [{\n  json: {\n    id, name, ip, type, ssh_user, ssh_password,\n    check_prompt,\n    update_prompt,\n    restore_prompt,\n    system_prompt,\n    is_lxc: isLXC,\n    proxmox_host: PROXMOX_HOST\n  }\n}];"
+      },
+      "name": "🔧 Build Update Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "Bearer dummy-key" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.check_prompt) }}}],\"max_tokens\":1024}",
+        "options": { "timeout": 60000 }
+      },
+      "name": "🤖 Claude: Check & Start System",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse check result and extract original_state\nconst response = $input.first().json;\nconst promptData = $('🔧 Build Update Prompts').first().json;\n\nlet checkResult = { original_state: 'running', current_state: 'running', action_taken: 'none', success: true };\n\ntry {\n  const content = response.choices?.[0]?.message?.content || '{}';\n  // Extract JSON from response (handle markdown code blocks)\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    checkResult = { ...checkResult, ...JSON.parse(jsonMatch[0]) };\n  }\n} catch (e) {\n  checkResult.error = `Parse error: ${e.message}`;\n}\n\nreturn [{\n  json: {\n    ...promptData,\n    check_result: checkResult,\n    original_state: checkResult.original_state || 'running'\n  }\n}];"
+      },
+      "name": "🔧 Parse Check Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "Bearer dummy-key" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.update_prompt) }}}],\"max_tokens\":2048}",
+        "options": { "timeout": 180000 }
+      },
+      "name": "🤖 Claude: Execute Updates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse update result\nconst response = $input.first().json;\nconst prevData = $('🔧 Parse Check Result').first().json;\n\nlet updateResult = { packages_updated: 0, reboot_required: false, update_output: '', success: false, errors: [] };\n\ntry {\n  const content = response.choices?.[0]?.message?.content || '{}';\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    updateResult = { ...updateResult, ...JSON.parse(jsonMatch[0]) };\n  }\n} catch (e) {\n  updateResult.errors = [`Parse error: ${e.message}`];\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    update_result: updateResult\n  }\n}];"
+      },
+      "name": "🔧 Parse Update Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "restore-check",
+              "leftValue": "={{ $json.original_state }}",
+              "rightValue": "stopped",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "✅ Check: Needs Restore?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "Bearer dummy-key" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.restore_prompt) }}}],\"max_tokens\":512}",
+        "options": { "timeout": 60000 }
+      },
+      "name": "🤖 Claude: Restore Original State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all results and build final output\nconst items = $input.all();\nconst data = items[0].json;\n\n// Get data from previous nodes\nconst parseUpdateData = $('🔧 Parse Update Result').first().json;\nconst updateResult = parseUpdateData.update_result || {};\nconst checkResult = parseUpdateData.check_result || {};\n\n// Determine overall status\nlet status = 'success';\nif (!updateResult.success) status = 'failed';\nelse if (updateResult.errors && updateResult.errors.length > 0) status = 'partial';\n\n// Was restore executed?\nlet restoreResult = null;\ntry {\n  restoreResult = $('🤖 Claude: Restore Original State').first().json;\n} catch (e) {\n  // No restore was needed\n}\n\nreturn [{\n  json: {\n    name: parseUpdateData.name,\n    id: parseUpdateData.id,\n    type: parseUpdateData.type,\n    ip: parseUpdateData.ip,\n    status,\n    packages_updated: updateResult.packages_updated || 0,\n    reboot_required: updateResult.reboot_required || false,\n    original_state: parseUpdateData.original_state,\n    restored_to_original: parseUpdateData.original_state === 'stopped',\n    details: {\n      check: checkResult,\n      update: updateResult,\n      restore: restoreResult ? 'executed' : 'not_needed'\n    }\n  }\n}];"
+      },
+      "name": "🔧 Build Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 200]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [{ "node": "🔧 Build Update Prompts", "type": "main", "index": 0 }]
+      ]
+    },
+    "🔧 Build Update Prompts": {
+      "main": [
+        [{ "node": "🤖 Claude: Check & Start System", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Claude: Check & Start System": {
+      "main": [
+        [{ "node": "🔧 Parse Check Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "🔧 Parse Check Result": {
+      "main": [
+        [{ "node": "🤖 Claude: Execute Updates", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Claude: Execute Updates": {
+      "main": [
+        [{ "node": "🔧 Parse Update Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "🔧 Parse Update Result": {
+      "main": [
+        [{ "node": "✅ Check: Needs Restore?", "type": "main", "index": 0 }]
+      ]
+    },
+    "✅ Check: Needs Restore?": {
+      "main": [
+        [{ "node": "🤖 Claude: Restore Original State", "type": "main", "index": 0 }],
+        [{ "node": "🔧 Build Output", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Claude: Restore Original State": {
+      "main": [
+        [{ "node": "🔧 Build Output", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

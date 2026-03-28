@@ -1,0 +1,159 @@
+{
+  "n8n_server": {
+    "name": "Lokale n8n Instanz",
+    "host": "10.1.1.180",
+    "port": 80,
+    "protocol": "http",
+    "base_url": "http://10.1.1.180",
+    "api_base_url": "http://10.1.1.180/api/v1",
+    "api_docs_url": "http://10.1.1.180/api/docs/",
+    "web_ui_url": "http://10.1.1.180"
+  },
+  "authentication": {
+    "method": "API_KEY",
+    "header_name": "X-N8N-API-KEY",
+    "api_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZDk0ZDFhYy1jMmZmLTQ5YTItOTFlMC1hMTRmOGU0ZDc2MjYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMDM3MzAxfQ.tZ72KsjUc6EuuWm5ZeTz1loMPmcMtMjO2B7ABA5dsiA",
+    "api_key_env_var": "N8N_API_KEY",
+    "note": "API Key is stored in /home/mdoehler/.env"
+  },
+  "endpoints": {
+    "workflows": {
+      "list": "GET /api/v1/workflows",
+      "get": "GET /api/v1/workflows/{workflowId}",
+      "create": "POST /api/v1/workflows",
+      "update": "PUT /api/v1/workflows/{workflowId}",
+      "delete": "DELETE /api/v1/workflows/{workflowId}"
+    },
+    "executions": {
+      "list": "GET /api/v1/executions",
+      "get": "GET /api/v1/executions/{executionId}",
+      "delete": "DELETE /api/v1/executions/{executionId}",
+      "run": "POST /api/v1/rest/workflows/{workflowId}/run"
+    },
+    "credentials": {
+      "list": "GET /api/v1/credentials",
+      "get": "GET /api/v1/credentials/{credentialId}",
+      "create": "POST /api/v1/credentials",
+      "update": "PUT /api/v1/credentials/{credentialId}",
+      "delete": "DELETE /api/v1/credentials/{credentialId}"
+    },
+    "variables": {
+      "list": "GET /api/v1/variables",
+      "create": "POST /api/v1/variables",
+      "update": "PUT /api/v1/variables/{variableId}",
+      "delete": "DELETE /api/v1/variables/{variableId}"
+    }
+  },
+  "deployed_workflows": {
+    "primitive_netbox_abfrage": {
+      "id": "k8qsLh2kePMYWurk",
+      "name": "Primitive: NetBox-Abfrage",
+      "type": "Sub-Workflow",
+      "status": "active",
+      "tier": 1,
+      "description": "Primitive Sub-Workflow für NetBox Infrastruktur-Abfragen (VMs, LXCs, Devices)",
+      "nodes": 7,
+      "parameters": {
+        "load_vms": "boolean",
+        "load_lxcs": "boolean",
+        "load_devices": "boolean",
+        "filter_by_type": "string|null",
+        "filter_by_ids": "string|null",
+        "device_primary_ip_filter": "boolean"
+      },
+      "output_format": {
+        "hostname": "string",
+        "ip": "string",
+        "ssh_user": "string",
+        "ssh_password": "string|null"
+      }
+    },
+    "test_netbox_abfrage": {
+      "id": "qQXIZPWmuFR6ylWC",
+      "name": "Test: NetBox-Abfrage Sub-Workflow",
+      "type": "Test-Workflow",
+      "status": "inactive",
+      "description": "Test-Workflow für die Primitive: NetBox-Abfrage Sub-Workflow"
+    },
+    "primitive_ki_executer": {
+      "id": "yt2okRvNmGItRjCI",
+      "name": "Primitive: KI-Executer",
+      "type": "Sub-Workflow",
+      "status": "active",
+      "description": "Sub-Workflow für SSH-Befehlsausführung"
+    }
+  },
+  "documentation": {
+    "local_path": "/opt/Projekte/n8n-workflows/netbox-abfrage/",
+    "files": {
+      "readme": "README.md",
+      "input_spec": "INPUT-SPEC.md",
+      "output_spec": "OUTPUT-SPEC.md",
+      "usage_guide": "USAGE-GUIDE.md",
+      "examples": "EXAMPLES.md",
+      "test_guide": "TEST-GUIDE.md",
+      "index": "INDEX.md",
+      "n8n_api_reference": "N8N-API-REFERENCE.md",
+      "n8n_deployment_guide": "N8N-DEPLOYMENT-GUIDE.md"
+    }
+  },
+  "http_headers": {
+    "default": {
+      "X-N8N-API-KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZDk0ZDFhYy1jMmZmLTQ5YTItOTFlMC1hMTRmOGU0ZDc2MjYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMDM3MzAxfQ.tZ72KsjUc6EuuWm5ZeTz1loMPmcMtMjO2B7ABA5dsiA",
+      "Content-Type": "application/json"
+    }
+  },
+  "error_codes": {
+    "200": "OK - Request erfolgreich",
+    "201": "Created - Ressource erstellt",
+    "204": "No Content - Erfolgreich, kein Content",
+    "400": "Bad Request - Ungültige Parameter",
+    "401": "Unauthorized - API Key ungültig",
+    "403": "Forbidden - Zugriff verweigert",
+    "404": "Not Found - Ressource nicht vorhanden",
+    "429": "Too Many Requests - Rate Limit erreicht",
+    "500": "Server Error - Server-Fehler"
+  },
+  "pagination": {
+    "default_limit": 100,
+    "max_limit": 250,
+    "methods": ["limit_skip", "cursor_based"],
+    "example_query": "?limit=100&skip=0"
+  },
+  "common_tasks": {
+    "deploy_workflow": {
+      "endpoint": "POST /api/v1/workflows",
+      "method": "POST",
+      "example": "curl -X POST http://10.1.1.180/api/v1/workflows -H 'X-N8N-API-KEY: <key>' -H 'Content-Type: application/json' -d @workflow.json"
+    },
+    "list_workflows": {
+      "endpoint": "GET /api/v1/workflows",
+      "method": "GET",
+      "example": "curl -X GET 'http://10.1.1.180/api/v1/workflows?limit=100' -H 'X-N8N-API-KEY: <key>'"
+    },
+    "run_workflow": {
+      "endpoint": "POST /api/v1/rest/workflows/{workflowId}/run",
+      "method": "POST",
+      "example": "curl -X POST http://10.1.1.180/api/v1/rest/workflows/k8qsLh2kePMYWurk/run -H 'X-N8N-API-KEY: <key>' -d '{\"data\": {...}}'"
+    },
+    "get_executions": {
+      "endpoint": "GET /api/v1/executions",
+      "method": "GET",
+      "example": "curl -X GET 'http://10.1.1.180/api/v1/executions?limit=50&sort=-startedAt' -H 'X-N8N-API-KEY: <key>'"
+    }
+  },
+  "environment": {
+    "env_file": "/home/mdoehler/.env",
+    "variables": {
+      "N8N_URL": "http://10.1.1.180",
+      "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZDk0ZDFhYy1jMmZmLTQ5YTItOTFlMC1hMTRmOGU0ZDc2MjYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMDM3MzAxfQ.tZ72KsjUc6EuuWm5ZeTz1loMPmcMtMjO2B7ABA5dsiA"
+    }
+  },
+  "metadata": {
+    "version": "1.0",
+    "created": "2026-01-24T16:30:00Z",
+    "updated": "2026-01-24T16:30:00Z",
+    "status": "production",
+    "agent_instructions": "Use this configuration file as the single source of truth for all n8n API operations. Always use the api_base_url and authentication header specified here. Reference the documentation files for detailed information."
+  }
+}

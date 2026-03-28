@@ -1,0 +1,123 @@
+{
+  "name": "SUB: Znuny Ticket Closer",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "ticket_id",
+              "type": "number"
+            },
+            {
+              "name": "close_note",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst ticket_id = input.ticket_id;\nif (!ticket_id) throw new Error('ticket_id ist erforderlich');\n\nreturn [{\n  json: {\n    ticket_id,\n    payload: {\n      UserLogin: 'root@localhost',\n      Password: 'ZnunyAdmin2026!',\n      Ticket: {\n        State: 'geschlossen'\n      },\n      Article: {\n        CommunicationChannel: 'Internal',\n        SenderType: 'agent',\n        IsVisibleForCustomer: '0',\n        Subject: 'Ticket geschlossen – Incident automatisch gelöst',\n        Body: input.close_note || 'Incident automatisch durch n8n Incident Response Workflow gelöst.',\n        ContentType: 'text/plain; charset=utf8',\n        MimeType: 'text/plain',\n        Charset: 'utf8'\n      }\n    },\n    closed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "🔧 Build Close Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket/{{ $json.ticket_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 15000
+        }
+      },
+      "name": "🔧 Znuny API: PATCH Close",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst d = $('🔧 Build Close Payload').first().json;\nconst success = !r.Error && (r.Success === 1 || r.TicketID != null);\nreturn [{\n  json: {\n    success,\n    ticket_id: d.ticket_id,\n    closed_at: d.closed_at,\n    error: r.Error ? `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}` : null\n  }\n}];"
+      },
+      "name": "🔧 Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Close Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Close Payload": {
+      "main": [
+        [
+          {
+            "node": "🔧 Znuny API: PATCH Close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Znuny API: PATCH Close": {
+      "main": [
+        [
+          {
+            "node": "🔧 Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "id": "LELSswgLWlmtIais"
+}

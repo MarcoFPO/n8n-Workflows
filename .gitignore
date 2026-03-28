@@ -74,3 +74,4 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+n8n-workflows/.claude/

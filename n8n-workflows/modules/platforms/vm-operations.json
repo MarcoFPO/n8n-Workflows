@@ -1,0 +1,86 @@
+{
+  "name": "Platform: VM Operations",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "vm_id",
+              "type": "number"
+            },
+            {
+              "name": "operation",
+              "type": "string"
+            },
+            {
+              "name": "proxmox_host",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { vm_id, operation, proxmox_host } = $('📥 Input').first().json;\nif (!vm_id || !operation) throw new Error('vm_id und operation erforderlich');\nconst ops = ['snapshot', 'restore', 'health_check', 'start', 'stop', 'status'];\nif (!ops.includes(operation)) throw new Error(`Unbekannte Operation: ${operation}. Erlaubt: ${ops.join(', ')}`);\nreturn { vm_id, operation, proxmox_host: proxmox_host || '10.1.1.100', vm_type: 'qemu',\n  session_id: require('crypto').randomUUID(), timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Validate & Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { vm_id, operation, proxmox_host, session_id } = $input.first().json;\n// Proxmox-API-Calls via n8n HTTP werden in Sub-Nodes abgebildet\n// Hier: Simulation des Ergebnis-Formats\nreturn { exit_code: 'success', session_id, data: { vm_id, operation, result: `${operation} auf VM ${vm_id} ausgeführt` },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🖥️ Execute VM Operation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate & Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Validate & Route": {
+      "main": [
+        [
+          {
+            "node": "🖥️ Execute VM Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

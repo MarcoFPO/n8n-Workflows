@@ -1,0 +1,110 @@
+{
+  "name": "SUB: Znuny Ticket Reader",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "ticket_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket/{{ $json.ticket_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "UserLogin",
+              "value": "root@localhost"
+            },
+            {
+              "name": "Password",
+              "value": "ZnunyAdmin2026!"
+            },
+            {
+              "name": "DynamicFields",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 15000
+        }
+      },
+      "name": "🔍 Znuny API: GET Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Znuny TicketGet response (DynamicFields=1)\n// Format: { \"Ticket\": [{...ticket, DynamicField: [{Name, Value}]}] }\nconst input = $('📥 Input from Master').first().json;\nconst response = $input.first().json;\nconst ticket_id = input.ticket_id;\n\nif (response.Error || !response.Ticket) {\n  return [{\n    json: {\n      ticket_id, error: response.Error?.ErrorMessage || 'Ticket nicht gefunden',\n      title: `Ticket ${ticket_id}`,\n      wer: 'unknown', was: 'unknown', wan: new Date().toISOString(),\n      priority: 'normal', status: 'unknown'\n    }\n  }];\n}\n\nconst ticket = Array.isArray(response.Ticket) ? response.Ticket[0] : response.Ticket;\n\n// DynamicFields: bei DynamicFields=1 liefert Znuny ein Array: [{Name, Value}]\n// Fallback auf flache DynamicField_<Name> Keys (ältere API-Versionen)\nconst getDynField = (name) => {\n  if (Array.isArray(ticket.DynamicField)) {\n    const f = ticket.DynamicField.find(f => f.Name === name);\n    return f && f.Value ? f.Value : null;\n  }\n  return ticket[`DynamicField_${name}`] || null;\n};\n\nconst wer  = getDynField('ZabbixWer')  || getDynField('Wer')  || 'unknown';\nconst was  = getDynField('ZabbixWas')  || getDynField('Was')  || ticket.Title || 'unknown';\nconst wan  = getDynField('ZabbixWann') || getDynField('Wan')  || ticket.Created || new Date().toISOString();\nconst ref  = getDynField('ZabbixReferenz')  || null;\nconst komm = getDynField('ZabbixKommentar') || null;\n\nreturn [{\n  json: {\n    ticket_id: ticket.TicketID || ticket_id,\n    ticket_number: ticket.TicketNumber || `TN-${ticket_id}`,\n    title: ticket.Title || `Ticket ${ticket_id}`,\n    wer, was, wan,\n    zabbix_referenz: ref,\n    zabbix_kommentar: komm,\n    priority: ticket.Priority || 'normal',\n    status: ticket.State || 'new',\n    queue: ticket.Queue || 'unknown',\n    owner: ticket.Owner || 'unknown',\n    customer_user: ticket.CustomerUserID || 'unknown'\n  }\n}];"
+      },
+      "name": "🔧 Parse & Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔍 Znuny API: GET Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Znuny API: GET Ticket": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse & Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "id": "LpMuYNBncZNbIoZo"
+}

@@ -1,0 +1,90 @@
+# Zabbix Workflow Architektur - Workflow IDs
+# Erstellt: 2025-10-13
+
+## Master Workflow
+master-zabbix-orchestrator.json → ID: VGbZS6A8KkozSPqz
+Name: Zabbix MASTER: Problem Manager Orchestrator
+Trigger: Every 5 Minutes (Schedule)
+URL: http://10.1.1.180/workflow/VGbZS6A8KkozSPqz
+
+## Sub-Workflows (Webhook-Trigger)
+
+### Sub-1: Problem-Erfassung
+sub1-problem-erfassung.json → ID: GcCL1oQtICdcL1Qi
+Name: Zabbix Sub-1: Problem-Erfassung
+Webhook: http://10.1.1.180/webhook/sub1-problem-erfassung
+Aufgabe: Erfasst Zabbix-Probleme der letzten 5 Minuten
+
+### Sub-2: Root Cause Analyse
+sub2-root-cause-analyse.json → ID: NCaeXgaxLp80s8xZ
+Name: Zabbix Sub-2: Root Cause Analyse
+Webhook: http://10.1.1.180/webhook/sub2-root-cause-analyse
+Aufgabe: Analysiert Problem mit Claude CLI
+
+### Sub-3: Entscheidung Remote-Lösbarkeit
+sub3-entscheidung-loesbarkeit.json → ID: z2i0bXV91yaQFULR
+Name: Zabbix Sub-3: Entscheidung Remote-Lösbarkeit
+Webhook: http://10.1.1.180/webhook/sub3-entscheidung-loesbarkeit
+Aufgabe: Claude entscheidet ob remote lösbar
+
+### Sub-4: Remote-Lösung
+sub4-remote-loesung.json → ID: sxReWqLtSqwbAAKh
+Name: Zabbix Sub-4: Remote-Lösung via Claude Code
+Webhook: http://10.1.1.180/webhook/sub4-remote-loesung
+Aufgabe: Claude Code führt automatische Lösung aus
+
+### Sub-5: User-Benachrichtigung
+sub5-user-benachrichtigung.json → ID: PsOuStaNjqB0qPd7
+Name: Zabbix Sub-5: User-Benachrichtigung
+Webhook: http://10.1.1.180/webhook/sub5-user-benachrichtigung
+Aufgabe: Erstellt Report und sendet Email
+
+## Neu deployte SUBs (Phase 1 - 2026-03-22)
+
+### SUB: SSH Command Executor
+sub-ssh-executor.json → ID: SL8OqOkRjHRosQCL
+Name: SUB: SSH Command Executor
+Trigger: executeWorkflowTrigger (Sub-Workflow)
+Active: true
+Aufgabe: Führt SSH-Befehle auf Remote-Hosts aus, validiert Input und normalisiert Output
+URL: http://10.1.1.180/workflow/SL8OqOkRjHRosQCL
+
+### SUB: Safety Check
+sub-safety-check.json → ID: A4C9uBifmH1TUS6J
+Name: SUB: Safety Check
+Trigger: executeWorkflowTrigger (Sub-Workflow)
+Active: true
+Aufgabe: Prüft Befehle auf gefährliche Muster (Blacklist), bewertet Risikolevel
+URL: http://10.1.1.180/workflow/A4C9uBifmH1TUS6J
+
+### SUB: System Update Executor
+sub-update-executor.json → ID: YJ4vzOJUoc5vHAYm
+Name: SUB: System Update Executor
+Trigger: executeWorkflowTrigger (Sub-Workflow)
+Active: true
+Aufgabe: Führt apt-Updates auf LXC-Containern und VMs via Claude Code API aus
+URL: http://10.1.1.180/workflow/YJ4vzOJUoc5vHAYm
+
+### SUB: System Health Check
+sub-health-check.json → ID: NM8Xd6QzlnAc6oy3
+Name: SUB: System Health Check
+Trigger: executeWorkflowTrigger (Sub-Workflow)
+Active: true
+Aufgabe: Prüft Disk, Memory, CPU-Load und Services eines Systems
+URL: http://10.1.1.180/workflow/NM8Xd6QzlnAc6oy3
+
+### SUB: System Log Analyser
+sub-log-analyser.json → ID: 6Ffe7nex0vMk9Aj5
+Name: SUB: System Log Analyser
+Trigger: executeWorkflowTrigger (Sub-Workflow)
+Active: true
+Aufgabe: Analysiert journalctl/syslog auf Fehler, Sicherheitsevents und Anomalien
+URL: http://10.1.1.180/workflow/6Ffe7nex0vMk9Aj5
+
+### SUB: Report Generator
+sub-report-generator.json → ID: NwfqZNDoN8zjEMaf
+Name: SUB: Report Generator
+Trigger: executeWorkflowTrigger (Sub-Workflow)
+Active: true
+Aufgabe: Generiert formatierte Berichte (Markdown/HTML) für Update, Health und Incident Reports
+URL: http://10.1.1.180/workflow/NwfqZNDoN8zjEMaf

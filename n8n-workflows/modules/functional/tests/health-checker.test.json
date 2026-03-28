@@ -1,0 +1,46 @@
+{
+  "name": "Test: Unified Health Checker",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const mock = { issues_list: [{severity:'critical',message:'Disk voll'},{severity:'warning',message:'Hohe Last'}] };\nreturn [{ json: { test: 'Unified Health Checker', status: 'manual', note: 'Benötigt SSH-Zugang' } }];"
+      },
+      "name": "🧪 Run Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🧪 Run Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}
