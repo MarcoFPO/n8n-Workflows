@@ -48,7 +48,7 @@
         380
       ],
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.update_results = [];\n\nreturn [{ json: {\n  run_id:          'update_' + new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),\n  run_date:        new Date().toISOString(),\n  // Striktes Verbot – diese Systeme werden NIEMALS angefasst\n  exclude_ips:     ['10.1.1.100', '10.1.1.105', '10.1.1.180'],\n  exclude_names:   ['n8n', 'claude'],\n  // 'auto' = Reboot sofort | 'skip' = nur melden\n  reboot_handling: 'auto',\n  reboot_wait_sec: 90,\n  proxmox_host:    '10.1.1.100',\n} }];"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\n// W4: eigener Bucket pro run_id – Race-Condition-sicher bei parallelen Executions\nstaticData[run_id] = { results: [], run_date: new Date().toISOString() };\n\nreturn [{ json: {\n  run_id:          'update_' + new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),\n  run_date:        new Date().toISOString(),\n  // Striktes Verbot – diese Systeme werden NIEMALS angefasst\n  exclude_ips:     ['10.1.1.100', '10.1.1.105', '10.1.1.180'],\n  exclude_names:   ['n8n', 'claude'],\n  // 'auto' = Reboot sofort | 'skip' = nur melden\n  reboot_handling: 'auto',\n  reboot_wait_sec: 90,\n  proxmox_host:    '10.1.1.100',\n} }];"
       }
     },
     {
@@ -116,7 +116,7 @@
         380
       ],
       "parameters": {
-        "jsCode": "const data         = $input.first().json;\nconst config       = $('📋 Set Config').first().json;\nconst systems      = data.systems || [];\nconst excl_ips    = config.exclude_ips   || [];\nconst excl_names  = config.exclude_names || [];\n\nconst active = systems.filter(s => {\n  if (!s.ip) return false;\n  const ip = (s.ip || '').split('/')[0].trim();\n  if (excl_ips.includes(ip)) return false;\n  if (excl_names.includes((s.name || '').toLowerCase())) return false;\n  return true;\n});\n\nif (active.length === 0) {\n  return [{ json: { _skip: true, name: '__no_systems__', ip: null, type: 'unknown',\n    os_family: 'unknown', platform: null } }];\n}\nreturn active.map(s => ({ json: s }));"
+        "jsCode": "const data         = $input.first().json;\nconst config       = $('📋 Set Config').first().json;\nconst systems      = data.systems || [];\nconst excl_ips    = config.exclude_ips   || [];\nconst excl_names  = config.exclude_names || [];\n\nconst active = systems.filter(s => {\n  if (!s.ip) return false;\n  const ip = (s.ip || '').split('/')[0].trim();\n  if (excl_ips.includes(ip)) return false;\n  if (excl_names.includes((s.name || '').toLowerCase())) return false;\n  return true;\n});\n\nif (active.length === 0) {\n  return [{ json: { _skip: true, name: '__no_systems__', ip: null, type: 'unknown',\n    os_family: 'unknown', platform: null, run_id: config.run_id } }];\n}\nreturn active.map(s => ({ json: { ...s, run_id: config.run_id } }));"
       }
     },
     {
@@ -175,7 +175,7 @@
         440
       ],
       "parameters": {
-        "jsCode": "const sys        = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\n\nconst r = {\n  system_name:      sys.name || sys.system_name || '?',\n  system_ip:        sys.ip   || sys.system_ip   || null,\n  system_type:      sys.type || 'unknown',\n  system_os_family: sys.os_family || 'unknown',\n  success:          false,\n  ssh_success:      false,\n  packages_updated: 0,\n  apps_updated:     [],\n  reboot_required:  false,\n  reboot_triggered: false,\n  errors:           ['System übersprungen (kein IP oder in Ausschlussliste)'],\n  summary:          'Übersprungen',\n  ticket_created:   false,\n  _skip:            true,\n};\nif (!staticData.update_results) staticData.update_results = [];\nstaticData.update_results.push(r);\nreturn [{ json: r }];"
+        "jsCode": "const sys        = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst run_id     = $('📋 Set Config').first().json.run_id;\n\n// W2: Phantom-Eintrag __no_systems__ nicht in Report aufnehmen\nif (sys.name === '__no_systems__') {\n  return [{ json: { _skip: true, _phantom: true, system_name: '__no_systems__' } }];\n}\n\nconst r = {\n  run_id,\n  system_name:      sys.name || sys.system_name || '?',\n  system_ip:        sys.ip   || sys.system_ip   || null,\n  system_type:      sys.type || 'unknown',\n  system_os_family: sys.os_family || 'unknown',\n  success:          false,\n  ssh_success:      false,\n  packages_updated: 0,\n  apps_updated:     [],\n  reboot_required:  false,\n  reboot_triggered: false,\n  errors:           ['System uebersprungen (kein IP oder in Ausschlussliste)'],\n  summary:          'Uebersprungen',\n  ticket_created:   false,\n  _skip:            true,\n};\n// W4: in run_id-Bucket schreiben\nif (!staticData[run_id]) staticData[run_id] = { results: [], run_date: new Date().toISOString() };\nstaticData[run_id].results.push(r);\nreturn [{ json: r }];"
       }
     },
     {
@@ -224,7 +224,8 @@
           ]
         },
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "upd-prsa01",
@@ -281,7 +282,7 @@
         80
       ],
       "parameters": {
-        "jsCode": "const d      = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst wait   = config.reboot_wait_sec || 90;\nconst prox   = d.proxmox || config.proxmox_host;\n\nlet reboot_cmd, verify_cmd;\n\nif (d.is_lxc) {\n  reboot_cmd = `ssh -o StrictHostKeyChecking=no root@${prox} \"pct reboot ${d.system_id}\"`;\n  verify_cmd = `ssh -o StrictHostKeyChecking=no root@${prox} \"pct status ${d.system_id}\"`;\n} else {\n  const ssh = d.ssh_prefix;\n  reboot_cmd = `${ssh} bash -c \"shutdown -r now 'Update-Reboot' 2>&1 || true\"`;\n  // Für Verify: nur SSH-Verbindbarkeit testen (kein Befehl)\n  const base = ssh.replace(/--$/, '').trim();\n  verify_cmd = `${base} -o ConnectTimeout=10 true 2>&1 && echo SSH_OK || echo SSH_TIMEOUT`;\n}\n\nconst prompt = `Du bist ein Systemadministrator. Führe den Reboot durch und stelle sicher, dass das System danach wieder erreichbar ist.\n\n=== SYSTEM ===\nName: ${d.system_name}\nIP: ${d.system_ip}\nTyp: ${d.system_type.toUpperCase()} (${d.is_lxc ? 'LXC Container' : 'Physical/VM'})\n\n=== PHASE B: Reboot ===\n\n**Schritt 1 – Reboot auslösen:**\n${reboot_cmd}\n\n**Schritt 2 – ${wait} Sekunden warten:**\nsleep ${wait}\n\n**Schritt 3 – Erreichbarkeit prüfen (bis zu 3 Versuche, Pause je 30s):**\nVersuch 1: ${verify_cmd}\nBei Timeout: sleep 30, dann Versuch 2; bei erneutem Timeout: sleep 30, Versuch 3.\nFür LXC: warte bis 'pct status ${d.system_id || ''}' → 'running'.\n\n=== ANTWORTFORMAT (NUR JSON) ===\n{\"reboot_triggered\":true,\"reboot_success\":true,\"wait_seconds\":${wait},\"errors\":[],\"summary\":\"Reboot OK, System nach Xs wieder erreichbar\"}\n\nWICHTIG: Antworte NUR mit dem JSON-Objekt.`;\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  d.reboot_handling,\n  step_a:           d.step_a,\n  prompt\n} }];"
+        "jsCode": "const d      = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst wait   = config.reboot_wait_sec || 90;\nconst prox   = d.proxmox || config.proxmox_host;\n\nlet reboot_cmd, verify_cmd;\n\nif (d.is_lxc) {\n  reboot_cmd = `ssh -o StrictHostKeyChecking=no root@${prox} \"pct reboot ${d.system_id}\"`;\n  verify_cmd = `ssh -o StrictHostKeyChecking=no root@${prox} \"pct status ${d.system_id}\"`;\n} else {\n  const ssh = d.ssh_prefix;\n  reboot_cmd = `${ssh} bash -c \"shutdown -r now 'Update-Reboot' 2>&1 || true\"`;\n  // Für Verify: nur SSH-Verbindbarkeit testen (kein Befehl)\n  const base = ssh.replace(/--$/, '').trim();\n  verify_cmd = `${base} -o ConnectTimeout=10 true 2>&1 && echo SSH_OK || echo SSH_TIMEOUT`;\n}\n\nconst prompt = `Du bist ein Systemadministrator. Führe den Reboot durch und stelle sicher, dass das System danach wieder erreichbar ist.\n\n=== SYSTEM ===\nName: ${d.system_name}\nIP: ${d.system_ip}\nTyp: ${d.system_type.toUpperCase()} (${d.is_lxc ? 'LXC Container' : 'Physical/VM'})\n\n=== PHASE B: Reboot ===\n\n**Schritt 1 – Reboot auslösen:**\n${reboot_cmd}\n\n**Schritt 2 – ${wait} Sekunden warten:**\nsleep ${wait}\n\n**Schritt 3 – Erreichbarkeit prüfen (bis zu 3 Versuche, Pause je 30s):**\nVersuch 1: ${verify_cmd}\nBei Timeout: sleep 30, dann Versuch 2; bei erneutem Timeout: sleep 30, Versuch 3.\nFür LXC: warte bis 'pct status ${d.system_id || ''}' → 'running'.\n\n=== ANTWORTFORMAT (NUR JSON) ===\n{\"reboot_triggered\":true,\"reboot_success\":true,\"wait_seconds\":${wait},\"errors\":[],\"summary\":\"Reboot OK, System nach Xs wieder erreichbar\"}\n\nWICHTIG: Antworte NUR mit dem JSON-Objekt.`;\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  d.reboot_handling,\n  skip_phase_c:     d.skip_phase_c || false,\n  step_a:           d.step_a,\n  prompt\n} }];"
       }
     },
     {
@@ -317,7 +318,8 @@
           ]
         },
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "upd-prsb01",
@@ -329,7 +331,7 @@
         80
       ],
       "parameters": {
-        "jsCode": "const claude = $input.first().json;\nconst d      = $('🔧 Build Reboot Prompt').first().json;\n\nlet step_b = {\n  reboot_triggered: false,\n  reboot_success:   false,\n  wait_seconds:     0,\n  errors:           ['Keine Antwort von Claude'],\n  summary:          'Parse-Fehler',\n};\n\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) step_b = { ...step_b, ...JSON.parse(match[0]) };\n} catch(e) {\n  step_b.errors.push('JSON Parse-Fehler: ' + e.message);\n}\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  d.reboot_handling,\n  step_a:           d.step_a,\n  step_b,\n} }];"
+        "jsCode": "const claude = $input.first().json;\nconst d      = $('🔧 Build Reboot Prompt').first().json;\n\nlet step_b = {\n  reboot_triggered: false,\n  reboot_success:   false,\n  wait_seconds:     0,\n  errors:           ['Keine Antwort von Claude'],\n  summary:          'Parse-Fehler',\n};\n\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) step_b = { ...step_b, ...JSON.parse(match[0]) };\n} catch(e) {\n  step_b.errors.push('JSON Parse-Fehler: ' + e.message);\n}\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  d.reboot_handling,\n  skip_phase_c:     d.skip_phase_c || false,\n  step_a:           d.step_a,\n  step_b,\n} }];"
       }
     },
     {
@@ -378,7 +380,8 @@
           ]
         },
         "options": {}
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "upd-prsc01",
@@ -395,7 +398,7 @@
     },
     {
       "id": "upd-iferr1",
-      "name": "✅ Fehler vorhanden?",
+      "name": "❌ Fehler vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
@@ -523,7 +526,7 @@
         80
       ],
       "parameters": {
-        "jsCode": "// FIX: System-Ergebnis aus Build Failure Ticket holen, ticket_id aus Create Ticket\nconst ticket       = $input.first().json;\nconst build_data   = $('🎫 Build Failure Ticket').item.json;\n\nreturn [{ json: {\n  ...build_data.system_result,\n  ticket_created: true,\n  ticket_id:      ticket.ticket_id     || null,\n  ticket_number:  ticket.ticket_number || null,\n} }];"
+        "jsCode": "// FIX: System-Ergebnis aus Build Failure Ticket holen, ticket_id aus Create Ticket\nconst ticket       = $input.first().json;\nconst build_data   = $('🎫 Build Failure Ticket').first().json;\n\nreturn [{ json: {\n  ...build_data.system_result,\n  ticket_created: true,\n  ticket_id:      ticket.ticket_id     || null,\n  ticket_number:  ticket.ticket_number || null,\n} }];"
       }
     },
     {
@@ -536,7 +539,7 @@
         220
       ],
       "parameters": {
-        "jsCode": "const d          = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.update_results) staticData.update_results = [];\nstaticData.update_results.push(d);\nreturn [{ json: d }];"
+        "jsCode": "const d          = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst run_id     = $('📋 Set Config').first().json.run_id;\n// W4: in run_id-Bucket schreiben\nif (!staticData[run_id]) staticData[run_id] = { results: [], run_date: new Date().toISOString() };\nstaticData[run_id].results.push({ ...d, run_id });\nreturn [{ json: d }];"
       }
     },
     {
@@ -549,7 +552,7 @@
         560
       ],
       "parameters": {
-        "jsCode": "const config     = $('📋 Set Config').first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst results    = staticData.update_results || [];\nstaticData.update_results = [];\n\nconst total           = results.length;\nconst success         = results.filter(r => r.success).length;\nconst failed          = results.filter(r => !r.success && !r._skip).length;\nconst skipped         = results.filter(r => r._skip).length;\nconst reboot_done     = results.filter(r => r.reboot_triggered).length;\nconst reboot_pending  = results.filter(r => r.reboot_required && !r.reboot_triggered).length;\nconst tickets_created = results.filter(r => r.ticket_created).length;\nconst packages_total  = results.reduce((s, r) => s + (r.packages_updated || 0), 0);\n\nconst summary = {\n  run_id: config.run_id, run_date: config.run_date,\n  total, success, failed, skipped,\n  reboot_done, reboot_pending, tickets_created, packages_total,\n  completed_at: new Date().toISOString(),\n};\n\nlet report_md = `# Update-Report ${config.run_id}\\n\\n`;\nreport_md += `| Gesamt | Erfolgreich | Fehler | Übersprungen | Reboots | Pakete |\\n`;\nreport_md += `|--------|------------|--------|-------------|---------|--------|\\n`;\nreport_md += `| ${total} | ${success} | ${failed} | ${skipped} | ${reboot_done} | ${packages_total} |\\n\\n`;\nreport_md += `## Systeme\\n\\n`;\n\nfor (const r of results) {\n  const icon = r._skip ? '⏭️' : (r.success ? '✅' : '❌');\n  const os   = r.system_os_family || '?';\n  report_md += `### ${icon} ${r.system_name} (${r.system_ip || 'N/A'}) – ${os}\\n`;\n  if (!r._skip) {\n    report_md += `- **Phase A:** ${r.packages_updated || 0} Pakete`;\n    if (r.reboot_triggered) report_md += ` | **Reboot:** ✅ durchgeführt`;\n    else if (r.reboot_required) report_md += ` | **Reboot:** ⏳ ausstehend`;\n    if (r.apps_discovered && r.apps_discovered.length > 0) report_md += ` | **Discovered:** ${r.apps_discovered.length}`;\n    if (r.apps_updated && r.apps_updated.length > 0) report_md += ` | **Updated:** ${r.apps_updated.join(', ')}`;\n    report_md += '\\n';\n  }\n  if (!r.success && (r.errors || []).length > 0) {\n    report_md += `- **Fehler:** ${r.errors.slice(0,3).join('; ')}\\n`;\n  }\n  if (r.summary) report_md += `- ${r.summary}\\n`;\n  report_md += '\\n';\n}\n\nreturn [{ json: { summary, results, report_md, report_data: JSON.stringify(results) } }];"
+        "jsCode": "// W5: run_id aus Loop-Input (Filter & Prepare hat run_id mitgeliefert – kein Cross-Branch-Zugriff nötig)\nconst run_id     = $input.first().json.run_id;\nconst staticData = $getWorkflowStaticData('global');\n// W4: run_id-Bucket lesen und löschen (verhindert Datenvermischung paralleler Executions)\nconst bucket  = staticData[run_id] || { results: [], run_date: new Date().toISOString() };\nconst results = bucket.results;\ndelete staticData[run_id];\n\nconst total           = results.length;\nconst success         = results.filter(r => r.success).length;\nconst failed          = results.filter(r => !r.success && !r._skip).length;\nconst skipped         = results.filter(r => r._skip).length;\nconst reboot_done     = results.filter(r => r.reboot_triggered).length;\nconst reboot_pending  = results.filter(r => r.reboot_required && !r.reboot_triggered).length;\nconst tickets_created = results.filter(r => r.ticket_created).length;\nconst packages_total  = results.reduce((s, r) => s + (r.packages_updated || 0), 0);\n\nconst summary = {\n  run_id, run_date: bucket.run_date,\n  total, success, failed, skipped,\n  reboot_done, reboot_pending, tickets_created, packages_total,\n  completed_at: new Date().toISOString(),\n};\n\nlet report_md = `# Update-Report ${run_id}\\n\\n`;\nreport_md += `| Gesamt | Erfolgreich | Fehler | Uebersprungen | Reboots | Pakete |\\n`;\nreport_md += `|--------|------------|--------|-------------|---------|--------|\\n`;\nreport_md += `| ${total} | ${success} | ${failed} | ${skipped} | ${reboot_done} | ${packages_total} |\\n\\n`;\nreport_md += `## Systeme\\n\\n`;\n\nfor (const r of results) {\n  const icon = r._skip ? '⏭️' : (r.success ? '✅' : '❌');\n  const os   = r.system_os_family || '?';\n  report_md += `### ${icon} ${r.system_name} (${r.system_ip || 'N/A'}) – ${os}\\n`;\n  if (!r._skip) {\n    report_md += `- **Phase A:** ${r.packages_updated || 0} Pakete`;\n    if (r.reboot_triggered) report_md += ` | **Reboot:** ✅ durchgefuehrt`;\n    else if (r.reboot_required) report_md += ` | **Reboot:** ⏳ ausstehend`;\n    if (r.apps_discovered && r.apps_discovered.length > 0) report_md += ` | **Discovered:** ${r.apps_discovered.length}`;\n    if (r.apps_updated && r.apps_updated.length > 0) report_md += ` | **Updated:** ${r.apps_updated.join(', ')}`;\n    report_md += '\\n';\n  }\n  if (!r.success && (r.errors || []).length > 0) {\n    report_md += `- **Fehler:** ${r.errors.slice(0,3).join('; ')}\\n`;\n  }\n  if (r.summary) report_md += `- ${r.summary}\\n`;\n  report_md += '\\n';\n}\n\nreturn [{ json: { summary, results, report_md, report_data: JSON.stringify(results) } }];"
       }
     },
     {
@@ -930,25 +933,7 @@
       "main": [
         [
           {
-            "node": "✅ Fehler vorhanden?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "✅ Fehler vorhanden?": {
-      "main": [
-        [
-          {
-            "node": "🎫 Build Failure Ticket",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "🔧 Store Result",
+            "node": "❌ Fehler vorhanden?",
             "type": "main",
             "index": 0
           }
@@ -1037,6 +1022,24 @@
         [
           {
             "node": "🔔 SUB: Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❌ Fehler vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "🎫 Build Failure Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Store Result",
             "type": "main",
             "index": 0
           }
