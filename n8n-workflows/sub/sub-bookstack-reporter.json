@@ -5,16 +5,28 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "title", "type": "string" },
-            { "name": "content_markdown", "type": "string" },
-            { "name": "tags", "type": "string" }
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "content_markdown",
+              "type": "string"
+            },
+            {
+              "name": "tags",
+              "type": "string"
+            }
           ]
         }
       },
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -23,23 +35,40 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "filter[book_id]", "value": "1" },
-            { "name": "filter[name]", "value": "Incident Response" }
+            {
+              "name": "filter[book_id]",
+              "value": "1"
+            },
+            {
+              "name": "filter[name]",
+              "value": "Incident Response"
+            }
           ]
         },
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "name": "🔍 BookStack: Find Chapter",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [400, 300],
+      "position": [
+        400,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -49,18 +78,28 @@
       "name": "🔧 Check Chapter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [600, 300]
+      "position": [
+        600,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
           "conditions": [
             {
               "id": "chapter-exists",
               "leftValue": "={{ $json.chapter_exists }}",
               "rightValue": false,
-              "operator": { "type": "boolean", "operation": "false" }
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
             }
           ],
           "combinator": "and"
@@ -70,7 +109,10 @@
       "name": "✅ Chapter existiert?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [800, 300]
+      "position": [
+        800,
+        300
+      ]
     },
     {
       "parameters": {
@@ -79,19 +121,30 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"book_id\": 1, \"name\": \"Incident Response\", \"description\": \"Automatische Incident Response Berichte via n8n\"}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "name": "📄 BookStack: Create Chapter",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1000, 200],
+      "position": [
+        1000,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -101,7 +154,10 @@
       "name": "🔧 Resolve Chapter ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1200, 300]
+      "position": [
+        1200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -110,19 +166,30 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ book_id: $json.book_id, chapter_id: $json.chapter_id, name: $json.title, markdown: $json.content_markdown, tags: $json.tags.map(t => ({ name: t })) }) }}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "name": "📄 BookStack: Create Page",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1400, 300],
+      "position": [
+        1400,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -132,44 +199,95 @@
       "name": "🔧 Process Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1600, 300]
+      "position": [
+        1600,
+        300
+      ]
     }
   ],
   "connections": {
     "📥 Input from Master": {
       "main": [
-        [{ "node": "🔍 BookStack: Find Chapter", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔍 BookStack: Find Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔍 BookStack: Find Chapter": {
       "main": [
-        [{ "node": "🔧 Check Chapter", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Check Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Check Chapter": {
       "main": [
-        [{ "node": "✅ Chapter existiert?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "✅ Chapter existiert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "✅ Chapter existiert?": {
       "main": [
-        [{ "node": "📄 BookStack: Create Chapter", "type": "main", "index": 0 }],
-        [{ "node": "🔧 Resolve Chapter ID", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📄 BookStack: Create Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Resolve Chapter ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📄 BookStack: Create Chapter": {
       "main": [
-        [{ "node": "🔧 Resolve Chapter ID", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Resolve Chapter ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Resolve Chapter ID": {
       "main": [
-        [{ "node": "📄 BookStack: Create Page", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📄 BookStack: Create Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📄 BookStack: Create Page": {
       "main": [
-        [{ "node": "🔧 Process Result", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -177,5 +295,6 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "id": "ugPeuIa1KJXX9xqC"
 }

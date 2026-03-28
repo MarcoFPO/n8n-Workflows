@@ -1,0 +1,46 @@
+{
+  "name": "Test: HTTP Wrapper",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { test: 'HTTP Wrapper', status: 'manual', note: 'Führe Test mit curl http://10.1.1.180:5678/webhook/test-http-wrapper durch' } }];"
+      },
+      "name": "🧪 Run Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🧪 Run Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

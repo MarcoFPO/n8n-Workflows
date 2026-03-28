@@ -1,0 +1,86 @@
+{
+  "name": "Platform: Network Device Operations",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "device_ip",
+              "type": "string"
+            },
+            {
+              "name": "device_type",
+              "type": "string"
+            },
+            {
+              "name": "operation",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { device_ip, device_type, operation } = $('📥 Input').first().json;\nif (!device_ip || !device_type || !operation) throw new Error('device_ip, device_type und operation erforderlich');\nconst supported = ['mikrotik', 'vyos', 'opnsense', 'generic'];\nif (!supported.includes(device_type)) throw new Error(`Nicht unterstützter Gerätetyp: ${device_type}`);\nconst ops = ['backup_config', 'check_health', 'get_interfaces', 'get_routes', 'reboot'];\nif (!ops.includes(operation)) throw new Error(`Unbekannte Operation: ${operation}`);\nreturn { device_ip, device_type, operation, session_id: require('crypto').randomUUID(),\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Validate & Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { device_ip, device_type, operation, session_id } = $input.first().json;\nreturn { exit_code: 'success', session_id,\n  data: { device_ip, device_type, operation, result: `${operation} auf ${device_type} (${device_ip}) ausgeführt` },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🌐 Execute Device Operation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate & Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Validate & Route": {
+      "main": [
+        [
+          {
+            "node": "🌐 Execute Device Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

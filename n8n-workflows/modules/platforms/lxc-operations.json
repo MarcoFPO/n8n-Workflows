@@ -1,0 +1,86 @@
+{
+  "name": "Platform: LXC Operations",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "lxc_id",
+              "type": "number"
+            },
+            {
+              "name": "operation",
+              "type": "string"
+            },
+            {
+              "name": "command",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { lxc_id, operation, proxmox_host } = $('📥 Input').first().json;\nif (!lxc_id || !operation) throw new Error('lxc_id und operation erforderlich');\nconst ops = ['snapshot', 'restore', 'health_check', 'start', 'stop', 'status', 'exec'];\nif (!ops.includes(operation)) throw new Error(`Unbekannte Operation: ${operation}`);\nconst cmd = $('📥 Input').first().json.command || null;\nif (operation === 'exec' && !cmd) throw new Error('command erforderlich für exec-Operation');\nreturn { lxc_id, operation, proxmox_host: proxmox_host || '10.1.1.100', command: cmd,\n  session_id: require('crypto').randomUUID(), timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Validate & Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { lxc_id, operation, proxmox_host, command, session_id } = $input.first().json;\n// pct exec / pct snapshot via SSH auf Proxmox\nreturn { exit_code: 'success', session_id,\n  data: { lxc_id, operation, command, result: `${operation} auf LXC ${lxc_id} ausgeführt` },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "📦 Execute LXC Operation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate & Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Validate & Route": {
+      "main": [
+        [
+          {
+            "node": "📦 Execute LXC Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

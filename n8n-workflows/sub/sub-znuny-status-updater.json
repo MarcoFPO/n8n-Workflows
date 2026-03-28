@@ -1,0 +1,78 @@
+{
+  "id": "Ly3pTphrckI23Bda",
+  "name": "SUB: Znuny Status Updater",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            { "name": "ticket_id", "type": "number" },
+            { "name": "new_state", "type": "string" }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst ticket_id = input.ticket_id;\nconst new_state = input.new_state;\n\nif (!ticket_id) throw new Error('ticket_id ist erforderlich');\nif (!new_state) throw new Error('new_state ist erforderlich');\n\n// Erlaubte Znuny-Stati\nconst allowed = ['neu', 'in Arbeit', 'geschlossen', 'eskaliert', 'pausiert', 'closed successful', 'new', 'open'];\nif (!allowed.includes(new_state)) {\n  throw new Error(`Unbekannter Status: '${new_state}'. Erlaubt: ${allowed.join(', ')}`);\n}\n\nreturn [{\n  json: {\n    ticket_id,\n    new_state,\n    payload: {\n      UserLogin: 'root@localhost',\n      Password: 'ZnunyAdmin2026!',\n      Ticket: {\n        State: new_state\n      }\n    },\n    changed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "🔧 Build Status Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket/{{ $json.ticket_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 15000
+        }
+      },
+      "name": "🔄 Znuny API: PATCH Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst d = $('🔧 Build Status Payload').first().json;\nconst success = !r.Error && (r.Success === 1 || r.TicketID != null);\nreturn [{\n  json: {\n    success,\n    ticket_id: d.ticket_id,\n    new_state: d.new_state,\n    changed_at: d.changed_at,\n    error: r.Error ? `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}` : null\n  }\n}];"
+      },
+      "name": "🔧 Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [[{ "node": "🔧 Build Status Payload", "type": "main", "index": 0 }]]
+    },
+    "🔧 Build Status Payload": {
+      "main": [[{ "node": "🔄 Znuny API: PATCH Status", "type": "main", "index": 0 }]]
+    },
+    "🔄 Znuny API: PATCH Status": {
+      "main": [[{ "node": "🔧 Process Result", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

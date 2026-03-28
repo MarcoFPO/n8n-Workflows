@@ -1,0 +1,167 @@
+{
+  "name": "Functional: Unified Log Analyser",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "target_host",
+              "type": "string"
+            },
+            {
+              "name": "target_type",
+              "type": "string"
+            },
+            {
+              "name": "since_hours",
+              "type": "number"
+            },
+            {
+              "name": "session_id",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { target_host, target_type, since_hours, session_id } = $('📥 Input').first().json;\nif (!target_host) throw new Error('target_host ist erforderlich');\nconst cmd = `journalctl -p err..emerg --since \"${since_hours || 24} hours ago\" --no-pager -o json | head -500`;\nreturn { target_host, target_type: target_type || 'lxc', since_hours: since_hours || 24,\n  command: cmd, session_id: session_id || require('crypto').randomUUID() };"
+      },
+      "name": "🔧 Build SSH Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: SSH Command Executor"
+        }
+      },
+      "name": "💻 SUB: SSH Execute",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst ssh_result = $('💻 SUB: SSH Execute').first().json;\nconst logs = ssh_result?.data?.stdout || '(keine Logs)';\nreturn { prompt: `Analysiere folgende System-Logs von ${input.target_host} (${input.target_type}) der letzten ${input.since_hours}h:\\n\\n${logs.substring(0,8000)}\\n\\nIdentifiziere: 1) Kritische Fehler 2) Warnungen 3) Muster 4) Handlungsempfehlungen. Antworte als JSON: {severity, issues:[{type,message,count,recommendation}], summary, requires_action}`,\n  model: 'claude-sonnet-4-6', max_tokens: 2000, session_id: input.session_id };"
+      },
+      "name": "🔧 Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: Claude AI Executor"
+        }
+      },
+      "name": "🤖 SUB: Claude",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst claude = $('🤖 SUB: Claude').first().json;\nconst result = typeof claude.response === 'string' ? JSON.parse(claude.response) : claude.response || {};\nreturn { exit_code: 'success', session_id: input.session_id,\n  data: { target_host: input.target_host, target_type: input.target_type,\n    severity: result.severity || 'unknown', issues: result.issues || [],\n    summary: result.summary || 'Keine Zusammenfassung', requires_action: result.requires_action || false },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Parse & Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build SSH Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build SSH Command": {
+      "main": [
+        [
+          {
+            "node": "💻 SUB: SSH Execute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 SUB: SSH Execute": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 SUB: Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 SUB: Claude": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse & Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,177 @@
+# Zabbix Workflow V2 - Workflow-Schritte
+
+## Sub-1: Problem-Erfassung V2 (Event-Based)
+Workflow ID: Vt14BPvUeKidWwfz
+Webhook: http://10.1.1.180/webhook/zabbix-event
+
+### Schritte:
+
+S1-1: Webhook-Empfänger
+  Typ: Webhook Trigger
+  Funktion: Empfängt POST-Requests von Zabbix mit Event-Daten
+
+S1-2: Event-Daten extrahieren
+  Typ: Set (Data Transformation)
+  Funktion: Extrahiert event_id, zabbix_event und received_at aus eingehendem JSON
+
+S1-3: In Redis Queue speichern
+  Typ: Redis (LPUSH)
+  Funktion: Speichert Event in Queue "zabbix:event:queue" mit Status "queued"
+
+S1-4: Event-Zähler erhöhen
+  Typ: Redis (INCR)
+  Funktion: Inkrementiert Counter "zabbix:event:counter" um 1
+
+S1-5: Master triggern (async)
+  Typ: HTTP Request
+  Funktion: Triggert Master-Workflow per Webhook (Fire & Forget, Timeout 500ms)
+
+S1-6: Antwort an Zabbix
+  Typ: Respond to Webhook
+  Funktion: Sendet JSON-Antwort mit success=true und queue_position zurück
+
+
+## Master: Event-Based Processor V2
+Workflow ID: jZtRTnmFZC6bniFP
+Webhook: http://10.1.1.180/webhook/master-zabbix-processor
+
+### Schritte:
+
+M-1: Webhook Trigger
+  Typ: Webhook Trigger
+  Funktion: Empfängt Trigger-Request von Sub-1
+
+M-2: Lock-Status prüfen
+  Typ: Redis (INFO)
+  Funktion: Prüft ob "zabbix:processing:lock" existiert
+
+M-3: Läuft bereits?
+  Typ: IF-Bedingung
+  Funktion: Verzweigt basierend auf Lock-Existenz
+  - Lock existiert NICHT -> M-4
+  - Lock existiert -> M-23
+
+M-4: Lock erwerben (5min)
+  Typ: Redis (SET mit TTL)
+  Funktion: Setzt Lock mit 5 Minuten TTL
+
+M-5: Event aus Queue holen
+  Typ: Redis (RPOP)
+  Funktion: Holt ältestes Event aus Queue "zabbix:event:queue"
+
+M-6: Event vorhanden?
+  Typ: IF-Bedingung
+  Funktion: Prüft ob Event aus Queue geholt wurde
+  - Event vorhanden -> M-7
+  - Keine Events -> M-21
+
+M-7: Event-Daten parsen
+  Typ: Code (JavaScript)
+  Funktion: Parsed JSON-String zu Event-Objekt, extrahiert event_id, zabbix_event, received_at
+
+M-8: Event als 'processing' markieren
+  Typ: Redis (SET mit TTL)
+  Funktion: Setzt "zabbix:event:{id}:status" = "processing" (TTL 1h)
+
+M-9: Problem-Daten formatieren
+  Typ: Set (Data Transformation)
+  Funktion: Erstellt strukturiertes Problem-Objekt mit event_id, host, timestamp, severity
+
+M-10: Sub-2 Root Cause Analyse
+  Typ: HTTP Request
+  Funktion: Ruft Sub-2 Webhook auf, sendet Problem-Daten, erhält Root Cause Analyse
+
+M-11: Sub-3 Entscheidung
+  Typ: HTTP Request
+  Funktion: Ruft Sub-3 Webhook auf, sendet Analyse, erhält Entscheidung ob remote lösbar
+
+M-12: Remote lösbar?
+  Typ: IF-Bedingung
+  Funktion: Prüft decision.remote_loesbar
+  - True (remote lösbar) -> M-13
+  - False (nicht remote lösbar) -> M-15
+
+M-13: Sub-4 Remote-Lösung
+  Typ: HTTP Request
+  Funktion: Ruft Sub-4 Webhook auf, Claude Code versucht automatische Lösung
+
+M-14: Mit Fix kombinieren
+  Typ: Set (Data Transformation)
+  Funktion: Kombiniert Problem + Analyse + Entscheidung + Fix-Result zu result-Objekt
+
+M-15: Ohne Fix kombinieren
+  Typ: Set (Data Transformation)
+  Funktion: Kombiniert Problem + Analyse + Entscheidung (fix_result = null) zu result-Objekt
+
+M-16: Zweige zusammenführen
+  Typ: Merge
+  Funktion: Führt beide Pfade (mit/ohne Fix) zusammen
+
+M-17: Für Benachrichtigung formatieren
+  Typ: Code (JavaScript)
+  Funktion: Erstellt Format für Sub-5: problems=[result], total_count=1, event_id
+
+M-18: Sub-5 User-Benachrichtigung
+  Typ: HTTP Request
+  Funktion: Ruft Sub-5 Webhook auf, erstellt Report und sendet Email
+
+M-19: Event als 'completed' markieren
+  Typ: Redis (SET mit TTL)
+  Funktion: Setzt "zabbix:event:{id}:status" = "completed" (TTL 24h)
+
+M-20: Lock freigeben
+  Typ: Redis (DELETE)
+  Funktion: Löscht "zabbix:processing:lock"
+
+M-21: Lock freigeben (kein Event)
+  Typ: Redis (DELETE)
+  Funktion: Löscht Lock wenn Queue leer war
+
+M-22: Antwort: Kein Event
+  Typ: Respond to Webhook
+  Funktion: Sendet "Queue empty, no events to process"
+
+M-23: Antwort: Bereits gesperrt
+  Typ: Respond to Webhook
+  Funktion: Sendet "Already processing, skipping"
+
+M-24: Antwort: Erfolg
+  Typ: Respond to Webhook
+  Funktion: Sendet "Event processed successfully" mit event_id
+
+
+## Datenfluss-Diagramm
+
+Zabbix Event
+    ↓
+Sub-1: S1-1 → S1-2 → S1-3 (Redis Queue) → S1-4 → S1-5 → S1-6
+                         ↓ (async trigger)
+Master: M-1 → M-2 → M-3 → M-4 → M-5 (RPOP Queue) → M-6 → M-7 → M-8 → M-9 → M-10 → M-11 → M-12
+                                                                                        ↓
+                                                                           M-12: Ja ← | → Nein
+                                                                               ↓              ↓
+                                                                            M-13          M-15
+                                                                               ↓              ↓
+                                                                            M-14 ─────→ M-16 ←
+                                                                                         ↓
+                                                            M-17 → M-18 → M-19 → M-20 → M-24
+
+
+## Redis-Keys
+
+Queue:
+  zabbix:event:queue (List)
+    - Struktur: {event_id, zabbix_event, received_at, status}
+
+Counter:
+  zabbix:event:counter (String/Integer)
+    - Gesamtzahl empfangener Events
+
+Lock:
+  zabbix:processing:lock (String mit TTL 300s)
+    - Wert: ISO-Timestamp des Lock-Erwerbs
+
+Event-Status:
+  zabbix:event:{event_id}:status (String mit TTL)
+    - Werte: "queued", "processing", "completed", "error"
+    - TTL: 3600s (processing), 86400s (completed)

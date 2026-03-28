@@ -1,0 +1,116 @@
+{
+  "name": "SUB: SSH Command Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "host",
+              "type": "string"
+            },
+            {
+              "name": "username",
+              "type": "string"
+            },
+            {
+              "name": "password",
+              "type": "string"
+            },
+            {
+              "name": "command",
+              "type": "string"
+            },
+            {
+              "name": "timeout",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate input and prepare SSH parameters\nconst input = $input.first().json;\n\nconst host = input.host || '';\nconst username = input.username || 'root';\nconst password = input.password || '';\nconst command = input.command || '';\nconst timeout = input.timeout || 300;\n\n// Generate unique session ID\nconst session_id = `ssh_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;\n\nif (!host) throw new Error('SSH host is required');\nif (!command) throw new Error('SSH command is required');\n\n// Validate host format (basic IP/hostname check)\nconst hostRegex = /^[a-zA-Z0-9._-]+$/;\nif (!hostRegex.test(host)) throw new Error(`Invalid host format: ${host}`);\n\nreturn [{\n  json: {\n    host,\n    username,\n    password,\n    command,\n    timeout,\n    session_id,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "name": "🔧 Validate & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SSH via child_process (key-based auth, dynamischer Host)\nconst { execSync } = require('child_process');\nconst input = $input.first().json;\nconst { host, username = 'root', command, timeout = 30, session_id, start_time } = input;\n\nlet stdout = '', stderr = '', exit_code = 'success', error = null;\n\ntry {\n    const sshOpts = [\n        '-o StrictHostKeyChecking=no',\n        '-o UserKnownHostsFile=/dev/null',\n        '-o ConnectTimeout=10',\n        '-o BatchMode=yes',\n        '-o LogLevel=ERROR'\n    ].join(' ');\n    \n    stdout = execSync(\n        `ssh ${sshOpts} ${username}@${host} ${JSON.stringify(command)}`,\n        { timeout: timeout * 1000, encoding: 'utf8', shell: '/bin/bash' }\n    ).trim();\n    \n} catch (e) {\n    exit_code = 'failed';\n    error = e.message;\n    stderr = (e.stderr || '').toString().trim() || e.message;\n    stdout = (e.stdout || '').toString().trim();\n}\n\nreturn [{\n    json: {\n        exit_code,\n        stdout,\n        stderr,\n        execution_time_seconds: Math.round((Date.now() - start_time) / 1000),\n        session_id: session_id || `ssh_${Date.now()}`,\n        error,\n        host,\n        command\n    }\n}];"
+      },
+      "name": "💻 SSH: Execute Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize SSH output into standardized result object\nconst sshResult = $input.first().json;\nconst prepareData = $('🔧 Validate & Prepare').first().json;\n\nconst execution_time_seconds = Math.round((Date.now() - prepareData.start_time) / 1000);\nconst session_id = prepareData.session_id;\n\n// n8n SSH node returns stdout directly or error\nlet exit_code = 'success';\nlet stdout = '';\nlet stderr = '';\nlet error = null;\n\nif (sshResult.error) {\n  exit_code = 'failed';\n  stderr = sshResult.error.message || String(sshResult.error);\n  error = stderr;\n} else if (sshResult.stdout !== undefined) {\n  stdout = sshResult.stdout || '';\n  stderr = sshResult.stderr || '';\n  // Check for non-zero exit in stderr patterns\n  if (sshResult.code && sshResult.code !== 0) {\n    exit_code = 'failed';\n  }\n} else {\n  // Direct string output from SSH node\n  stdout = typeof sshResult === 'string' ? sshResult : JSON.stringify(sshResult);\n}\n\nreturn [{\n  json: {\n    exit_code,\n    stdout: stdout.trim(),\n    stderr: stderr.trim(),\n    execution_time_seconds,\n    session_id,\n    error,\n    host: prepareData.host,\n    command: prepareData.command\n  }\n}];"
+      },
+      "name": "🔧 Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Validate & Prepare": {
+      "main": [
+        [
+          {
+            "node": "💻 SSH: Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 SSH: Execute Command": {
+      "main": [
+        [
+          {
+            "node": "🔧 Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

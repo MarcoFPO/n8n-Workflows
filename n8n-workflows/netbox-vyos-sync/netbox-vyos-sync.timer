@@ -1,0 +1,12 @@
+[Unit]
+Description=NetBox to vyOS IPv6 Route Sync Timer (alle 5 Minuten)
+Requires=netbox-vyos-sync.service
+
+[Timer]
+# Alle 5 Minuten
+OnBootSec=1min
+OnUnitActiveSec=5min
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

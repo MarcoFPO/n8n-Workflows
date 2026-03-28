@@ -1,0 +1,18 @@
+[Unit]
+Description=NetBox to vyOS IPv6 Route Sync
+After=network.target
+
+[Service]
+Type=oneshot
+User=mdoehler
+WorkingDirectory=/home/mdoehler/netbox-vyos-sync
+ExecStart=/usr/bin/python3 /home/mdoehler/netbox-vyos-sync/sync_routes.py
+StandardOutput=journal
+StandardError=journal
+
+# Security
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,511 @@
+{
+  "name": "SUB: BookStack Störungsbearbeitung Reporter",
+  "nodes": [
+    {
+      "id": "input-stoerung-01",
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "content_markdown",
+              "type": "string"
+            },
+            {
+              "name": "component",
+              "type": "string"
+            },
+            {
+              "name": "affected_system",
+              "type": "string"
+            },
+            {
+              "name": "tags",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "find-book-01",
+      "name": "🔍 BookStack: Suche Buch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://bookstack.doehlercomputing.de/api/books",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[name]",
+              "value": "Störungsbearbeitung"
+            },
+            {
+              "name": "count",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "check-book-01",
+      "name": "🔧 Check Book",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Prüfe ob Buch 'Störungsbearbeitung' existiert\nconst bookResult = $input.first().json;\nconst input = $('📥 Input from Master').first().json;\n\nlet book_id = null;\n\nif (bookResult.data && bookResult.data.length > 0) {\n  // Exakter Name-Match\n  const exact = bookResult.data.find(b => b.name === 'Störungsbearbeitung');\n  book_id = exact ? exact.id : null;  // kein Fallback auf falsches Buch\n}\n\n// Tags parsen\nlet tags = [];\ntry {\n  tags = typeof input.tags === 'string' ? JSON.parse(input.tags) : (input.tags || []);\n} catch(e) {\n  tags = ['incident'];\n}\n\nreturn [{\n  json: {\n    book_id,\n    book_exists: book_id !== null,\n    title: input.title,\n    content_markdown: input.content_markdown,\n    component: input.component || 'Allgemein',\n    affected_system: input.affected_system || 'Unbekannt',\n    tags\n  }\n}];"
+      }
+    },
+    {
+      "id": "if-book-01",
+      "name": "✅ IF: Buch existiert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "book-exists",
+              "leftValue": "={{ $json.book_exists }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "create-book-01",
+      "name": "📚 BookStack: Create Buch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://bookstack.doehlercomputing.de/api/books",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"name\": \"Störungsbearbeitung\", \"description\": \"Dokumentation von Störungen, Fehlern und deren Lösungen – automatisch befüllt durch n8n Incident Response\"}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "resolve-book-01",
+      "name": "🔧 Resolve Book ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Ermittle finale Book ID\nconst checkData = $('🔧 Check Book').first().json;\nlet book_id = checkData.book_id;\n\n// Falls Buch gerade erstellt wurde\ntry {\n  const created = $('📚 BookStack: Create Buch').first().json;\n  if (created && created.id) {\n    book_id = created.id;\n  }\n} catch(e) {\n  // Create-Node hat nicht gelaufen (Buch existierte bereits)\n}\n\nreturn [{\n  json: {\n    ...checkData,\n    book_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "find-chapter-01",
+      "name": "🔍 BookStack: Suche Kapitel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://bookstack.doehlercomputing.de/api/chapters",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[book_id]",
+              "value": "={{ $json.book_id }}"
+            },
+            {
+              "name": "filter[name]",
+              "value": "={{ $json.component }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "check-chapter-01",
+      "name": "🔧 Check Chapter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Prüfe ob Kapitel existiert\nconst chapterResult = $input.first().json;\nconst bookData = $('🔧 Resolve Book ID').first().json;\n\nlet chapter_id = null;\n\nif (chapterResult.data && chapterResult.data.length > 0) {\n  chapter_id = chapterResult.data[0].id;\n}\n\nreturn [{\n  json: {\n    ...bookData,\n    chapter_id,\n    chapter_exists: chapter_id !== null\n  }\n}];"
+      }
+    },
+    {
+      "id": "if-chapter-01",
+      "name": "✅ IF: Kapitel existiert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "chapter-exists",
+              "leftValue": "={{ $json.chapter_exists }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "create-chapter-01",
+      "name": "📂 BookStack: Create Kapitel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://bookstack.doehlercomputing.de/api/chapters",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ book_id: $('🔧 Check Chapter').first().json.book_id, name: $('🔧 Check Chapter').first().json.component, description: 'Störungen und Lösungen für ' + $('🔧 Check Chapter').first().json.component }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "resolve-chapter-01",
+      "name": "🔧 Resolve Chapter ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Ermittle finale Chapter ID\nconst checkData = $('🔧 Check Chapter').first().json;\nlet chapter_id = checkData.chapter_id;\n\ntry {\n  const created = $('📂 BookStack: Create Kapitel').first().json;\n  if (created && created.id) {\n    chapter_id = created.id;\n  }\n} catch(e) {\n  // Create-Node hat nicht gelaufen\n}\n\nreturn [{\n  json: {\n    ...checkData,\n    chapter_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "create-page-01",
+      "name": "📄 BookStack: Create Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://bookstack.doehlercomputing.de/api/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token a5FgBtyb3qJCZZRM2zgpvMn0eIMVIkcJ:fRt0WwEHGwRvZh5YzC8djKZ6rM0rJrin"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ book_id: $json.book_id, chapter_id: $json.chapter_id, name: $json.title, markdown: $json.content_markdown, tags: ($json.tags || []).map(t => ({ name: t })) }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "process-result-01",
+      "name": "🔧 Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Ergebnis aufbereiten\nconst pageResult = $input.first().json;\nconst chapterData = $('🔧 Resolve Chapter ID').first().json;\n\nconst success = !pageResult.error && pageResult.id != null;\nconst page_url = pageResult.url || `https://bookstack.doehlercomputing.de/books/${chapterData.book_id}/page/${pageResult.id || 'unknown'}`;\n\nreturn [{\n  json: {\n    success,\n    page_id: pageResult.id || null,\n    page_url,\n    title: chapterData.title,\n    book_id: chapterData.book_id,\n    chapter_id: chapterData.chapter_id,\n    error: pageResult.error || null\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔍 BookStack: Suche Buch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 BookStack: Suche Buch": {
+      "main": [
+        [
+          {
+            "node": "🔧 Check Book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Check Book": {
+      "main": [
+        [
+          {
+            "node": "✅ IF: Buch existiert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ IF: Buch existiert?": {
+      "main": [
+        [
+          {
+            "node": "📚 BookStack: Create Buch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Resolve Book ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📚 BookStack: Create Buch": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resolve Book ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Resolve Book ID": {
+      "main": [
+        [
+          {
+            "node": "🔍 BookStack: Suche Kapitel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 BookStack: Suche Kapitel": {
+      "main": [
+        [
+          {
+            "node": "🔧 Check Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Check Chapter": {
+      "main": [
+        [
+          {
+            "node": "✅ IF: Kapitel existiert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ IF: Kapitel existiert?": {
+      "main": [
+        [
+          {
+            "node": "📂 BookStack: Create Kapitel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Resolve Chapter ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📂 BookStack: Create Kapitel": {
+      "main": [
+        [
+          {
+            "node": "🔧 Resolve Chapter ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Resolve Chapter ID": {
+      "main": [
+        [
+          {
+            "node": "📄 BookStack: Create Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 BookStack: Create Page": {
+      "main": [
+        [
+          {
+            "node": "🔧 Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-03-28T00:00:00.000Z",
+  "versionId": "1"
+}

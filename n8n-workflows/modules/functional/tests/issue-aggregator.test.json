@@ -1,0 +1,46 @@
+{
+  "name": "Test: Issue Aggregator",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const test = { issues_list: [{severity:'critical',message:'Test1'},{severity:'warning',message:'Test2'},{severity:'warning',message:'Test3'}] };\nconst counts = { critical: test.issues_list.filter(i=>i.severity==='critical').length };\nif (counts.critical !== 1) throw new Error('FAIL: critical count falsch');\nreturn [{ json: { test: 'Issue Aggregator', status: 'PASS', counts } }];"
+      },
+      "name": "🧪 Run Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🧪 Run Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

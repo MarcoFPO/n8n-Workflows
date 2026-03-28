@@ -1,0 +1,123 @@
+{
+  "name": "Primitive: SSH Command Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "host",
+              "type": "string"
+            },
+            {
+              "name": "command",
+              "type": "string"
+            },
+            {
+              "name": "user",
+              "type": "string"
+            },
+            {
+              "name": "timeout_seconds",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { host, command, user, timeout_seconds } = $('📥 Input').first().json;\nif (!host || !command) throw new Error('host und command sind erforderlich');\nreturn { host, command, user: user || 'root', timeout: (timeout_seconds || 60) * 1000 };"
+      },
+      "name": "🔧 Validate & Build",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "command",
+        "command": "={{ $json.command }}",
+        "options": {
+          "execTimeout": "={{ $json.timeout }}"
+        }
+      },
+      "name": "💻 SSH Execute",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        600,
+        300
+      ],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "ssh-lxc117",
+          "name": "n8n SSH Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst result = $input.first().json;\nconst sessionId = require('crypto').randomUUID();\nreturn { exit_code: result.exitCode === 0 ? 'success' : 'failed',\n  session_id: sessionId, data: { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate & Build",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Validate & Build": {
+      "main": [
+        [
+          {
+            "node": "💻 SSH Execute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 SSH Execute": {
+      "main": [
+        [
+          {
+            "node": "🔧 Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

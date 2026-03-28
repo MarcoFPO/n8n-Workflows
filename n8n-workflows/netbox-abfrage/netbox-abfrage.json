@@ -76,16 +76,6 @@
     },
     {
       "parameters": {
-        "mode": "combine"
-      },
-      "id": "merge-results",
-      "name": "🔗 Merge All Objects",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2,
-      "position": [1200, 240]
-    },
-    {
-      "parameters": {
         "jsCode": "const items = $input.all();\nconst params = $('🔧 Parse Input Parameters').first().json;\nconst hostname = (params.hostname || '').trim().toLowerCase();\nconst filterByType = (params.filter_by_type || '').trim().toLowerCase();\nconst filterByIds = Array.isArray(params.filter_by_ids) ? params.filter_by_ids : [];\n\nconsole.log(`\\n📥 PARSER: ${items.length} Rohobjekte von NetBox`);\nconsole.log(`🔧 Filter: hostname=\"${hostname}\", type=\"${filterByType}\", ids=${JSON.stringify(filterByIds)}`);\n\n// Step 1: Extrahiere Hostname, IP, SSH-Daten\nlet processed = items.map(item => {\n  const obj = item.json;\n  const objHostname = (obj.name || '').trim().toLowerCase();\n  \n  // IP extrahieren\n  let ip = null;\n  if (obj.primary_ip4 && obj.primary_ip4.address) {\n    ip = obj.primary_ip4.address.split('/')[0];\n  } else if (obj.primary_ip && obj.primary_ip.address) {\n    ip = obj.primary_ip.address.split('/')[0];\n  }\n  \n  // Objekte OHNE IP filtern\n  if (!ip) {\n    console.log(`  ⏭️ \"${obj.name}\" hat keine IP - übersprungen`);\n    return null;\n  }\n  \n  // SSH-Daten\n  const cf = obj.custom_fields || {};\n  const default_user = obj.type === 'device' ? 'admin' : 'root';\n  const ssh_user = cf.ssh_username || default_user;\n  const ssh_password = cf.ssh_password || null;\n  \n  return {\n    json: {\n      id: obj.id,\n      type: (obj.type || 'unknown').trim().toLowerCase(),\n      hostname_raw: obj.name,\n      hostname: objHostname,\n      ip: ip,\n      ssh_user: ssh_user,\n      ssh_password: ssh_password\n    }\n  };\n}).filter(item => item !== null);\n\nconsole.log(`✅ Nach IP-Filter: ${processed.length} Objekte mit IP`);\n\n// Step 2: Wende Filterung an\nlet filtered = processed;\n\n// PRIORITÄT 1: Hostname-Filter (exakt und streng!)\nif (hostname && hostname.length > 0) {\n  const beforeFilter = filtered.length;\n  filtered = filtered.filter(item => {\n    const match = item.json.hostname === hostname;\n    if (!match) {\n      console.log(`  🔍 \"${item.json.hostname_raw}\" != \"${hostname}\" (Hostname-Filter)`);\n    }\n    return match;\n  });\n  console.log(`🎯 HOSTNAME FILTER: ${beforeFilter} → ${filtered.length} Objekt(e)`);\n  \n  // WICHTIG: Wenn Hostname gegeben, STOP hier! Keine anderen Filter!\n} else {\n  // PRIORITÄT 2: Type-Filter (nur wenn KEIN Hostname)\n  if (filterByType && filterByType.length > 0) {\n    const beforeFilter = filtered.length;\n    filtered = filtered.filter(item => item.json.type === filterByType);\n    console.log(`🎯 TYPE FILTER \"${filterByType}\": ${beforeFilter} → ${filtered.length} Objekt(e)`);\n  }\n  \n  // PRIORITÄT 3: ID-Filter (nur wenn KEIN Hostname)\n  if (filterByIds && filterByIds.length > 0) {\n    const beforeFilter = filtered.length;\n    filtered = filtered.filter(item => filterByIds.includes(item.json.id));\n    console.log(`🎯 ID FILTER: ${beforeFilter} → ${filtered.length} Objekt(e)`);\n  }\n}\n\n// Step 3: Formatiere Output (nur 4 Felder)\nconst output = filtered.map(item => ({\n  json: {\n    hostname: item.json.hostname_raw,\n    ip: item.json.ip,\n    ssh_user: item.json.ssh_user,\n    ssh_password: item.json.ssh_password\n  }\n}));\n\nconsole.log(`\\n✅ FINAL OUTPUT: ${output.length} Objekt(e) zurückgegeben\\n`);\nreturn output;"
       },
       "id": "apply-filters",
@@ -127,7 +117,7 @@
       "main": [
         [
           {
-            "node": "🔗 Merge All Objects",
+            "node": "🎯 Apply Filters & Finalize",
             "type": "main",
             "index": 0
           }
@@ -138,20 +128,9 @@
       "main": [
         [
           {
-            "node": "🔗 Merge All Objects",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "🔗 Merge All Objects": {
-      "main": [
-        [
-          {
             "node": "🎯 Apply Filters & Finalize",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]

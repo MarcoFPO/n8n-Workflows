@@ -5,17 +5,32 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "message", "type": "string" },
-            { "name": "title", "type": "string" },
-            { "name": "severity", "type": "string" },
-            { "name": "channels", "type": "string" }
+            {
+              "name": "message",
+              "type": "string"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "severity",
+              "type": "string"
+            },
+            {
+              "name": "channels",
+              "type": "string"
+            }
           ]
         }
       },
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -24,18 +39,28 @@
       "name": "🔧 Format Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
           "conditions": [
             {
               "id": "matrix-check",
               "leftValue": "={{ $json.send_to_matrix }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
             }
           ],
           "combinator": "and"
@@ -45,40 +70,61 @@
       "name": "✅ Route: Matrix?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [600, 200]
+      "position": [
+        600,
+        200
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
+        "method": "PUT",
         "url": "=https://matrix.doehlercomputing.de/_matrix/client/v3/rooms/!rNuYEsjl0UEQrtLHFS:doehlercomputing.de/send/m.room.message/{{ $now.toMillis() }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer inayCKjbepNL2D9qPeP8Ve9TYEC6PuqI" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "Bearer inayCKjbepNL2D9qPeP8Ve9TYEC6PuqI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"msgtype\": \"m.text\", \"body\": {{ JSON.stringify($json.matrix_body) }}, \"format\": \"org.matrix.custom.html\", \"formatted_body\": {{ JSON.stringify($json.matrix_formatted_body) }}}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "name": "📨 Matrix: Send Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [800, 100],
+      "position": [
+        800,
+        100
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
           "conditions": [
             {
               "id": "telegram-check",
               "leftValue": "={{ $json.send_to_telegram }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
             }
           ],
           "combinator": "and"
@@ -88,7 +134,10 @@
       "name": "✅ Route: Telegram?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [600, 400]
+      "position": [
+        600,
+        400
+      ]
     },
     {
       "parameters": {
@@ -97,18 +146,26 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"chat_id\": \"PLACEHOLDER_CHAT_ID\", \"text\": {{ JSON.stringify($json.telegram_text) }}, \"parse_mode\": \"Markdown\"}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "name": "📨 Telegram: Send Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [800, 400],
+      "position": [
+        800,
+        400
+      ],
       "continueOnFail": true
     },
     {
@@ -118,41 +175,98 @@
       "name": "🔧 Collect Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1000, 300]
+      "position": [
+        1000,
+        300
+      ]
     }
   ],
   "connections": {
     "📥 Input from Master": {
       "main": [
-        [{ "node": "🔧 Format Message", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Format Message": {
       "main": [
-        [{ "node": "✅ Route: Matrix?", "type": "main", "index": 0 }],
-        [{ "node": "✅ Route: Telegram?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "✅ Route: Matrix?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Route: Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "✅ Route: Matrix?": {
       "main": [
-        [{ "node": "📨 Matrix: Send Message", "type": "main", "index": 0 }],
-        [{ "node": "🔧 Collect Results", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📨 Matrix: Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📨 Matrix: Send Message": {
       "main": [
-        [{ "node": "🔧 Collect Results", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "✅ Route: Telegram?": {
       "main": [
-        [{ "node": "📨 Telegram: Send Message", "type": "main", "index": 0 }],
-        [{ "node": "🔧 Collect Results", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📨 Telegram: Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📨 Telegram: Send Message": {
       "main": [
-        [{ "node": "🔧 Collect Results", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -160,5 +274,6 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "id": "TmyAkITcb41Ti3Ev"
 }

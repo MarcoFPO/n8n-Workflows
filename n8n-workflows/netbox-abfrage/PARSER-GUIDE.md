@@ -138,17 +138,19 @@ filtered = filtered.filter(item => item.json.hostname.includes(hostname));
 ```
 NetBox API (250 Objekte)
         ↓
-VMs Query: 150 Objekte (VMs + LXCs)
-Devices Query: 100 Objekte
-        ↓
-Merge: 250 Objekte kombiniert
-        ↓
+VMs Query: 150 Objekte (VMs + LXCs)    |    Devices Query: 100 Objekte
+        ↓                               ↓
+        └─────────┬─────────────────────┘
+                  ↓
 Apply Filters & Finalize (PARSER):
+   Empfängt: 250 Objekte von BEIDEN Queries (parallel)
    Step 1: IP-Extraktion → 180 Objekte mit IP
    Step 2: Hostname-Filter "WI-SW02" → 1 Objekt
         ↓
 Output: [{ hostname: "WI-SW02", ip: "...", ssh_user: "...", ssh_password: "..." }]
 ```
+
+**Architektur-Update v4.1:** Der Merge-Node wurde entfernt. Beide NetBox-Queries verbinden sich direkt zum Apply-Filters-Node über separate Eingänge (index 0 und index 1). Der Parser empfängt alle Objekte mittels `$input.all()`.
 
 ---
 
@@ -249,17 +251,23 @@ Console Output:
 
 **Was hat sich geändert:**
 ```
-v4.0: NetBox Filters + Client Parser
+v4.0: NetBox Filters + Client Parser + Merge Node v3
 v4.1: Nur Client Parser (NetBox Filters entfernt)
+v4.1.1: Merge Node entfernt (direkte parallele Verbindung)
 
-Grund: NetBox Node Filter funktionieren nicht
-Lösung: 100% Client-Side Parsing
+Grund:
+- NetBox Node Filter funktionieren nicht
+- Merge Node v2/v3 inkompatibel mit n8n 2.4.4
+Lösung:
+- 100% Client-Side Parsing
+- Beide Queries direkt zu Apply-Filters Node
 ```
 
 **Kompatibilität:**
 - ✅ Alle v4.0 Parameter funktionieren gleich
 - ✅ 3 Parameter: hostname, filter_by_type, filter_by_ids
 - ✅ 4-Feld Output: hostname, ip, ssh_user, ssh_password
+- ✅ Parser empfängt alle 500+ Objekte parallel (beide Queries)
 
 ---
 

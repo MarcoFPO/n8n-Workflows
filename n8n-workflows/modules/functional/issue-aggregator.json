@@ -1,0 +1,59 @@
+{
+  "name": "Functional: Issue Aggregator",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "issues_list",
+              "type": "array"
+            },
+            {
+              "name": "session_id",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { issues_list, session_id } = $('📥 Input').first().json;\nif (!Array.isArray(issues_list)) throw new Error('issues_list muss ein Array sein');\nconst grouped = {};\nfor (const issue of issues_list) {\n  const key = issue.severity || 'unknown';\n  if (!grouped[key]) grouped[key] = [];\n  grouped[key].push(issue);\n}\nconst counts = { critical: (grouped.critical||[]).length, warning: (grouped.warning||[]).length, info: (grouped.info||[]).length };\nconst requires_action = counts.critical > 0 || counts.warning > 2;\nreturn { exit_code: 'success', session_id: session_id || require('crypto').randomUUID(),\n  data: { total: issues_list.length, counts, requires_action, grouped, top_issues: issues_list.filter(i=>i.severity==='critical').slice(0,5) },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Aggregate Issues",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Aggregate Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}
