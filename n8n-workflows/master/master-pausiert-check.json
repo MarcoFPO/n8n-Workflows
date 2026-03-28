@@ -1,14 +1,19 @@
 {
+  "updatedAt": "2026-03-23T18:28:57.536Z",
+  "createdAt": "2026-03-23T18:25:44.008Z",
   "id": "ieZs0tmJO0Z5kVHo",
   "name": "MASTER: Pausiert Check",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 24
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
             }
           ]
         }
@@ -19,7 +24,8 @@
       "position": [
         200,
         300
-      ]
+      ],
+      "id": "8604b38b-c0fb-4f75-8260-b527e26249da"
     },
     {
       "parameters": {},
@@ -29,7 +35,8 @@
       "position": [
         200,
         500
-      ]
+      ],
+      "id": "2f0f6607-cfca-4412-a73d-a4f068889523"
     },
     {
       "parameters": {
@@ -41,7 +48,8 @@
       "position": [
         440,
         300
-      ]
+      ],
+      "id": "467b4515-eb0b-4801-b39f-c4689dfdb1f1"
     },
     {
       "parameters": {
@@ -57,7 +65,8 @@
       "position": [
         640,
         300
-      ]
+      ],
+      "id": "2d60cff8-db45-4874-8846-4c18310661a1"
     },
     {
       "parameters": {
@@ -69,7 +78,8 @@
       "position": [
         840,
         300
-      ]
+      ],
+      "id": "516621d7-4440-4c8b-89ed-bd2b604128b1"
     },
     {
       "parameters": {
@@ -98,7 +108,8 @@
       "position": [
         1040,
         300
-      ]
+      ],
+      "id": "dd06f3f1-c2d2-4d22-8ed5-5771afa1255e"
     },
     {
       "parameters": {
@@ -110,7 +121,8 @@
       "position": [
         1240,
         500
-      ]
+      ],
+      "id": "43af5b54-cd76-4e30-9b3e-2afad48fdf41"
     },
     {
       "parameters": {
@@ -122,7 +134,8 @@
       "position": [
         1240,
         300
-      ]
+      ],
+      "id": "8e9557f3-65bb-4529-aa54-ec39e327be53"
     },
     {
       "parameters": {
@@ -135,7 +148,8 @@
       "position": [
         1440,
         300
-      ]
+      ],
+      "id": "1c7de10a-8b23-46dd-948c-32eadb1f604b"
     },
     {
       "parameters": {
@@ -151,7 +165,8 @@
       "position": [
         1640,
         300
-      ]
+      ],
+      "id": "da3fb5cb-daa9-4b60-bbb9-8f015f413625"
     },
     {
       "parameters": {
@@ -163,7 +178,8 @@
       "position": [
         1840,
         300
-      ]
+      ],
+      "id": "86ba0e68-37f5-4e9a-bf71-46d15fc5ca51"
     },
     {
       "parameters": {
@@ -179,7 +195,8 @@
       "position": [
         2040,
         300
-      ]
+      ],
+      "id": "8a34f483-6277-47c4-ba7d-d361c491583f"
     },
     {
       "parameters": {
@@ -191,7 +208,8 @@
       "position": [
         2240,
         300
-      ]
+      ],
+      "id": "be447d93-8064-4eb0-92c1-4734f8933bf7"
     },
     {
       "parameters": {
@@ -220,7 +238,8 @@
       "position": [
         2440,
         300
-      ]
+      ],
+      "id": "36439937-69da-45b8-823e-029eca439d61"
     },
     {
       "parameters": {
@@ -232,7 +251,8 @@
       "position": [
         2640,
         200
-      ]
+      ],
+      "id": "58247038-aaef-4995-9402-0adc748c92d9"
     },
     {
       "parameters": {
@@ -248,7 +268,8 @@
       "position": [
         2840,
         200
-      ]
+      ],
+      "id": "87dccc9f-224c-49c4-9880-53e96d1954ed"
     },
     {
       "parameters": {
@@ -277,7 +298,8 @@
         3040,
         200
       ],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "id": "502dd22c-2108-4199-af95-8eb438c0d55f"
     },
     {
       "parameters": {
@@ -289,7 +311,8 @@
       "position": [
         3240,
         200
-      ]
+      ],
+      "id": "46d3307a-0c23-45aa-8547-40bcd82599f4"
     },
     {
       "parameters": {
@@ -301,7 +324,8 @@
       "position": [
         2640,
         450
-      ]
+      ],
+      "id": "e318cd7c-6da1-4361-b702-fabd13e1edff"
     },
     {
       "parameters": {
@@ -313,7 +337,8 @@
       "position": [
         3440,
         300
-      ]
+      ],
+      "id": "12e3a27b-acfa-4505-b00a-c610ad58f14c"
     }
   ],
   "connections": {
@@ -532,7 +557,609 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "executionTimeout": 600
+    "executionTimeout": 600,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "pinData": {}
+  "staticData": {
+    "node:⏰ Schedule: Täglich 08:00": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": null,
+  "versionId": "a00b8919-6b92-4637-ac36-a10eb4aa26c0",
+  "activeVersionId": "a00b8919-6b92-4637-ac36-a10eb4aa26c0",
+  "versionCounter": 5,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-23T18:25:44.011Z",
+      "createdAt": "2026-03-23T18:25:44.011Z",
+      "role": "workflow:owner",
+      "workflowId": "ieZs0tmJO0Z5kVHo",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-23T18:28:57.539Z",
+    "createdAt": "2026-03-23T18:28:57.539Z",
+    "versionId": "a00b8919-6b92-4637-ac36-a10eb4aa26c0",
+    "workflowId": "ieZs0tmJO0Z5kVHo",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 24
+              }
+            ]
+          }
+        },
+        "name": "⏰ Schedule: Täglich 08:00",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "8604b38b-c0fb-4f75-8260-b527e26249da"
+      },
+      {
+        "parameters": {},
+        "name": "▶️ Manual Trigger",
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          200,
+          500
+        ],
+        "id": "2f0f6607-cfca-4412-a73d-a4f068889523"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Konfiguration für diesen Lauf\nreturn [{ json: {\n  state_to_check: 'pausiert',\n  check_time: new Date().toISOString(),\n  max_tickets: 50\n} }];"
+        },
+        "name": "📋 Set Check Config",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          300
+        ],
+        "id": "467b4515-eb0b-4801-b39f-c4689dfdb1f1"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "XtpJW0B4twnclvtk"
+          }
+        },
+        "name": "🔍 SUB: Search Pausiert Tickets",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          640,
+          300
+        ],
+        "id": "2d60cff8-db45-4874-8846-4c18310661a1"
+      },
+      {
+        "parameters": {
+          "jsCode": "const result = $input.first().json;\nconst ticket_ids = result.ticket_ids || [];\n\nif (ticket_ids.length === 0) {\n  return [{ json: { has_tickets: false, count: 0, ticket_ids: [] } }];\n}\n\nreturn [{ json: { has_tickets: true, count: ticket_ids.length, ticket_ids } }];"
+        },
+        "name": "🔧 Check: Tickets vorhanden?",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          840,
+          300
+        ],
+        "id": "516621d7-4440-4c8b-89ed-bd2b604128b1"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "has-tickets-check",
+                "leftValue": "={{ $json.has_tickets }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "✅ IF: Tickets gefunden?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1040,
+          300
+        ],
+        "id": "dd06f3f1-c2d2-4d22-8ed5-5771afa1255e"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Kein pausiertes Ticket – reguläres Ende\nconst cfg = $('📋 Set Check Config').first().json;\nreturn [{ json: {\n  status: 'no_paused_tickets',\n  checked_at: cfg.check_time,\n  message: 'Keine Tickets im Status \"pausiert\" gefunden.'\n} }];"
+        },
+        "name": "📋 Log: Keine Tickets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1240,
+          500
+        ],
+        "id": "43af5b54-cd76-4e30-9b3e-2afad48fdf41"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Ticket-IDs in Einzel-Items aufteilen für Loop\nconst { ticket_ids } = $input.first().json;\nreturn ticket_ids.map(id => ({ json: { ticket_id: id } }));"
+        },
+        "name": "🔧 Split Ticket IDs",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1240,
+          300
+        ],
+        "id": "8e9557f3-65bb-4529-aa54-ec39e327be53"
+      },
+      {
+        "parameters": {
+          "batchSize": 1,
+          "options": {}
+        },
+        "name": "🔄 Loop: Für jedes Ticket",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          1440,
+          300
+        ],
+        "id": "1c7de10a-8b23-46dd-948c-32eadb1f604b"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "LpMuYNBncZNbIoZo"
+          }
+        },
+        "name": "🔍 SUB: Znuny Ticket Reader",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          1640,
+          300
+        ],
+        "id": "da3fb5cb-daa9-4b60-bbb9-8f015f413625"
+      },
+      {
+        "parameters": {
+          "jsCode": "const ticket = $input.first().json;\nconst cfg = $('📋 Set Check Config').first().json;\n\n// Pause-Bedingung aus Ticket-Notizen extrahieren\n// Die letzte Notiz des Execute-Phase enthält den pause_condition-Hinweis\nconst system_name = ticket.wer || 'unbekannt';\nconst system_ip = ticket.system_ip || null;\nconst problem = ticket.was || 'unbekannt';\nconst ticket_id = ticket.ticket_id;\n\n// SSH-Zugang für Health-Check aufbauen\n// Wir versuchen: ssh root@10.1.1.100 pct exec <lxc_id> -- hostname\n// ODER: ssh root@<system_ip> hostname\nconst ssh_check_cmd = system_ip\n  ? `ssh -o ConnectTimeout=5 -o BatchMode=yes root@${system_ip} 'echo ONLINE && hostname && uptime' 2>&1`\n  : `echo 'Kein SSH-Zugang bekannt – System-IP nicht gespeichert'`;\n\nconst prompt = `Du bist ein DevOps-Engineer der prüft ob ein pausiertes Incident-Ticket wieder aufgenommen werden kann.\n\nTicket-Informationen:\n- Ticket-ID: ${ticket_id}\n- Device/System: ${system_name}\n- Problem: ${problem}\n- System-IP: ${system_ip || 'unbekannt'}\n- Ticket erstellt: ${ticket.wan || 'unbekannt'}\n\nDeine Aufgabe:\n1. Prüfe ob das System \"${system_name}\" wieder erreichbar ist\n2. Führe dazu folgenden SSH-Health-Check aus:\n   ${ssh_check_cmd}\n3. Wenn das System erreichbar ist (SSH antwortet): Empfehle RESUME\n4. Wenn das System nicht erreichbar ist: Empfehle KEEP_PAUSED\n5. Wenn die System-IP unbekannt ist: Prüfe ob vergangene Zeit > 30min (Check-Zeit: ${cfg.check_time})\n\nAntworte NUR als JSON:\n{\n  \"decision\": \"RESUME\" oder \"KEEP_PAUSED\",\n  \"reason\": \"Kurze Begründung\",\n  \"system_online\": true/false/null,\n  \"confidence\": 0-100\n}`;\n\nreturn [{ json: { ticket_id, ticket, system_name, system_ip, problem, prompt } }];"
+        },
+        "name": "🔧 Build Check Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1840,
+          300
+        ],
+        "id": "86ba0e68-37f5-4e9a-bf71-46d15fc5ca51"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "l4ee6BahShsiEXjI"
+          }
+        },
+        "name": "🤖 SUB: Claude Condition Check",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          2040,
+          300
+        ],
+        "id": "8a34f483-6277-47c4-ba7d-d361c491583f"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $('🔧 Build Check Prompt').first().json;\nconst claude = $input.first().json;\n\nlet decision_data = { decision: 'KEEP_PAUSED', reason: 'Keine Antwort von Claude', confidence: 0 };\n\ntry {\n  const text = claude.response_text || claude.response || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) decision_data = { ...decision_data, ...JSON.parse(match[0]) };\n} catch(e) {\n  decision_data.reason = `Parse-Fehler: ${e.message}`;\n}\n\nconst should_resume = decision_data.decision === 'RESUME' && decision_data.confidence >= 70;\n\nreturn [{ json: {\n  ticket_id: input.ticket_id,\n  ticket: input.ticket,\n  system_name: input.system_name,\n  system_ip: input.system_ip,\n  should_resume,\n  decision: decision_data.decision,\n  reason: decision_data.reason,\n  confidence: decision_data.confidence,\n  system_online: decision_data.system_online\n} }];"
+        },
+        "name": "🔧 Parse Check Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2240,
+          300
+        ],
+        "id": "be447d93-8064-4eb0-92c1-4734f8933bf7"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "resume-check",
+                "leftValue": "={{ $json.should_resume }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "✅ IF: Fortsetzen?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2440,
+          300
+        ],
+        "id": "36439937-69da-45b8-823e-029eca439d61"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Ticket wird fortgesetzt → Status zurück auf 'in Arbeit' setzen\nconst input = $input.first().json;\n\nconst note_body = `## ▶️ Bearbeitung fortgesetzt\\n\\n**Pausiert-Check:** Bedingung erfüllt – System wieder verfügbar.\\n\\n**System:** ${input.system_name} (${input.system_ip || 'IP unbekannt'})\\n**Claude-Bewertung:** ${input.reason}\\n**Konfidenz:** ${input.confidence}%\\n\\nDer Incident-Response-Workflow wird automatisch neu gestartet.`;\n\nreturn [{ json: {\n  ticket_id: input.ticket_id,\n  note_title: '▶️ Bearbeitung fortgesetzt – Bedingung erfüllt',\n  note_body,\n  new_state: 'in Arbeit',\n  // Für Re-Trigger\n  system_name: input.system_name,\n  reason: input.reason\n} }];"
+        },
+        "name": "🔧 Build Resume Note",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          200
+        ],
+        "id": "58247038-aaef-4995-9402-0adc748c92d9"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "0k5NM7V2p1dkvMSG"
+          }
+        },
+        "name": "📝 SUB: Note + Set In-Progress",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          2840,
+          200
+        ],
+        "id": "87dccc9f-224c-49c4-9880-53e96d1954ed"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://10.1.1.180:80/webhook/znuny-new-ticket",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ ticket_id: $('🔧 Build Resume Note').first().json.ticket_id }) }}",
+          "options": {
+            "timeout": 10000
+          }
+        },
+        "name": "🚀 Re-Trigger: Incident Webhook",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3040,
+          200
+        ],
+        "continueOnFail": true,
+        "id": "502dd22c-2108-4199-af95-8eb438c0d55f"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $('🔧 Build Resume Note').first().json;\nconst trigger_result = $input.first().json;\nconst success = !trigger_result.error && trigger_result.status !== 'error';\n\nreturn [{ json: {\n  ticket_id: input.ticket_id,\n  action: 'resumed',\n  system_name: input.system_name,\n  webhook_triggered: success,\n  timestamp: new Date().toISOString()\n} }];"
+        },
+        "name": "🔧 Log Resume",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3240,
+          200
+        ],
+        "id": "46d3307a-0c23-45aa-8547-40bcd82599f4"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Ticket bleibt pausiert – kein Eingriff nötig\nconst input = $input.first().json;\nreturn [{ json: {\n  ticket_id: input.ticket_id,\n  action: 'keep_paused',\n  reason: input.reason,\n  confidence: input.confidence,\n  timestamp: new Date().toISOString()\n} }];"
+        },
+        "name": "🔧 Log Keep Paused",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          450
+        ],
+        "id": "e318cd7c-6da1-4361-b702-fabd13e1edff"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Alle Tickets verarbeitet – Zusammenfassung\nconst items = $input.all();\nconst resumed = items.filter(i => i.json.action === 'resumed').length;\nconst kept_paused = items.filter(i => i.json.action === 'keep_paused').length;\n\nreturn [{ json: {\n  status: 'check_complete',\n  total_checked: items.length,\n  resumed,\n  kept_paused,\n  timestamp: new Date().toISOString()\n} }];"
+        },
+        "name": "🔧 Aggregate Results",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3440,
+          300
+        ],
+        "id": "12e3a27b-acfa-4505-b00a-c610ad58f14c"
+      }
+    ],
+    "connections": {
+      "⏰ Schedule: Täglich 08:00": {
+        "main": [
+          [
+            {
+              "node": "📋 Set Check Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ Manual Trigger": {
+        "main": [
+          [
+            {
+              "node": "📋 Set Check Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Set Check Config": {
+        "main": [
+          [
+            {
+              "node": "🔍 SUB: Search Pausiert Tickets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 SUB: Search Pausiert Tickets": {
+        "main": [
+          [
+            {
+              "node": "🔧 Check: Tickets vorhanden?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Check: Tickets vorhanden?": {
+        "main": [
+          [
+            {
+              "node": "✅ IF: Tickets gefunden?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ IF: Tickets gefunden?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Split Ticket IDs",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📋 Log: Keine Tickets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Split Ticket IDs": {
+        "main": [
+          [
+            {
+              "node": "🔄 Loop: Für jedes Ticket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔄 Loop: Für jedes Ticket": {
+        "main": [
+          [
+            {
+              "node": "🔍 SUB: Znuny Ticket Reader",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 SUB: Znuny Ticket Reader": {
+        "main": [
+          [
+            {
+              "node": "🔧 Build Check Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Build Check Prompt": {
+        "main": [
+          [
+            {
+              "node": "🤖 SUB: Claude Condition Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 SUB: Claude Condition Check": {
+        "main": [
+          [
+            {
+              "node": "🔧 Parse Check Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Parse Check Result": {
+        "main": [
+          [
+            {
+              "node": "✅ IF: Fortsetzen?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ IF: Fortsetzen?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Build Resume Note",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔧 Log Keep Paused",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Build Resume Note": {
+        "main": [
+          [
+            {
+              "node": "📝 SUB: Note + Set In-Progress",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 SUB: Note + Set In-Progress": {
+        "main": [
+          [
+            {
+              "node": "🚀 Re-Trigger: Incident Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🚀 Re-Trigger: Incident Webhook": {
+        "main": [
+          [
+            {
+              "node": "🔧 Log Resume",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Log Resume": {
+        "main": [
+          [
+            {
+              "node": "🔧 Aggregate Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Log Keep Paused": {
+        "main": [
+          [
+            {
+              "node": "🔧 Aggregate Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-23T18:28:58.608Z",
+        "id": 187,
+        "workflowId": "ieZs0tmJO0Z5kVHo",
+        "versionId": "a00b8919-6b92-4637-ac36-a10eb4aa26c0",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  },
+  "_n8n_id": "ieZs0tmJO0Z5kVHo"
 }

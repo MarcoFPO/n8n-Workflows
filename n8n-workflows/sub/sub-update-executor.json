@@ -5,19 +5,40 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "id", "type": "number" },
-            { "name": "name", "type": "string" },
-            { "name": "ip", "type": "string" },
-            { "name": "type", "type": "string" },
-            { "name": "ssh_user", "type": "string" },
-            { "name": "ssh_password", "type": "string" }
+            {
+              "name": "id",
+              "type": "number"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "ip",
+              "type": "string"
+            },
+            {
+              "name": "type",
+              "type": "string"
+            },
+            {
+              "name": "ssh_user",
+              "type": "string"
+            },
+            {
+              "name": "ssh_password",
+              "type": "string"
+            }
           ]
         }
       },
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -26,7 +47,10 @@
       "name": "🔧 Build Update Prompts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     },
     {
       "parameters": {
@@ -35,19 +59,30 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "Bearer dummy-key" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer dummy-key"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.check_prompt) }}}],\"max_tokens\":1024}",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "name": "🤖 Claude: Check & Start System",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [600, 200],
+      "position": [
+        600,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -57,7 +92,10 @@
       "name": "🔧 Parse Check Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 200]
+      "position": [
+        800,
+        200
+      ]
     },
     {
       "parameters": {
@@ -66,19 +104,30 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "Bearer dummy-key" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer dummy-key"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.update_prompt) }}}],\"max_tokens\":2048}",
-        "options": { "timeout": 180000 }
+        "options": {
+          "timeout": 180000
+        }
       },
       "name": "🤖 Claude: Execute Updates",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1000, 200],
+      "position": [
+        1000,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -88,7 +137,10 @@
       "name": "🔧 Parse Update Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1200, 200]
+      "position": [
+        1200,
+        200
+      ]
     },
     {
       "parameters": {
@@ -116,7 +168,10 @@
       "name": "✅ Check: Needs Restore?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1400, 200]
+      "position": [
+        1400,
+        200
+      ]
     },
     {
       "parameters": {
@@ -125,19 +180,30 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "Bearer dummy-key" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer dummy-key"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.restore_prompt) }}}],\"max_tokens\":512}",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "name": "🤖 Claude: Restore Original State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1600, 100],
+      "position": [
+        1600,
+        100
+      ],
       "continueOnFail": true
     },
     {
@@ -147,49 +213,106 @@
       "name": "🔧 Build Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1800, 200]
+      "position": [
+        1800,
+        200
+      ]
     }
   ],
   "connections": {
     "📥 Input from Master": {
       "main": [
-        [{ "node": "🔧 Build Update Prompts", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Build Update Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Build Update Prompts": {
       "main": [
-        [{ "node": "🤖 Claude: Check & Start System", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🤖 Claude: Check & Start System",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🤖 Claude: Check & Start System": {
       "main": [
-        [{ "node": "🔧 Parse Check Result", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Parse Check Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Parse Check Result": {
       "main": [
-        [{ "node": "🤖 Claude: Execute Updates", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🤖 Claude: Execute Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🤖 Claude: Execute Updates": {
       "main": [
-        [{ "node": "🔧 Parse Update Result", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Parse Update Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Parse Update Result": {
       "main": [
-        [{ "node": "✅ Check: Needs Restore?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "✅ Check: Needs Restore?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "✅ Check: Needs Restore?": {
       "main": [
-        [{ "node": "🤖 Claude: Restore Original State", "type": "main", "index": 0 }],
-        [{ "node": "🔧 Build Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🤖 Claude: Restore Original State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🤖 Claude: Restore Original State": {
       "main": [
-        [{ "node": "🔧 Build Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Build Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -197,5 +320,6 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "_n8n_id": "YJ4vzOJUoc5vHAYm"
 }

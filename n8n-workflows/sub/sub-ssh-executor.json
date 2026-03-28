@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-03-22T10:51:56.881Z",
+  "createdAt": "2026-03-22T10:08:33.661Z",
+  "id": "SL8OqOkRjHRosQCL",
   "name": "SUB: SSH Command Executor",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -34,7 +40,8 @@
       "position": [
         200,
         300
-      ]
+      ],
+      "id": "6161f9a5-9e2e-48cb-ada6-5f0350d453f1"
     },
     {
       "parameters": {
@@ -46,19 +53,21 @@
       "position": [
         400,
         300
-      ]
+      ],
+      "id": "335206ab-3372-4361-bbb7-7babc95c114d"
     },
     {
-      "parameters": {
-        "jsCode": "// SSH via child_process (key-based auth, dynamischer Host)\nconst { execSync } = require('child_process');\nconst input = $input.first().json;\nconst { host, username = 'root', command, timeout = 30, session_id, start_time } = input;\n\nlet stdout = '', stderr = '', exit_code = 'success', error = null;\n\ntry {\n    const sshOpts = [\n        '-o StrictHostKeyChecking=no',\n        '-o UserKnownHostsFile=/dev/null',\n        '-o ConnectTimeout=10',\n        '-o BatchMode=yes',\n        '-o LogLevel=ERROR'\n    ].join(' ');\n    \n    stdout = execSync(\n        `ssh ${sshOpts} ${username}@${host} ${JSON.stringify(command)}`,\n        { timeout: timeout * 1000, encoding: 'utf8', shell: '/bin/bash' }\n    ).trim();\n    \n} catch (e) {\n    exit_code = 'failed';\n    error = e.message;\n    stderr = (e.stderr || '').toString().trim() || e.message;\n    stdout = (e.stdout || '').toString().trim();\n}\n\nreturn [{\n    json: {\n        exit_code,\n        stdout,\n        stderr,\n        execution_time_seconds: Math.round((Date.now() - start_time) / 1000),\n        session_id: session_id || `ssh_${Date.now()}`,\n        error,\n        host,\n        command\n    }\n}];"
-      },
+      "id": "228a8cd5-8fe6-45a8-8614-a9b02a4b68d4",
       "name": "💻 SSH: Execute Command",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        600,
+        1200,
         300
-      ]
+      ],
+      "parameters": {
+        "jsCode": "// SSH via child_process (key-based auth, dynamischer Host)\nconst { execSync } = require('child_process');\nconst input = $input.first().json;\nconst { host, username = 'root', command, timeout = 30, session_id, start_time } = input;\n\nlet stdout = '', stderr = '', exit_code = 'success', error = null;\n\ntry {\n    const sshOpts = [\n        '-o StrictHostKeyChecking=no',\n        '-o UserKnownHostsFile=/dev/null',\n        '-o ConnectTimeout=10',\n        '-o BatchMode=yes',\n        '-o LogLevel=ERROR'\n    ].join(' ');\n    \n    stdout = execSync(\n        `ssh ${sshOpts} ${username}@${host} ${JSON.stringify(command)}`,\n        { timeout: timeout * 1000, encoding: 'utf8', shell: '/bin/bash' }\n    ).trim();\n    \n} catch (e) {\n    exit_code = 'failed';\n    error = e.message;\n    stderr = (e.stderr || '').toString().trim() || e.message;\n    stdout = (e.stdout || '').toString().trim();\n}\n\nreturn [{\n    json: {\n        exit_code,\n        stdout,\n        stderr,\n        execution_time_seconds: Math.round((Date.now() - start_time) / 1000),\n        session_id: session_id || `ssh_${Date.now()}`,\n        error,\n        host,\n        command\n    }\n}];"
+      }
     },
     {
       "parameters": {
@@ -68,9 +77,103 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
+        1400,
+        300
+      ],
+      "id": "10ca588e-2581-4acb-888f-6c3b95b5a6a1"
+    },
+    {
+      "id": "sc-ssh-01-safe",
+      "name": "🛡️ SUB: Safety Check",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "A4C9uBifmH1TUS6J"
+        },
+        "workflowInputs": {
+          "value": {
+            "commands": "={{ JSON.stringify($json.commands || []) }}",
+            "context": "={{ $json.target_host || 'unknown' }}"
+          },
+          "schema": [
+            {
+              "id": "commands",
+              "displayName": "commands",
+              "required": true,
+              "type": "string",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "context",
+              "displayName": "context",
+              "required": false,
+              "type": "string",
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "waitForSubWorkflow": true,
+          "continueOnFail": true
+        }
+      }
+    },
+    {
+      "id": "sc-ssh-02-if",
+      "name": "✅ IF: Safety OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
         800,
         300
-      ]
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "safety-ok",
+              "leftValue": "={{ $json.blocked === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sc-ssh-03-blocked",
+      "name": "🚫 Safety: Blocked",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        180
+      ],
+      "parameters": {
+        "jsCode": "const safetyResult = $('🛡️ SUB: Safety Check').first().json;\nconst validated = $('🔧 Validate & Prepare').first().json;\nreturn [{ json: {\n  success: false,\n  blocked: true,\n  blocked_reason: safetyResult.blocked_reason || 'Safety Check fehlgeschlagen',\n  blocked_commands: safetyResult.blocked_commands || [],\n  target: validated.target_host || 'unknown',\n  output: ''\n}}];"
+      }
     }
   ],
   "connections": {
@@ -89,7 +192,7 @@
       "main": [
         [
           {
-            "node": "💻 SSH: Execute Command",
+            "node": "🛡️ SUB: Safety Check",
             "type": "main",
             "index": 0
           }
@@ -106,11 +209,200 @@
           }
         ]
       ]
+    },
+    "🛡️ SUB: Safety Check": {
+      "main": [
+        [
+          {
+            "node": "✅ IF: Safety OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ IF: Safety OK?": {
+      "main": [
+        [
+          {
+            "node": "💻 SSH: Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🚫 Safety: Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "pinData": {}
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "f54f98a4-012d-4413-bd09-667287b75577",
+  "activeVersionId": "f54f98a4-012d-4413-bd09-667287b75577",
+  "versionCounter": 10,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-22T10:08:33.663Z",
+      "createdAt": "2026-03-22T10:08:33.663Z",
+      "role": "workflow:owner",
+      "workflowId": "SL8OqOkRjHRosQCL",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-22T10:51:56.886Z",
+    "createdAt": "2026-03-22T10:51:56.886Z",
+    "versionId": "f54f98a4-012d-4413-bd09-667287b75577",
+    "workflowId": "SL8OqOkRjHRosQCL",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "host",
+                "type": "string"
+              },
+              {
+                "name": "username",
+                "type": "string"
+              },
+              {
+                "name": "password",
+                "type": "string"
+              },
+              {
+                "name": "command",
+                "type": "string"
+              },
+              {
+                "name": "timeout",
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "name": "📥 Input from Master",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "6161f9a5-9e2e-48cb-ada6-5f0350d453f1"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Validate input and prepare SSH parameters\nconst input = $input.first().json;\n\nconst host = input.host || '';\nconst username = input.username || 'root';\nconst password = input.password || '';\nconst command = input.command || '';\nconst timeout = input.timeout || 300;\n\n// Generate unique session ID\nconst session_id = `ssh_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;\n\nif (!host) throw new Error('SSH host is required');\nif (!command) throw new Error('SSH command is required');\n\n// Validate host format (basic IP/hostname check)\nconst hostRegex = /^[a-zA-Z0-9._-]+$/;\nif (!hostRegex.test(host)) throw new Error(`Invalid host format: ${host}`);\n\nreturn [{\n  json: {\n    host,\n    username,\n    password,\n    command,\n    timeout,\n    session_id,\n    start_time: Date.now()\n  }\n}];"
+        },
+        "name": "🔧 Validate & Prepare",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          400,
+          300
+        ],
+        "id": "335206ab-3372-4361-bbb7-7babc95c114d"
+      },
+      {
+        "id": "228a8cd5-8fe6-45a8-8614-a9b02a4b68d4",
+        "name": "💻 SSH: Execute Command",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          600,
+          300
+        ],
+        "parameters": {
+          "jsCode": "// SSH via child_process (key-based auth, dynamischer Host)\nconst { execSync } = require('child_process');\nconst input = $input.first().json;\nconst { host, username = 'root', command, timeout = 30, session_id, start_time } = input;\n\nlet stdout = '', stderr = '', exit_code = 'success', error = null;\n\ntry {\n    const sshOpts = [\n        '-o StrictHostKeyChecking=no',\n        '-o UserKnownHostsFile=/dev/null',\n        '-o ConnectTimeout=10',\n        '-o BatchMode=yes',\n        '-o LogLevel=ERROR'\n    ].join(' ');\n    \n    stdout = execSync(\n        `ssh ${sshOpts} ${username}@${host} ${JSON.stringify(command)}`,\n        { timeout: timeout * 1000, encoding: 'utf8', shell: '/bin/bash' }\n    ).trim();\n    \n} catch (e) {\n    exit_code = 'failed';\n    error = e.message;\n    stderr = (e.stderr || '').toString().trim() || e.message;\n    stdout = (e.stdout || '').toString().trim();\n}\n\nreturn [{\n    json: {\n        exit_code,\n        stdout,\n        stderr,\n        execution_time_seconds: Math.round((Date.now() - start_time) / 1000),\n        session_id: session_id || `ssh_${Date.now()}`,\n        error,\n        host,\n        command\n    }\n}];"
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Normalize SSH output into standardized result object\nconst sshResult = $input.first().json;\nconst prepareData = $('🔧 Validate & Prepare').first().json;\n\nconst execution_time_seconds = Math.round((Date.now() - prepareData.start_time) / 1000);\nconst session_id = prepareData.session_id;\n\n// n8n SSH node returns stdout directly or error\nlet exit_code = 'success';\nlet stdout = '';\nlet stderr = '';\nlet error = null;\n\nif (sshResult.error) {\n  exit_code = 'failed';\n  stderr = sshResult.error.message || String(sshResult.error);\n  error = stderr;\n} else if (sshResult.stdout !== undefined) {\n  stdout = sshResult.stdout || '';\n  stderr = sshResult.stderr || '';\n  // Check for non-zero exit in stderr patterns\n  if (sshResult.code && sshResult.code !== 0) {\n    exit_code = 'failed';\n  }\n} else {\n  // Direct string output from SSH node\n  stdout = typeof sshResult === 'string' ? sshResult : JSON.stringify(sshResult);\n}\n\nreturn [{\n  json: {\n    exit_code,\n    stdout: stdout.trim(),\n    stderr: stderr.trim(),\n    execution_time_seconds,\n    session_id,\n    error,\n    host: prepareData.host,\n    command: prepareData.command\n  }\n}];"
+        },
+        "name": "🔧 Process Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          300
+        ],
+        "id": "10ca588e-2581-4acb-888f-6c3b95b5a6a1"
+      }
+    ],
+    "connections": {
+      "📥 Input from Master": {
+        "main": [
+          [
+            {
+              "node": "🔧 Validate & Prepare",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Validate & Prepare": {
+        "main": [
+          [
+            {
+              "node": "💻 SSH: Execute Command",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "💻 SSH: Execute Command": {
+        "main": [
+          [
+            {
+              "node": "🔧 Process Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-22T10:51:57.035Z",
+        "id": 89,
+        "workflowId": "SL8OqOkRjHRosQCL",
+        "versionId": "f54f98a4-012d-4413-bd09-667287b75577",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  },
+  "_n8n_id": "SL8OqOkRjHRosQCL"
 }
