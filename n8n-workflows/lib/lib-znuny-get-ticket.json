@@ -1,0 +1,140 @@
+{
+  "updatedAt": "2026-02-15T16:38:16.428Z",
+  "createdAt": "2026-02-15T16:31:28.420Z",
+  "id": "1R9iC71QxU9DKZfE",
+  "name": "lib-znuny-get-ticket",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst ZNUNY_URL = \"https://ticket.doehlercomputing.de/znuny/nph-genericinterface.pl/Webservice/ZabbixIntegration\";\nconst session = await this.helpers.httpRequest({\n  method: \"POST\", url: `${ZNUNY_URL}/Session`,\n  body: {UserLogin: \"zabbix\", Password: \"ZabbixInt3gration!\"},\n  json: true, skipSslCertificateValidation: true\n});\nif (!session.SessionID) return [{json: {success: false, error: \"Session failed\"}}];\n\nlet ticketId = input.ticket_id;\nif (!ticketId && input.zabbix_reference) {\n  const search = await this.helpers.httpRequest({\n    method: \"GET\",\n    url: `${ZNUNY_URL}/Ticket?SessionID=${session.SessionID}&DynamicField_ZabbixReferenz=${encodeURIComponent(input.zabbix_reference)}`,\n    json: true, skipSslCertificateValidation: true\n  });\n  ticketId = search.TicketID?.[0];\n  if (!ticketId) return [{json: {success: false, error: \"Ticket nicht gefunden\"}}];\n}\nif (!ticketId) return [{json: {success: false, error: \"Kein ticket_id/zabbix_reference\"}}];\n\nconst ticket = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `${ZNUNY_URL}/Ticket/${ticketId}?SessionID=${session.SessionID}&AllArticles=1&DynamicFields=1`,\n  json: true, skipSslCertificateValidation: true\n});\nif (!ticket.Ticket?.length) return [{json: {success: false, error: \"Ticket nicht gefunden\"}}];\n\nconst t = ticket.Ticket[0];\nconst df = {};\nif (t.DynamicField) for (const f of t.DynamicField) df[f.Name] = f.Value;\n\nreturn [{json: {\n  success: true, ticket_id: t.TicketID, ticket_number: t.TicketNumber,\n  title: t.Title, queue: t.Queue, state: t.State, priority: t.Priority,\n  dynamic_fields: df,\n  articles: (t.Article||[]).map(a => ({id: a.ArticleID, subject: a.Subject, body: a.Body, created: a.Created}))\n}}];"
+      },
+      "id": "get-ticket",
+      "name": "Znuny Get Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Znuny Get Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "5f7c3f25-4001-4afc-b6f6-828af4c9b688",
+  "activeVersionId": "5f7c3f25-4001-4afc-b6f6-828af4c9b688",
+  "versionCounter": 34,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-02-15T16:31:28.422Z",
+      "createdAt": "2026-02-15T16:31:28.422Z",
+      "role": "workflow:owner",
+      "workflowId": "1R9iC71QxU9DKZfE",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-15T16:38:16.429Z",
+    "createdAt": "2026-02-15T16:38:16.429Z",
+    "versionId": "5f7c3f25-4001-4afc-b6f6-828af4c9b688",
+    "workflowId": "1R9iC71QxU9DKZfE",
+    "nodes": [
+      {
+        "parameters": {},
+        "id": "trigger",
+        "name": "Execute Workflow Trigger",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          240,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.first().json;\nconst ZNUNY_URL = \"https://ticket.doehlercomputing.de/znuny/nph-genericinterface.pl/Webservice/ZabbixIntegration\";\nconst session = await this.helpers.httpRequest({\n  method: \"POST\", url: `${ZNUNY_URL}/Session`,\n  body: {UserLogin: \"zabbix\", Password: \"ZabbixInt3gration!\"},\n  json: true, skipSslCertificateValidation: true\n});\nif (!session.SessionID) return [{json: {success: false, error: \"Session failed\"}}];\n\nlet ticketId = input.ticket_id;\nif (!ticketId && input.zabbix_reference) {\n  const search = await this.helpers.httpRequest({\n    method: \"GET\",\n    url: `${ZNUNY_URL}/Ticket?SessionID=${session.SessionID}&DynamicField_ZabbixReferenz=${encodeURIComponent(input.zabbix_reference)}`,\n    json: true, skipSslCertificateValidation: true\n  });\n  ticketId = search.TicketID?.[0];\n  if (!ticketId) return [{json: {success: false, error: \"Ticket nicht gefunden\"}}];\n}\nif (!ticketId) return [{json: {success: false, error: \"Kein ticket_id/zabbix_reference\"}}];\n\nconst ticket = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `${ZNUNY_URL}/Ticket/${ticketId}?SessionID=${session.SessionID}&AllArticles=1&DynamicFields=1`,\n  json: true, skipSslCertificateValidation: true\n});\nif (!ticket.Ticket?.length) return [{json: {success: false, error: \"Ticket nicht gefunden\"}}];\n\nconst t = ticket.Ticket[0];\nconst df = {};\nif (t.DynamicField) for (const f of t.DynamicField) df[f.Name] = f.Value;\n\nreturn [{json: {\n  success: true, ticket_id: t.TicketID, ticket_number: t.TicketNumber,\n  title: t.Title, queue: t.Queue, state: t.State, priority: t.Priority,\n  dynamic_fields: df,\n  articles: (t.Article||[]).map(a => ({id: a.ArticleID, subject: a.Subject, body: a.Body, created: a.Created}))\n}}];"
+        },
+        "id": "get-ticket",
+        "name": "Znuny Get Ticket",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          460,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Execute Workflow Trigger": {
+        "main": [
+          [
+            {
+              "node": "Znuny Get Ticket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-02-15T16:38:16.548Z",
+        "id": 41,
+        "workflowId": "1R9iC71QxU9DKZfE",
+        "versionId": "5f7c3f25-4001-4afc-b6f6-828af4c9b688",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  },
+  "_n8n_id": "1R9iC71QxU9DKZfE"
+}

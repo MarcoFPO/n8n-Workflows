@@ -1,0 +1,140 @@
+{
+  "updatedAt": "2026-02-15T16:38:15.784Z",
+  "createdAt": "2026-02-15T16:31:28.270Z",
+  "id": "zSeQkSwR0nqS0pvp",
+  "name": "lib-netbox-lookup",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst hostname = input.hostname;\nconst NETBOX_URL = \"http://10.1.1.104/api\";\nconst NETBOX_TOKEN = \"Token 6e517f4e4fd4b3f3d3de63770bd79e6faacf0fe4\";\n\ntry {\n  // Erst Devices suchen\n  const devResp = await this.helpers.httpRequest({\n    method: \"GET\",\n    url: `${NETBOX_URL}/dcim/devices/?name=${encodeURIComponent(hostname)}`,\n    headers: { Authorization: NETBOX_TOKEN },\n    json: true\n  });\n  \n  let host = null;\n  let source = null;\n\n  if (devResp.count > 0) {\n    host = devResp.results[0];\n    source = \"device\";\n  } else {\n    const vmResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: `${NETBOX_URL}/virtualization/virtual-machines/?name=${encodeURIComponent(hostname)}`,\n      headers: { Authorization: NETBOX_TOKEN },\n      json: true\n    });\n    if (vmResp.count > 0) {\n      host = vmResp.results[0];\n      source = \"vm\";\n    }\n  }\n\n  if (!host) {\n    return [{ json: { found: false, hostname, error: `Host nicht in NetBox gefunden` } }];\n  }\n\n  const cf = host.custom_fields || {};\n  return [{ json: {\n    found: true, hostname, netbox_source: source, netbox_id: host.id,\n    host_ip: host.primary_ip4 ? host.primary_ip4.address.split(\"/\")[0] : null,\n    host_ip6: host.primary_ip6 ? host.primary_ip6.address.split(\"/\")[0] : null,\n    platform: host.platform ? host.platform.slug : \"unknown\",\n    platform_name: host.platform ? host.platform.name : \"Unknown\",\n    ssh_user: cf.ssh_username || \"root\",\n    ssh_password: cf.ssh_password || null,\n    ssh_key_file: cf.ssh_key_file || null,\n    maintenance_enabled: cf.maintenance_enabled !== false,\n    maintenance_window: cf.maintenance_window || null,\n    critical_system: cf.critical_system || false,\n    device_role: host.role ? host.role.slug : (host.device_role ? host.device_role.slug : null),\n    site: host.site ? host.site.name : null,\n    api_key: cf.api_key || null\n  }}];\n} catch (e) {\n  return [{ json: { found: false, hostname, error: \"NetBox Error: \" + e.message } }];\n}"
+      },
+      "id": "lookup",
+      "name": "NetBox Lookup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "NetBox Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "65b958d8-502e-4e94-be88-57b3bdfab70f",
+  "activeVersionId": "65b958d8-502e-4e94-be88-57b3bdfab70f",
+  "versionCounter": 34,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-02-15T16:31:28.274Z",
+      "createdAt": "2026-02-15T16:31:28.274Z",
+      "role": "workflow:owner",
+      "workflowId": "zSeQkSwR0nqS0pvp",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-15T16:38:15.785Z",
+    "createdAt": "2026-02-15T16:38:15.785Z",
+    "versionId": "65b958d8-502e-4e94-be88-57b3bdfab70f",
+    "workflowId": "zSeQkSwR0nqS0pvp",
+    "nodes": [
+      {
+        "parameters": {},
+        "id": "trigger",
+        "name": "Execute Workflow Trigger",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          240,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.first().json;\nconst hostname = input.hostname;\nconst NETBOX_URL = \"http://10.1.1.104/api\";\nconst NETBOX_TOKEN = \"Token 6e517f4e4fd4b3f3d3de63770bd79e6faacf0fe4\";\n\ntry {\n  // Erst Devices suchen\n  const devResp = await this.helpers.httpRequest({\n    method: \"GET\",\n    url: `${NETBOX_URL}/dcim/devices/?name=${encodeURIComponent(hostname)}`,\n    headers: { Authorization: NETBOX_TOKEN },\n    json: true\n  });\n  \n  let host = null;\n  let source = null;\n\n  if (devResp.count > 0) {\n    host = devResp.results[0];\n    source = \"device\";\n  } else {\n    const vmResp = await this.helpers.httpRequest({\n      method: \"GET\",\n      url: `${NETBOX_URL}/virtualization/virtual-machines/?name=${encodeURIComponent(hostname)}`,\n      headers: { Authorization: NETBOX_TOKEN },\n      json: true\n    });\n    if (vmResp.count > 0) {\n      host = vmResp.results[0];\n      source = \"vm\";\n    }\n  }\n\n  if (!host) {\n    return [{ json: { found: false, hostname, error: `Host nicht in NetBox gefunden` } }];\n  }\n\n  const cf = host.custom_fields || {};\n  return [{ json: {\n    found: true, hostname, netbox_source: source, netbox_id: host.id,\n    host_ip: host.primary_ip4 ? host.primary_ip4.address.split(\"/\")[0] : null,\n    host_ip6: host.primary_ip6 ? host.primary_ip6.address.split(\"/\")[0] : null,\n    platform: host.platform ? host.platform.slug : \"unknown\",\n    platform_name: host.platform ? host.platform.name : \"Unknown\",\n    ssh_user: cf.ssh_username || \"root\",\n    ssh_password: cf.ssh_password || null,\n    ssh_key_file: cf.ssh_key_file || null,\n    maintenance_enabled: cf.maintenance_enabled !== false,\n    maintenance_window: cf.maintenance_window || null,\n    critical_system: cf.critical_system || false,\n    device_role: host.role ? host.role.slug : (host.device_role ? host.device_role.slug : null),\n    site: host.site ? host.site.name : null,\n    api_key: cf.api_key || null\n  }}];\n} catch (e) {\n  return [{ json: { found: false, hostname, error: \"NetBox Error: \" + e.message } }];\n}"
+        },
+        "id": "lookup",
+        "name": "NetBox Lookup",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          460,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Execute Workflow Trigger": {
+        "main": [
+          [
+            {
+              "node": "NetBox Lookup",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-02-15T16:38:15.842Z",
+        "id": 35,
+        "workflowId": "zSeQkSwR0nqS0pvp",
+        "versionId": "65b958d8-502e-4e94-be88-57b3bdfab70f",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  },
+  "_n8n_id": "zSeQkSwR0nqS0pvp"
+}

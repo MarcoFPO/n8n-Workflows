@@ -5,17 +5,32 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "report_type", "type": "string" },
-            { "name": "title", "type": "string" },
-            { "name": "data", "type": "string" },
-            { "name": "format", "type": "string" }
+            {
+              "name": "report_type",
+              "type": "string"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "string"
+            },
+            {
+              "name": "format",
+              "type": "string"
+            }
           ]
         }
       },
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -24,13 +39,22 @@
       "name": "📊 Generate Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     }
   ],
   "connections": {
     "📥 Input from Master": {
       "main": [
-        [{ "node": "📊 Generate Report", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📊 Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -38,5 +62,6 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "_n8n_id": "NwfqZNDoN8zjEMaf"
 }

@@ -5,19 +5,40 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "id", "type": "number" },
-            { "name": "name", "type": "string" },
-            { "name": "ip", "type": "string" },
-            { "name": "type", "type": "string" },
-            { "name": "ssh_user", "type": "string" },
-            { "name": "ssh_password", "type": "string" }
+            {
+              "name": "id",
+              "type": "number"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "ip",
+              "type": "string"
+            },
+            {
+              "name": "type",
+              "type": "string"
+            },
+            {
+              "name": "ssh_user",
+              "type": "string"
+            },
+            {
+              "name": "ssh_password",
+              "type": "string"
+            }
           ]
         }
       },
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -26,7 +47,10 @@
       "name": "🔧 Build Health Check Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     },
     {
       "parameters": {
@@ -35,19 +59,30 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "Bearer dummy-key" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer dummy-key"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"default\",\"messages\":[{\"role\":\"system\",\"content\":{{ JSON.stringify($json.system_prompt) }}},{\"role\":\"user\",\"content\":{{ JSON.stringify($json.prompt) }}}],\"max_tokens\":1024}",
-        "options": { "timeout": 90000 }
+        "options": {
+          "timeout": 90000
+        }
       },
       "name": "🤖 Claude: Execute Health Check",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [600, 300],
+      "position": [
+        600,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -57,23 +92,44 @@
       "name": "🔧 Parse Health Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 300]
+      "position": [
+        800,
+        300
+      ]
     }
   ],
   "connections": {
     "📥 Input from Master": {
       "main": [
-        [{ "node": "🔧 Build Health Check Prompt", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Build Health Check Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Build Health Check Prompt": {
       "main": [
-        [{ "node": "🤖 Claude: Execute Health Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🤖 Claude: Execute Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🤖 Claude: Execute Health Check": {
       "main": [
-        [{ "node": "🔧 Parse Health Result", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Parse Health Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -81,5 +137,6 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "_n8n_id": "NM8Xd6QzlnAc6oy3"
 }

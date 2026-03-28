@@ -19,7 +19,10 @@
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,14 +31,21 @@
       "name": "🛡️ Validate Commands",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     }
   ],
   "connections": {
     "📥 Input from Master": {
       "main": [
         [
-          { "node": "🛡️ Validate Commands", "type": "main", "index": 0 }
+          {
+            "node": "🛡️ Validate Commands",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
@@ -44,5 +54,6 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "_n8n_id": "A4C9uBifmH1TUS6J"
 }

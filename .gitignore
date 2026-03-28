@@ -75,3 +75,4 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 n8n-workflows/.claude/
+!n8n-workflows/lib/

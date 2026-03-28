@@ -1,0 +1,250 @@
+{
+  "updatedAt": "2026-02-15T16:38:15.967Z",
+  "createdAt": "2026-02-15T16:31:28.323Z",
+  "id": "7HfU3iVsgx1gk1T3",
+  "name": "lib-claude-wrapper",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const WRAPPER_URL = 'http://10.1.1.105:3001';\nconst DEFAULT_MODEL = 'sonnet';\nconst DEFAULT_MAX_TOKENS = 4000;\n\nconst SYSTEM_PROMPTS = {\n  'collect-diagnostics': `Du bist ein erfahrener Linux/Netzwerk-Administrator.\nDu hast SSH-Zugang zu einem Server und sollst Diagnose-Daten für ein spezifisches Problem sammeln.\n\nREGELN:\n- Passe deine Befehle an die Plattform an (Debian, Ubuntu, RouterOS, OPNsense, OpenWrt etc.)\n- Sammle NUR relevante Daten — kein Shotgun-Debugging\n- Gib die Befehle UND deren Output strukturiert zurück\n- Fasse am Ende kurz zusammen was du siehst (Auffälligkeiten)\n- Führe KEINE Änderungen durch — nur lesen/diagnostizieren\n\nOUTPUT-FORMAT (JSON):\n{\"commands_executed\": [{\"command\": \"...\", \"output\": \"...\", \"exit_code\": 0}], \"summary\": \"Kurze Zusammenfassung\", \"platform_detected\": \"debian-12|...\"}`,\n\n  'root-cause-analysis': `Du bist ein erfahrener Incident-Response-Analyst.\nBestimme die URSACHE (nicht nur Symptom) aus den Diagnose-Daten.\n\nREGELN:\n- Unterscheide Symptom und Ursache\n- Nenne Konfidenz (high/medium/low) mit Begründung\n- Sei präzise — keine vagen Vermutungen\n\nOUTPUT-FORMAT (JSON):\n{\"symptom\": \"...\", \"root_cause\": \"...\", \"confidence\": \"high|medium|low\", \"reasoning\": \"...\", \"alternative_causes\": [], \"affected_service\": \"...\", \"category\": \"disk|cpu|memory|service|network|certificate|backup|other\"}`,\n\n  'generate-remediation': `Du bist ein erfahrener System-Administrator.\nErstelle eine Schritt-für-Schritt-Anleitung zur Behebung.\n\nREGELN:\n- Jeder Schritt = ein konkreter Befehl\n- Passe Befehle an die Plattform an\n- Bewerte Risiko jedes Schritts\n- Bei kritischen Systemen: konservativer\n- Maximal 10 Schritte\n\nOUTPUT-FORMAT (JSON):\n{\"steps\": [{\"nr\": 1, \"description\": \"...\", \"command\": \"...\", \"risk\": \"none|low|medium|high\", \"auto_approve\": true, \"rollback\": null, \"expected_result\": \"...\"}], \"overall_risk\": \"low|medium|high\", \"auto_approve_all\": true, \"estimated_duration_seconds\": 60, \"long_term_recommendations\": []}`,\n\n  'execute-remediation': `Du bist ein System-Administrator mit SSH-Zugang.\nFühre die vorgegebenen Schritte EXAKT aus und protokolliere jeden.\n\nREGELN:\n- Schritte in Reihenfolge ausführen\n- Bei Fehler (exit_code != 0): SOFORT stoppen\n- JEDEN Schritt protokollieren\n- NUR vorgegebene Befehle — keine Eigeninitiative\n\nOUTPUT-FORMAT (JSON):\n{\"steps_executed\": [{\"nr\": 1, \"command\": \"...\", \"output\": \"...\", \"exit_code\": 0, \"modified\": false, \"modification_reason\": null}], \"completed\": true, \"stopped_at_step\": null, \"stop_reason\": null}`,\n\n  'evaluate-result': `Du bist ein Incident-Response-Analyst.\nVergleiche Zustand VOR und NACH der Remediation.\n\nREGELN:\n- Relevante Metriken vergleichen\n- Prüfe ob ursprüngliches Problem behoben\n- Prüfe ob neue Probleme entstanden\n- Bewerte: RESOLVED, UNRESOLVED oder DEGRADED\n\nOUTPUT-FORMAT (JSON):\n{\"status\": \"RESOLVED|UNRESOLVED|DEGRADED\", \"comparison\": {\"metric\": \"...\", \"before\": \"...\", \"after\": \"...\", \"target\": \"...\", \"target_met\": true}, \"new_issues\": [], \"explanation\": \"...\", \"next_steps\": null, \"close_ticket\": true}`,\n\n  'generic': `Du bist ein erfahrener System-Administrator und Analyst.\nBeantworte die Anfrage präzise und strukturiert.\nWenn ein bestimmtes Output-Format angegeben ist, halte dich daran.`\n};\n\nfunction buildUserPrompt(phase, data) {\n  switch (phase) {\n    case 'collect-diagnostics':\n      return `AUFGABE: SSH-Diagnose sammeln.\\n\\nHOST:\\n- Hostname: ${data.hostname}\\n- IP: ${data.ip}\\n- Platform: ${data.platform || 'unbekannt'}\\n- SSH-User: ${data.ssh_user}\\n- SSH-Passwort: ${data.ssh_password || 'Key-Auth'}\\n${data.ssh_key_file ? '- SSH-Key: ' + data.ssh_key_file : ''}\\n\\nPROBLEM:\\n- Symptom: ${data.symptom}\\n- Severity: ${data.severity || 'unbekannt'}\\n- Seit: ${data.event_time || 'unbekannt'}\\n${data.trigger_description ? '- Details: ' + data.trigger_description : ''}\\n\\nSammle relevante Diagnose-Daten.`;\n    case 'root-cause-analysis':\n      return `SYMPTOM: ${data.symptom}\\nHOST: ${data.hostname} (${data.platform || 'unbekannt'})\\n\\nDIAGNOSE-DATEN:\\n${JSON.stringify(data.diagnostics, null, 2)}\\n${data.zabbix_history ? '\\nZABBIX-HISTORY:\\n' + JSON.stringify(data.zabbix_history, null, 2) : ''}\\n\\nBestimme die ROOT CAUSE.`;\n    case 'generate-remediation':\n      return `ROOT CAUSE:\\n${JSON.stringify(data.rca, null, 2)}\\n\\nHOST: ${data.hostname} (${data.platform || 'unbekannt'})\\nKritisch: ${data.critical ? 'JA' : 'Nein'}\\nWartungsfenster: ${data.maintenance_window || 'keins'}\\n\\nErstelle Behebungsschritte.`;\n    case 'execute-remediation':\n      return `HOST:\\n- IP: ${data.ip}\\n- SSH-User: ${data.ssh_user}\\n- SSH-Passwort: ${data.ssh_password || 'Key-Auth'}\\n${data.ssh_key_file ? '- SSH-Key: ' + data.ssh_key_file : ''}\\n\\nSCHRITTE:\\n${JSON.stringify(data.steps, null, 2)}\\n\\nAusführen. Bei Fehler: STOPPEN.`;\n    case 'evaluate-result':\n      return `PROBLEM: ${data.symptom} auf ${data.hostname}\\n\\nVORHER:\\n${JSON.stringify(data.before, null, 2)}\\n\\nNACHHER:\\n${JSON.stringify(data.after, null, 2)}\\n\\nDURCHGEFÜHRT:\\n${JSON.stringify(data.steps_executed, null, 2)}\\n\\nBewerte: Gelöst?`;\n    case 'generic':\n      return data.prompt || JSON.stringify(data);\n    default:\n      return JSON.stringify(data);\n  }\n}\n\nconst input = $input.first().json;\nconst phase = input.phase || 'generic';\nconst data = input.data || input;\nconst systemPrompt = SYSTEM_PROMPTS[phase] || SYSTEM_PROMPTS['generic'];\nconst userPrompt = buildUserPrompt(phase, data);\nconst temp = (phase === 'execute-remediation') ? 0.1 : 0.3;\n\nreturn [{ json: {\n  wrapper_url: WRAPPER_URL,\n  payload: {\n    model: input.model || DEFAULT_MODEL,\n    messages: [\n      { role: 'system', content: systemPrompt },\n      { role: 'user', content: userPrompt }\n    ],\n    max_tokens: input.max_tokens || DEFAULT_MAX_TOKENS,\n    temperature: input.temperature || temp,\n    output_format: 'json'\n  }\n}}];"
+      },
+      "id": "build-prompt",
+      "name": "Prompt Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.wrapper_url }}/v1/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "call-wrapper",
+      "name": "Claude Wrapper Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst phase = $('Prompt Builder').first().json.phase;\n\nlet parsed;\ntry {\n  const content = response.choices[0].message.content;\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  parsed = {\n    raw: response.choices?.[0]?.message?.content || 'No content',\n    parse_error: true,\n    error_message: e.message\n  };\n}\n\nreturn [{ json: {\n  phase: phase,\n  result: parsed,\n  model: response.model,\n  tokens: response.usage,\n  parse_error: parsed.parse_error || false\n}}];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prompt Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "Claude Wrapper Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Wrapper Call": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "1f14a31c-434f-41e4-9550-f5367b43f1af",
+  "activeVersionId": "1f14a31c-434f-41e4-9550-f5367b43f1af",
+  "versionCounter": 30,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-02-15T16:31:28.325Z",
+      "createdAt": "2026-02-15T16:31:28.325Z",
+      "role": "workflow:owner",
+      "workflowId": "7HfU3iVsgx1gk1T3",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-15T16:38:15.969Z",
+    "createdAt": "2026-02-15T16:38:15.969Z",
+    "versionId": "1f14a31c-434f-41e4-9550-f5367b43f1af",
+    "workflowId": "7HfU3iVsgx1gk1T3",
+    "nodes": [
+      {
+        "parameters": {},
+        "id": "trigger",
+        "name": "Execute Workflow Trigger",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [
+          240,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const WRAPPER_URL = 'http://10.1.1.105:3001';\nconst DEFAULT_MODEL = 'sonnet';\nconst DEFAULT_MAX_TOKENS = 4000;\n\nconst SYSTEM_PROMPTS = {\n  'collect-diagnostics': `Du bist ein erfahrener Linux/Netzwerk-Administrator.\nDu hast SSH-Zugang zu einem Server und sollst Diagnose-Daten für ein spezifisches Problem sammeln.\n\nREGELN:\n- Passe deine Befehle an die Plattform an (Debian, Ubuntu, RouterOS, OPNsense, OpenWrt etc.)\n- Sammle NUR relevante Daten — kein Shotgun-Debugging\n- Gib die Befehle UND deren Output strukturiert zurück\n- Fasse am Ende kurz zusammen was du siehst (Auffälligkeiten)\n- Führe KEINE Änderungen durch — nur lesen/diagnostizieren\n\nOUTPUT-FORMAT (JSON):\n{\"commands_executed\": [{\"command\": \"...\", \"output\": \"...\", \"exit_code\": 0}], \"summary\": \"Kurze Zusammenfassung\", \"platform_detected\": \"debian-12|...\"}`,\n\n  'root-cause-analysis': `Du bist ein erfahrener Incident-Response-Analyst.\nBestimme die URSACHE (nicht nur Symptom) aus den Diagnose-Daten.\n\nREGELN:\n- Unterscheide Symptom und Ursache\n- Nenne Konfidenz (high/medium/low) mit Begründung\n- Sei präzise — keine vagen Vermutungen\n\nOUTPUT-FORMAT (JSON):\n{\"symptom\": \"...\", \"root_cause\": \"...\", \"confidence\": \"high|medium|low\", \"reasoning\": \"...\", \"alternative_causes\": [], \"affected_service\": \"...\", \"category\": \"disk|cpu|memory|service|network|certificate|backup|other\"}`,\n\n  'generate-remediation': `Du bist ein erfahrener System-Administrator.\nErstelle eine Schritt-für-Schritt-Anleitung zur Behebung.\n\nREGELN:\n- Jeder Schritt = ein konkreter Befehl\n- Passe Befehle an die Plattform an\n- Bewerte Risiko jedes Schritts\n- Bei kritischen Systemen: konservativer\n- Maximal 10 Schritte\n\nOUTPUT-FORMAT (JSON):\n{\"steps\": [{\"nr\": 1, \"description\": \"...\", \"command\": \"...\", \"risk\": \"none|low|medium|high\", \"auto_approve\": true, \"rollback\": null, \"expected_result\": \"...\"}], \"overall_risk\": \"low|medium|high\", \"auto_approve_all\": true, \"estimated_duration_seconds\": 60, \"long_term_recommendations\": []}`,\n\n  'execute-remediation': `Du bist ein System-Administrator mit SSH-Zugang.\nFühre die vorgegebenen Schritte EXAKT aus und protokolliere jeden.\n\nREGELN:\n- Schritte in Reihenfolge ausführen\n- Bei Fehler (exit_code != 0): SOFORT stoppen\n- JEDEN Schritt protokollieren\n- NUR vorgegebene Befehle — keine Eigeninitiative\n\nOUTPUT-FORMAT (JSON):\n{\"steps_executed\": [{\"nr\": 1, \"command\": \"...\", \"output\": \"...\", \"exit_code\": 0, \"modified\": false, \"modification_reason\": null}], \"completed\": true, \"stopped_at_step\": null, \"stop_reason\": null}`,\n\n  'evaluate-result': `Du bist ein Incident-Response-Analyst.\nVergleiche Zustand VOR und NACH der Remediation.\n\nREGELN:\n- Relevante Metriken vergleichen\n- Prüfe ob ursprüngliches Problem behoben\n- Prüfe ob neue Probleme entstanden\n- Bewerte: RESOLVED, UNRESOLVED oder DEGRADED\n\nOUTPUT-FORMAT (JSON):\n{\"status\": \"RESOLVED|UNRESOLVED|DEGRADED\", \"comparison\": {\"metric\": \"...\", \"before\": \"...\", \"after\": \"...\", \"target\": \"...\", \"target_met\": true}, \"new_issues\": [], \"explanation\": \"...\", \"next_steps\": null, \"close_ticket\": true}`,\n\n  'generic': `Du bist ein erfahrener System-Administrator und Analyst.\nBeantworte die Anfrage präzise und strukturiert.\nWenn ein bestimmtes Output-Format angegeben ist, halte dich daran.`\n};\n\nfunction buildUserPrompt(phase, data) {\n  switch (phase) {\n    case 'collect-diagnostics':\n      return `AUFGABE: SSH-Diagnose sammeln.\\n\\nHOST:\\n- Hostname: ${data.hostname}\\n- IP: ${data.ip}\\n- Platform: ${data.platform || 'unbekannt'}\\n- SSH-User: ${data.ssh_user}\\n- SSH-Passwort: ${data.ssh_password || 'Key-Auth'}\\n${data.ssh_key_file ? '- SSH-Key: ' + data.ssh_key_file : ''}\\n\\nPROBLEM:\\n- Symptom: ${data.symptom}\\n- Severity: ${data.severity || 'unbekannt'}\\n- Seit: ${data.event_time || 'unbekannt'}\\n${data.trigger_description ? '- Details: ' + data.trigger_description : ''}\\n\\nSammle relevante Diagnose-Daten.`;\n    case 'root-cause-analysis':\n      return `SYMPTOM: ${data.symptom}\\nHOST: ${data.hostname} (${data.platform || 'unbekannt'})\\n\\nDIAGNOSE-DATEN:\\n${JSON.stringify(data.diagnostics, null, 2)}\\n${data.zabbix_history ? '\\nZABBIX-HISTORY:\\n' + JSON.stringify(data.zabbix_history, null, 2) : ''}\\n\\nBestimme die ROOT CAUSE.`;\n    case 'generate-remediation':\n      return `ROOT CAUSE:\\n${JSON.stringify(data.rca, null, 2)}\\n\\nHOST: ${data.hostname} (${data.platform || 'unbekannt'})\\nKritisch: ${data.critical ? 'JA' : 'Nein'}\\nWartungsfenster: ${data.maintenance_window || 'keins'}\\n\\nErstelle Behebungsschritte.`;\n    case 'execute-remediation':\n      return `HOST:\\n- IP: ${data.ip}\\n- SSH-User: ${data.ssh_user}\\n- SSH-Passwort: ${data.ssh_password || 'Key-Auth'}\\n${data.ssh_key_file ? '- SSH-Key: ' + data.ssh_key_file : ''}\\n\\nSCHRITTE:\\n${JSON.stringify(data.steps, null, 2)}\\n\\nAusführen. Bei Fehler: STOPPEN.`;\n    case 'evaluate-result':\n      return `PROBLEM: ${data.symptom} auf ${data.hostname}\\n\\nVORHER:\\n${JSON.stringify(data.before, null, 2)}\\n\\nNACHHER:\\n${JSON.stringify(data.after, null, 2)}\\n\\nDURCHGEFÜHRT:\\n${JSON.stringify(data.steps_executed, null, 2)}\\n\\nBewerte: Gelöst?`;\n    case 'generic':\n      return data.prompt || JSON.stringify(data);\n    default:\n      return JSON.stringify(data);\n  }\n}\n\nconst input = $input.first().json;\nconst phase = input.phase || 'generic';\nconst data = input.data || input;\nconst systemPrompt = SYSTEM_PROMPTS[phase] || SYSTEM_PROMPTS['generic'];\nconst userPrompt = buildUserPrompt(phase, data);\nconst temp = (phase === 'execute-remediation') ? 0.1 : 0.3;\n\nreturn [{ json: {\n  wrapper_url: WRAPPER_URL,\n  payload: {\n    model: input.model || DEFAULT_MODEL,\n    messages: [\n      { role: 'system', content: systemPrompt },\n      { role: 'user', content: userPrompt }\n    ],\n    max_tokens: input.max_tokens || DEFAULT_MAX_TOKENS,\n    temperature: input.temperature || temp,\n    output_format: 'json'\n  }\n}}];"
+        },
+        "id": "build-prompt",
+        "name": "Prompt Builder",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          460,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $json.wrapper_url }}/v1/chat/completions",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.payload) }}",
+          "options": {
+            "timeout": 600000
+          }
+        },
+        "id": "call-wrapper",
+        "name": "Claude Wrapper Call",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          680,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const response = $input.first().json;\nconst phase = $('Prompt Builder').first().json.phase;\n\nlet parsed;\ntry {\n  const content = response.choices[0].message.content;\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  parsed = {\n    raw: response.choices?.[0]?.message?.content || 'No content',\n    parse_error: true,\n    error_message: e.message\n  };\n}\n\nreturn [{ json: {\n  phase: phase,\n  result: parsed,\n  model: response.model,\n  tokens: response.usage,\n  parse_error: parsed.parse_error || false\n}}];"
+        },
+        "id": "parse-response",
+        "name": "Parse Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          900,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Execute Workflow Trigger": {
+        "main": [
+          [
+            {
+              "node": "Prompt Builder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prompt Builder": {
+        "main": [
+          [
+            {
+              "node": "Claude Wrapper Call",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude Wrapper Call": {
+        "main": [
+          [
+            {
+              "node": "Parse Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-02-15T16:38:16.030Z",
+        "id": 37,
+        "workflowId": "7HfU3iVsgx1gk1T3",
+        "versionId": "1f14a31c-434f-41e4-9550-f5367b43f1af",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  },
+  "_n8n_id": "7HfU3iVsgx1gk1T3"
+}

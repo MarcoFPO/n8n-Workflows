@@ -5,18 +5,36 @@
       "parameters": {
         "workflowInputs": {
           "values": [
-            { "name": "title",    "type": "string" },
-            { "name": "body",     "type": "string" },
-            { "name": "queue",    "type": "string" },
-            { "name": "state",    "type": "string" },
-            { "name": "priority", "type": "string" }
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            },
+            {
+              "name": "queue",
+              "type": "string"
+            },
+            {
+              "name": "state",
+              "type": "string"
+            },
+            {
+              "name": "priority",
+              "type": "string"
+            }
           ]
         }
       },
       "name": "📥 Input from Master",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -25,7 +43,10 @@
       "name": "🔧 Build Ticket Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [420, 300]
+      "position": [
+        420,
+        300
+      ]
     },
     {
       "parameters": {
@@ -33,7 +54,12 @@
         "url": "https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
         },
         "sendBody": true,
         "specifyBody": "json",
@@ -46,7 +72,10 @@
       "name": "🎫 Znuny API: Ticket erstellen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 300],
+      "position": [
+        640,
+        300
+      ],
       "continueOnFail": true
     },
     {
@@ -56,17 +85,51 @@
       "name": "🔧 Parse Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [860, 300]
+      "position": [
+        860,
+        300
+      ]
     }
   ],
   "connections": {
-    "📥 Input from Master":      { "main": [[{ "node": "🔧 Build Ticket Payload",      "type": "main", "index": 0 }]] },
-    "🔧 Build Ticket Payload":   { "main": [[{ "node": "🎫 Znuny API: Ticket erstellen","type": "main", "index": 0 }]] },
-    "🎫 Znuny API: Ticket erstellen": { "main": [[{ "node": "🔧 Parse Result",          "type": "main", "index": 0 }]] }
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Ticket Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Ticket Payload": {
+      "main": [
+        [
+          {
+            "node": "🎫 Znuny API: Ticket erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎫 Znuny API: Ticket erstellen": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "pinData": {}
+  "pinData": {},
+  "_n8n_id": "NMxFaLwPpq39MSCF"
 }
