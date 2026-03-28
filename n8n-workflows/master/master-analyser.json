@@ -15,23 +15,49 @@
       "name": "⏰ Schedule: Daily 01:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [200, 200]
+      "position": [
+        200,
+        200
+      ]
     },
     {
       "parameters": {},
       "name": "▶️ Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [200, 400]
+      "position": [
+        200,
+        400
+      ]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
-            { "id": "log_lines", "name": "log_lines", "value": 100, "type": "number" },
-            { "id": "notification_channels", "name": "notification_channels", "value": "[\"matrix\"]", "type": "string" },
-            { "id": "run_id", "name": "run_id", "value": "={{ 'analyse_' + $now.toFormat('yyyyMMdd_HHmmss') }}", "type": "string" },
-            { "id": "critical_alert_threshold", "name": "critical_alert_threshold", "value": 1, "type": "number" }
+            {
+              "id": "log_lines",
+              "name": "log_lines",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "notification_channels",
+              "name": "notification_channels",
+              "value": "[\"matrix\"]",
+              "type": "string"
+            },
+            {
+              "id": "run_id",
+              "name": "run_id",
+              "value": "={{ 'analyse_' + $now.toFormat('yyyyMMdd_HHmmss') }}",
+              "type": "string"
+            },
+            {
+              "id": "critical_alert_threshold",
+              "name": "critical_alert_threshold",
+              "value": 1,
+              "type": "number"
+            }
           ]
         },
         "options": {}
@@ -39,12 +65,19 @@
       "name": "📋 Set Analyse Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
-      "position": [400, 300]
+      "position": [
+        400,
+        300
+      ]
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: NetBox Infrastructure Loader" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sp6DiNXwi5pfRjA7"
+        },
         "workflowInputs": {
           "value": {
             "filter_by_type": "",
@@ -52,9 +85,33 @@
             "hostname": ""
           },
           "schema": [
-            { "id": "filter_by_type", "displayName": "filter_by_type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "filter_by_ids", "displayName": "filter_by_ids", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "hostname", "displayName": "hostname", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "filter_by_type",
+              "displayName": "filter_by_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "filter_by_ids",
+              "displayName": "filter_by_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hostname",
+              "displayName": "hostname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -62,7 +119,10 @@
       "name": "🔗 SUB: NetBox Loader",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [600, 300],
+      "position": [
+        600,
+        300
+      ],
       "notes": "Lädt alle Systeme aus NetBox. Gibt jeden System-Eintrag als einzelnes Item zurück."
     },
     {
@@ -73,7 +133,10 @@
       "name": "🔄 Loop Over Systems",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [800, 300]
+      "position": [
+        800,
+        300
+      ]
     },
     {
       "parameters": {
@@ -81,12 +144,17 @@
           "values": [
             {
               "conditions": {
-                "options": { "caseSensitive": false },
+                "options": {
+                  "caseSensitive": false
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json.type }}",
                     "rightValue": "vm",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ]
               },
@@ -95,12 +163,17 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": false },
+                "options": {
+                  "caseSensitive": false
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json.type }}",
                     "rightValue": "lxc",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ]
               },
@@ -109,12 +182,17 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": false },
+                "options": {
+                  "caseSensitive": false
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json.type }}",
                     "rightValue": "device",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ]
               },
@@ -123,18 +201,27 @@
             }
           ]
         },
-        "options": { "fallbackOutput": "extra" }
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "name": "🔀 Route by Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [1000, 300],
+      "position": [
+        1000,
+        300
+      ],
       "notes": "Routet nach Systemtyp. Alle Typen gehen in die gleichen Sub-Workflows, aber Claude generiert unterschiedliche Prompts basierend auf dem type-Feld."
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: System Log Analyser" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "6Ffe7nex0vMk9Aj5"
+        },
         "workflowInputs": {
           "value": {
             "id": "={{ $json.id }}",
@@ -146,13 +233,69 @@
             "lines": "={{ $('📋 Set Analyse Config').first().json.log_lines }}"
           },
           "schema": [
-            { "id": "id", "displayName": "id", "required": true, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "name", "displayName": "name", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ip", "displayName": "ip", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "type", "displayName": "type", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_user", "displayName": "ssh_user", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_password", "displayName": "ssh_password", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "lines", "displayName": "lines", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true }
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ip",
+              "displayName": "ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_user",
+              "displayName": "ssh_user",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_password",
+              "displayName": "ssh_password",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lines",
+              "displayName": "lines",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -160,13 +303,20 @@
       "name": "📋 SUB: Log Analyser (VM)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1200, 100],
+      "position": [
+        1200,
+        100
+      ],
       "notes": "Analysiert System-Logs via Claude. Für VMs direkt per SSH, für LXCs via pct exec."
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: System Log Analyser" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "6Ffe7nex0vMk9Aj5"
+        },
         "workflowInputs": {
           "value": {
             "id": "={{ $json.id }}",
@@ -178,13 +328,69 @@
             "lines": "={{ $('📋 Set Analyse Config').first().json.log_lines }}"
           },
           "schema": [
-            { "id": "id", "displayName": "id", "required": true, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "name", "displayName": "name", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ip", "displayName": "ip", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "type", "displayName": "type", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_user", "displayName": "ssh_user", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_password", "displayName": "ssh_password", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "lines", "displayName": "lines", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true }
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ip",
+              "displayName": "ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_user",
+              "displayName": "ssh_user",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_password",
+              "displayName": "ssh_password",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lines",
+              "displayName": "lines",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -192,13 +398,20 @@
       "name": "📋 SUB: Log Analyser (LXC)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1200, 300],
+      "position": [
+        1200,
+        300
+      ],
       "notes": "Gleicher Sub-Workflow wie VM – Claude erkennt anhand des type-Felds, dass pct exec verwendet werden soll."
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: System Log Analyser" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "6Ffe7nex0vMk9Aj5"
+        },
         "workflowInputs": {
           "value": {
             "id": "={{ $json.id }}",
@@ -210,13 +423,69 @@
             "lines": "={{ $('📋 Set Analyse Config').first().json.log_lines }}"
           },
           "schema": [
-            { "id": "id", "displayName": "id", "required": true, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "name", "displayName": "name", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ip", "displayName": "ip", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "type", "displayName": "type", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_user", "displayName": "ssh_user", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_password", "displayName": "ssh_password", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "lines", "displayName": "lines", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true }
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ip",
+              "displayName": "ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_user",
+              "displayName": "ssh_user",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_password",
+              "displayName": "ssh_password",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lines",
+              "displayName": "lines",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -224,13 +493,20 @@
       "name": "📋 SUB: Log Analyser (Device)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1200, 500],
+      "position": [
+        1200,
+        500
+      ],
       "notes": "Devices (physische Switches/Router) werden direkt per SSH analysiert."
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: System Health Check" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NM8Xd6QzlnAc6oy3"
+        },
         "workflowInputs": {
           "value": {
             "id": "={{ $json.id }}",
@@ -241,12 +517,60 @@
             "ssh_password": "={{ $json.ssh_password || '' }}"
           },
           "schema": [
-            { "id": "id", "displayName": "id", "required": true, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "name", "displayName": "name", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ip", "displayName": "ip", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "type", "displayName": "type", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_user", "displayName": "ssh_user", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ssh_password", "displayName": "ssh_password", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ip",
+              "displayName": "ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_user",
+              "displayName": "ssh_user",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ssh_password",
+              "displayName": "ssh_password",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -254,7 +578,10 @@
       "name": "🏥 SUB: Health Check",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1400, 300],
+      "position": [
+        1400,
+        300
+      ],
       "notes": "Prüft Disk/Memory/CPU/Services. Output: health_status (ok/warning/critical), Metriken."
     },
     {
@@ -264,19 +591,27 @@
       "name": "🔧 Collect Issues",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1600, 300],
+      "position": [
+        1600,
+        300
+      ],
       "notes": "Kombiniert Health-Check und Log-Analyse Ergebnisse pro System"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true },
+          "options": {
+            "caseSensitive": true
+          },
           "conditions": [
             {
               "id": "critical-check",
               "leftValue": "={{ $json.has_critical }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true" }
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
             }
           ],
           "combinator": "and"
@@ -286,12 +621,19 @@
       "name": "✅ Check: Critical Issues?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1800, 300]
+      "position": [
+        1800,
+        300
+      ]
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: Notification Dispatcher" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TmyAkITcb41Ti3Ev"
+        },
         "workflowInputs": {
           "value": {
             "title": "=🚨 CRITICAL: {{ $json.name }}",
@@ -300,10 +642,42 @@
             "channels": "[\"matrix\"]"
           },
           "schema": [
-            { "id": "title", "displayName": "title", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "message", "displayName": "message", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "severity", "displayName": "severity", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "channels", "displayName": "channels", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channels",
+              "displayName": "channels",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -311,7 +685,10 @@
       "name": "🚨 SUB: Notification (Critical)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [2000, 100],
+      "position": [
+        2000,
+        100
+      ],
       "notes": "Sofortige Critical-Benachrichtigung – wird NICHT auf den Tages-Report gewartet"
     },
     {
@@ -321,12 +698,19 @@
       "name": "🔧 Aggregate Daily Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 400]
+      "position": [
+        2000,
+        400
+      ]
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: Report Generator" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NwfqZNDoN8zjEMaf"
+        },
         "workflowInputs": {
           "value": {
             "report_type": "analyse",
@@ -335,10 +719,42 @@
             "format": "markdown"
           },
           "schema": [
-            { "id": "report_type", "displayName": "report_type", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "title", "displayName": "title", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "data", "displayName": "data", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "format", "displayName": "format", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "report_type",
+              "displayName": "report_type",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "format",
+              "displayName": "format",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -346,13 +762,20 @@
       "name": "📊 SUB: Report Generator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [2200, 400],
+      "position": [
+        2200,
+        400
+      ],
       "notes": "Erstellt täglichen Analyse-Report mit Health-Overview und Issue-Details"
     },
     {
       "parameters": {
         "source": "database",
-        "workflowId": { "__rl": true, "mode": "name", "value": "SUB: Notification Dispatcher" },
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TmyAkITcb41Ti3Ev"
+        },
         "workflowInputs": {
           "value": {
             "title": "=📊 Tages-Report {{ $('🔧 Aggregate Daily Data').first().json.summary.date }}",
@@ -361,10 +784,42 @@
             "channels": "[\"matrix\"]"
           },
           "schema": [
-            { "id": "title", "displayName": "title", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "message", "displayName": "message", "required": true, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "severity", "displayName": "severity", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "channels", "displayName": "channels", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channels",
+              "displayName": "channels",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ]
         },
         "options": {}
@@ -372,88 +827,205 @@
       "name": "🔔 SUB: Notification (Daily)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [2400, 400],
+      "position": [
+        2400,
+        400
+      ],
       "notes": "Sendet tägliche Zusammenfassung via Matrix"
     }
   ],
   "connections": {
     "⏰ Schedule: Daily 01:00": {
       "main": [
-        [{ "node": "📋 Set Analyse Config", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📋 Set Analyse Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "▶️ Manual Trigger": {
       "main": [
-        [{ "node": "📋 Set Analyse Config", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📋 Set Analyse Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📋 Set Analyse Config": {
       "main": [
-        [{ "node": "🔗 SUB: NetBox Loader", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔗 SUB: NetBox Loader",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔗 SUB: NetBox Loader": {
       "main": [
-        [{ "node": "🔄 Loop Over Systems", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔄 Loop Over Systems",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔄 Loop Over Systems": {
       "main": [
-        [{ "node": "🔀 Route by Type", "type": "main", "index": 0 }],
-        [{ "node": "🔧 Aggregate Daily Data", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔀 Route by Type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Aggregate Daily Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔀 Route by Type": {
       "main": [
-        [{ "node": "📋 SUB: Log Analyser (VM)", "type": "main", "index": 0 }],
-        [{ "node": "📋 SUB: Log Analyser (LXC)", "type": "main", "index": 0 }],
-        [{ "node": "📋 SUB: Log Analyser (Device)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📋 SUB: Log Analyser (VM)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📋 SUB: Log Analyser (LXC)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📋 SUB: Log Analyser (Device)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📋 SUB: Log Analyser (VM)": {
       "main": [
-        [{ "node": "🏥 SUB: Health Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🏥 SUB: Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📋 SUB: Log Analyser (LXC)": {
       "main": [
-        [{ "node": "🏥 SUB: Health Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🏥 SUB: Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📋 SUB: Log Analyser (Device)": {
       "main": [
-        [{ "node": "🏥 SUB: Health Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🏥 SUB: Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🏥 SUB: Health Check": {
       "main": [
-        [{ "node": "🔧 Collect Issues", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔧 Collect Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Collect Issues": {
       "main": [
-        [{ "node": "✅ Check: Critical Issues?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "✅ Check: Critical Issues?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "✅ Check: Critical Issues?": {
       "main": [
-        [{ "node": "🚨 SUB: Notification (Critical)", "type": "main", "index": 0 }],
-        [{ "node": "🔄 Loop Over Systems", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🚨 SUB: Notification (Critical)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔄 Loop Over Systems",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🚨 SUB: Notification (Critical)": {
       "main": [
-        [{ "node": "🔄 Loop Over Systems", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔄 Loop Over Systems",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "🔧 Aggregate Daily Data": {
       "main": [
-        [{ "node": "📊 SUB: Report Generator", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "📊 SUB: Report Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "📊 SUB: Report Generator": {
       "main": [
-        [{ "node": "🔔 SUB: Notification (Daily)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "🔔 SUB: Notification (Daily)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
