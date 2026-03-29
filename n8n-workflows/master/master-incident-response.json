@@ -2129,11 +2129,11 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "={{ $('🔧 Build Störung Doc').first().json.stoerung_title }}",
-            "content_markdown": "={{ $('🔧 Build Störung Doc').first().json.stoerung_content }}",
-            "component": "={{ $('🔧 Build Störung Doc').first().json.stoerung_component }}",
-            "affected_system": "={{ $('🔧 Build Störung Doc').first().json.stoerung_system }}",
-            "tags": "={{ $('🔧 Build Störung Doc').first().json.stoerung_tags }}"
+            "title": "={{ $json.stoerung_title }}",
+            "content_markdown": "={{ $json.stoerung_content }}",
+            "component": "={{ $json.stoerung_component }}",
+            "affected_system": "={{ $json.stoerung_system }}",
+            "tags": "={{ $json.stoerung_tags }}"
           },
           "schema": [
             {
@@ -2286,11 +2286,11 @@
         },
         "workflowInputs": {
           "value": {
-            "title": "={{ $('🔧 Build Störung Doc 2').first().json.stoerung_title }}",
-            "content_markdown": "={{ $('🔧 Build Störung Doc 2').first().json.stoerung_content }}",
-            "component": "={{ $('🔧 Build Störung Doc 2').first().json.stoerung_component }}",
-            "affected_system": "={{ $('🔧 Build Störung Doc 2').first().json.stoerung_system }}",
-            "tags": "={{ $('🔧 Build Störung Doc 2').first().json.stoerung_tags }}"
+            "title": "={{ $json.stoerung_title }}",
+            "content_markdown": "={{ $json.stoerung_content }}",
+            "component": "={{ $json.stoerung_component }}",
+            "affected_system": "={{ $json.stoerung_system }}",
+            "tags": "={{ $json.stoerung_tags }}"
           },
           "schema": [
             {
