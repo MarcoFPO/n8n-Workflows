@@ -2108,7 +2108,7 @@
         100
       ],
       "parameters": {
-        "jsCode": "// Vorbereitung der Störungsdokumentation für BookStack \"Störungsbearbeitung\"\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca = $('🔧 Parse RCA Result').first().json.rca;\n\nlet verify = {};\ntry { verify = $('🔧 Parse Verify Result').first().json.verify || {}; } catch(e) {}\n\nlet guide = {};\ntry { guide = $('🔧 Parse Guide Result').first().json.guide || {}; } catch(e) {}\n\nconst today = new Date().toISOString().split('T')[0];\nconst component = rca?.affected_component || ctx.wer || 'Unbekannt';\nconst errorSnippet = (rca?.rca_text || ctx.was || 'Unbekannte Störung').substring(0, 80);\n\nconst title = `[${today}] ${component} – ${errorSnippet}`;\n\n// Lösungsschritte aus Guide extrahieren\nconst stepsText = (guide.guide_steps || [])\n  .map(s => `${s.step_nr}. ${s.description}\\n   \\`\\`\\`\\n   ${(s.commands || []).join('\\n   ')}\\n   \\`\\`\\``)\n  .join('\\n\\n') || rca?.suggested_approach || 'Keine Schritte dokumentiert';\n\nconst content = `# ${title}\n\n## Fehlerbeschreibung\n\n**System:** ${ctx.wer}\n**IP:** ${ctx.system_ip || 'unbekannt'}\n**Typ:** ${ctx.system_type || 'unbekannt'}\n**Zeitpunkt:** ${ctx.wan}\n**Ticket-ID:** ${ctx.ticket_id}\n**Betroffene Komponente:** ${component}\n\n### Fehlerbild\n${ctx.was}\n\n### Root Cause Analysis\n${rca?.rca_text || 'n/a'}\n\n**Confidence:** ${rca?.confidence_pct || 0}%\n\n## Lösung / Behebungsschritte\n\n${stepsText}\n\n## Verifikation\n\n${verify?.soll_ist_comparison || 'n/a'}\n\n**Status:** ${verify?.resolved ? '✅ Erfolgreich behoben' : '⚠️ Status unklar'}\n\n---\n*Automatisch dokumentiert durch n8n Incident Response Workflow – Versuch 1*`;\n\nreturn [{\n  json: {\n    stoerung_title: title,\n    stoerung_content: content,\n    stoerung_component: component,\n    stoerung_system: ctx.wer,\n    stoerung_tags: JSON.stringify([\n      'incident', 'automatisch', 'versuch-1',\n      component.toLowerCase().replace(/[^a-z0-9äöüß]/gi, '-').substring(0, 30)\n    ])\n  }\n}];"
+        "jsCode": "// Vorbereitung der Störungsdokumentation für BookStack \"Störungsbearbeitung\"\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca = $('🔧 Parse RCA Result').first().json.rca;\n\nlet verify = {};\ntry { verify = $('🔧 Parse Verify Result').first().json.verify || {}; } catch(e) {}\n\nlet guide = {};\ntry { guide = $('🔧 Parse Guide Result').first().json.guide || {}; } catch(e) {}\n\nconst today = new Date().toISOString().split('T')[0];\nconst component = rca?.affected_component || ctx.wer || 'Unbekannt';\nconst errorSnippet = (rca?.rca_text || ctx.was || 'Unbekannte Störung').substring(0, 80);\n\nconst title = `[${today}] ${component} – ${errorSnippet}`;\n\n// Lösungsschritte aus Guide extrahieren\nconst stepsText = (guide.guide_steps || [])\n  .map(s => `${s.step_nr}. ${s.description}\\n   \\`\\`\\`\\n   ${(s.commands || []).join('\\n   ')}\\n   \\`\\`\\``)\n  .join('\\n\\n') || rca?.suggested_approach || 'Keine Schritte dokumentiert';\n\nconst content = `# ${title}\n\n## Fehlerbeschreibung\n\n**System:** ${ctx.wer}\n**IP:** ${ctx.system_ip || 'unbekannt'}\n**Typ:** ${ctx.system_type || 'unbekannt'}\n**Zeitpunkt:** ${ctx.wan}\n**Ticket-ID:** ${ctx.ticket_id}\n**Betroffene Komponente:** ${component}\n\n### Fehlerbild\n${ctx.was}\n\n### Root Cause Analysis\n${rca?.rca_text || 'n/a'}\n\n**Confidence:** ${rca?.confidence_pct || 0}%\n\n## Lösung / Behebungsschritte\n\n${stepsText}\n\n## Verifikation\n\n${verify?.soll_ist_comparison || 'n/a'}\n\n**Status:** ${verify?.resolved ? '✅ Erfolgreich behoben' : '⚠️ Status unklar'}\n\n---\n*Automatisch dokumentiert durch n8n Incident Response Workflow – Versuch 1*`;\n\nreturn [{\n  json: {\n    title: title,\n    content_markdown: content,\n    component: component,\n    affected_system: ctx.wer,\n    tags: JSON.stringify([\n      'incident', 'automatisch', 'versuch-1',\n      component.toLowerCase().replace(/[^a-z0-9äöüß]/gi, '-').substring(0, 30)\n    ])\n  }\n}];"
       }
     },
     {
@@ -2128,13 +2128,7 @@
           "value": "VznEDCWHa9HgbyGh"
         },
         "workflowInputs": {
-          "value": {
-            "title": "={{ $json.stoerung_title }}",
-            "content_markdown": "={{ $json.stoerung_content }}",
-            "component": "={{ $json.stoerung_component }}",
-            "affected_system": "={{ $json.stoerung_system }}",
-            "tags": "={{ $json.stoerung_tags }}"
-          },
+          "value": {},
           "schema": [
             {
               "id": "title",
@@ -2265,7 +2259,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Störungsdokumentation für BookStack – Versuch 2\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca2 = $('🔧 Parse RCA Result 2').first().json.rca2;\n\nlet verify2 = {};\ntry { verify2 = $('🔧 Parse Verify Result 2').first().json.verify2 || {}; } catch(e) {}\n\nlet guide2 = {};\ntry { guide2 = $('🔧 Parse Guide Result 2').first().json.guide2 || {}; } catch(e) {}\n\nconst today = new Date().toISOString().split('T')[0];\nconst component = rca2?.affected_component || ctx.wer || 'Unbekannt';\nconst errorSnippet = (rca2?.rca_text || ctx.was || 'Unbekannte Störung').substring(0, 80);\n\nconst title = `[${today}] ${component} – ${errorSnippet} (V2)`;\n\nconst stepsText = (guide2.guide_steps || [])\n  .map(s => `${s.step_nr}. ${s.description}\\n   \\`\\`\\`\\n   ${(s.commands || []).join('\\n   ')}\\n   \\`\\`\\``)\n  .join('\\n\\n') || rca2?.suggested_approach || 'Keine Schritte dokumentiert';\n\nconst content = `# ${title}\n\n## Fehlerbeschreibung\n\n**System:** ${ctx.wer}\n**IP:** ${ctx.system_ip || 'unbekannt'}\n**Zeitpunkt:** ${ctx.wan}\n**Ticket-ID:** ${ctx.ticket_id}\n**Betroffene Komponente:** ${component}\n\n### Fehlerbild\n${ctx.was}\n\n### Root Cause Analysis (Versuch 2)\n${rca2?.rca_text || 'n/a'}\n\n**Confidence:** ${rca2?.confidence_pct || 0}%\n\n## Lösung / Behebungsschritte\n\n${stepsText}\n\n## Verifikation\n\n${verify2?.soll_ist_comparison || 'n/a'}\n\n**Status:** ${verify2?.resolved ? '✅ Erfolgreich behoben' : '⚠️ Status unklar'}\n\n> Hinweis: Versuch 1 war nicht erfolgreich. Diese Dokumentation beschreibt den erfolgreichen zweiten Lösungsweg.\n\n---\n*Automatisch dokumentiert durch n8n Incident Response Workflow – Versuch 2*`;\n\nreturn [{\n  json: {\n    stoerung_title: title,\n    stoerung_content: content,\n    stoerung_component: component,\n    stoerung_system: ctx.wer,\n    stoerung_tags: JSON.stringify([\n      'incident', 'automatisch', 'versuch-2',\n      component.toLowerCase().replace(/[^a-z0-9äöüß]/gi, '-').substring(0, 30)\n    ])\n  }\n}];"
+        "jsCode": "// Störungsdokumentation für BookStack – Versuch 2\nconst ctx = $('🔧 Initialize Context').first().json;\nconst rca2 = $('🔧 Parse RCA Result 2').first().json.rca2;\n\nlet verify2 = {};\ntry { verify2 = $('🔧 Parse Verify Result 2').first().json.verify2 || {}; } catch(e) {}\n\nlet guide2 = {};\ntry { guide2 = $('🔧 Parse Guide Result 2').first().json.guide2 || {}; } catch(e) {}\n\nconst today = new Date().toISOString().split('T')[0];\nconst component = rca2?.affected_component || ctx.wer || 'Unbekannt';\nconst errorSnippet = (rca2?.rca_text || ctx.was || 'Unbekannte Störung').substring(0, 80);\n\nconst title = `[${today}] ${component} – ${errorSnippet} (V2)`;\n\nconst stepsText = (guide2.guide_steps || [])\n  .map(s => `${s.step_nr}. ${s.description}\\n   \\`\\`\\`\\n   ${(s.commands || []).join('\\n   ')}\\n   \\`\\`\\``)\n  .join('\\n\\n') || rca2?.suggested_approach || 'Keine Schritte dokumentiert';\n\nconst content = `# ${title}\n\n## Fehlerbeschreibung\n\n**System:** ${ctx.wer}\n**IP:** ${ctx.system_ip || 'unbekannt'}\n**Zeitpunkt:** ${ctx.wan}\n**Ticket-ID:** ${ctx.ticket_id}\n**Betroffene Komponente:** ${component}\n\n### Fehlerbild\n${ctx.was}\n\n### Root Cause Analysis (Versuch 2)\n${rca2?.rca_text || 'n/a'}\n\n**Confidence:** ${rca2?.confidence_pct || 0}%\n\n## Lösung / Behebungsschritte\n\n${stepsText}\n\n## Verifikation\n\n${verify2?.soll_ist_comparison || 'n/a'}\n\n**Status:** ${verify2?.resolved ? '✅ Erfolgreich behoben' : '⚠️ Status unklar'}\n\n> Hinweis: Versuch 1 war nicht erfolgreich. Diese Dokumentation beschreibt den erfolgreichen zweiten Lösungsweg.\n\n---\n*Automatisch dokumentiert durch n8n Incident Response Workflow – Versuch 2*`;\n\nreturn [{\n  json: {\n    title: title,\n    content_markdown: content,\n    component: component,\n    affected_system: ctx.wer,\n    tags: JSON.stringify([\n      'incident', 'automatisch', 'versuch-2',\n      component.toLowerCase().replace(/[^a-z0-9äöüß]/gi, '-').substring(0, 30)\n    ])\n  }\n}];"
       }
     },
     {
@@ -2285,13 +2279,7 @@
           "value": "VznEDCWHa9HgbyGh"
         },
         "workflowInputs": {
-          "value": {
-            "title": "={{ $json.stoerung_title }}",
-            "content_markdown": "={{ $json.stoerung_content }}",
-            "component": "={{ $json.stoerung_component }}",
-            "affected_system": "={{ $json.stoerung_system }}",
-            "tags": "={{ $json.stoerung_tags }}"
-          },
+          "value": {},
           "schema": [
             {
               "id": "title",
