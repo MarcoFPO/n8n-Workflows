@@ -1,0 +1,451 @@
+{
+  "updatedAt": "2026-03-29T09:27:25.058Z",
+  "createdAt": "2026-03-15T15:29:19.962Z",
+  "id": "l4ee6BahShsiEXjI",
+  "name": "SUB: Claude AI Executor",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "prompt",
+              "type": "string"
+            },
+            {
+              "name": "system_prompt",
+              "type": "string"
+            },
+            {
+              "name": "context",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ],
+      "id": "5cfa8436-51ec-49fe-9f35-fc8dd1501959"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build OpenAI-compatible request for Claude Code API\nconst input = $input.first().json;\n\nconst prompt = input.prompt || '';\nconst system_prompt = input.system_prompt || 'You are a helpful Linux system administrator assistant. Respond concisely and technically.';\nconst context = input.context || '';\n\nif (!prompt) throw new Error('prompt is required');\n\nconst session_id = `claude_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;\n\n// Build user message (include context if provided)\nconst userContent = context ? `Context:\\n${context}\\n\\nTask:\\n${prompt}` : prompt;\n\nconst requestBody = {\n  model: 'default',\n  messages: [\n    {\n      role: 'system',\n      content: system_prompt\n    },\n    {\n      role: 'user',\n      content: userContent\n    }\n  ],\n  max_tokens: 4096,\n  temperature: 0.3\n};\n\nreturn [{\n  json: {\n    request_body: requestBody,\n    session_id,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "name": "🔧 Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "id": "d274e750-a20e-45d6-a35c-a3baa471f091"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer dummy-key"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+        "options": {
+          "timeout": 600000,
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "name": "🤖 Claude API: Send Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        300
+      ],
+      "continueOnFail": true,
+      "id": "b0340e39-8db2-4854-9bb8-89916d1ea4fb"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract response from Claude API\nconst apiResponse = $input.first().json;\nconst buildData = $('🔧 Build Request').first().json;\n\nconst execution_time_ms = Date.now() - buildData.start_time;\nconst session_id = buildData.session_id;\n\nlet response_text = '';\nlet model = 'default';\nlet tokens_used = 0;\nlet error = null;\n\nif (apiResponse.error) {\n  error = apiResponse.error.message || String(apiResponse.error);\n  response_text = `ERROR: ${error}`;\n} else if (apiResponse.choices && apiResponse.choices.length > 0) {\n  response_text = apiResponse.choices[0].message?.content || '';\n  model = apiResponse.model || 'default';\n  tokens_used = apiResponse.usage?.total_tokens || 0;\n} else if (typeof apiResponse === 'string') {\n  response_text = apiResponse;\n} else {\n  error = 'Unexpected API response format';\n  response_text = JSON.stringify(apiResponse);\n}\n\nreturn [{\n  json: {\n    response_text,\n    model,\n    tokens_used,\n    session_id,\n    execution_time_ms,\n    error\n  }\n}];"
+      },
+      "name": "🔧 Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ],
+      "id": "3450c55d-abfe-4eb8-8654-8ee935efc8c3"
+    },
+    {
+      "id": "skip-check-if-001",
+      "name": "✅ Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "skip-cond-1",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "skip-response-code-001",
+      "name": "🔧 Skip Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        180
+      ],
+      "parameters": {
+        "jsCode": "// _skip=true: kein Gerät dieser Klasse → leere Analyse zurückgeben\nconst inp = $input.first().json;\nreturn [{ json: {\n  session_id: 'skip_' + Date.now(),\n  response_text: JSON.stringify({\n    hostname: inp.system_name || '__skip__',\n    ip: inp.system_ip || null,\n    ssh_success: false,\n    has_findings: false,\n    findings: [],\n    error: 'skip_no_devices'\n  }),\n  model: 'skip',\n  tokens_used: 0,\n  execution_time_ms: 0,\n  error: null\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "✅ Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Request": {
+      "main": [
+        [
+          {
+            "node": "🤖 Claude API: Send Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Claude API: Send Prompt": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Skip?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Skip Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "976285ab-a525-4e93-90eb-209945925731",
+  "activeVersionId": "976285ab-a525-4e93-90eb-209945925731",
+  "versionCounter": 29,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-15T15:29:19.964Z",
+      "createdAt": "2026-03-15T15:29:19.964Z",
+      "role": "workflow:owner",
+      "workflowId": "l4ee6BahShsiEXjI",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-29T09:27:25.060Z",
+    "createdAt": "2026-03-29T09:27:25.060Z",
+    "versionId": "976285ab-a525-4e93-90eb-209945925731",
+    "workflowId": "l4ee6BahShsiEXjI",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "prompt",
+                "type": "string"
+              },
+              {
+                "name": "system_prompt",
+                "type": "string"
+              },
+              {
+                "name": "context",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "name": "📥 Input from Master",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "5cfa8436-51ec-49fe-9f35-fc8dd1501959"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Build OpenAI-compatible request for Claude Code API\nconst input = $input.first().json;\n\nconst prompt = input.prompt || '';\nconst system_prompt = input.system_prompt || 'You are a helpful Linux system administrator assistant. Respond concisely and technically.';\nconst context = input.context || '';\n\nif (!prompt) throw new Error('prompt is required');\n\nconst session_id = `claude_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;\n\n// Build user message (include context if provided)\nconst userContent = context ? `Context:\\n${context}\\n\\nTask:\\n${prompt}` : prompt;\n\nconst requestBody = {\n  model: 'default',\n  messages: [\n    {\n      role: 'system',\n      content: system_prompt\n    },\n    {\n      role: 'user',\n      content: userContent\n    }\n  ],\n  max_tokens: 4096,\n  temperature: 0.3\n};\n\nreturn [{\n  json: {\n    request_body: requestBody,\n    session_id,\n    start_time: Date.now()\n  }\n}];"
+        },
+        "name": "🔧 Build Request",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          400,
+          300
+        ],
+        "id": "d274e750-a20e-45d6-a35c-a3baa471f091"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://10.1.1.105:3001/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer dummy-key"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+          "options": {
+            "timeout": 600000,
+            "response": {
+              "response": {
+                "fullResponse": false
+              }
+            }
+          }
+        },
+        "name": "🤖 Claude API: Send Prompt",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          300
+        ],
+        "continueOnFail": true,
+        "id": "b0340e39-8db2-4854-9bb8-89916d1ea4fb"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Extract response from Claude API\nconst apiResponse = $input.first().json;\nconst buildData = $('🔧 Build Request').first().json;\n\nconst execution_time_ms = Date.now() - buildData.start_time;\nconst session_id = buildData.session_id;\n\nlet response_text = '';\nlet model = 'default';\nlet tokens_used = 0;\nlet error = null;\n\nif (apiResponse.error) {\n  error = apiResponse.error.message || String(apiResponse.error);\n  response_text = `ERROR: ${error}`;\n} else if (apiResponse.choices && apiResponse.choices.length > 0) {\n  response_text = apiResponse.choices[0].message?.content || '';\n  model = apiResponse.model || 'default';\n  tokens_used = apiResponse.usage?.total_tokens || 0;\n} else if (typeof apiResponse === 'string') {\n  response_text = apiResponse;\n} else {\n  error = 'Unexpected API response format';\n  response_text = JSON.stringify(apiResponse);\n}\n\nreturn [{\n  json: {\n    response_text,\n    model,\n    tokens_used,\n    session_id,\n    execution_time_ms,\n    error\n  }\n}];"
+        },
+        "name": "🔧 Parse Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          300
+        ],
+        "id": "3450c55d-abfe-4eb8-8654-8ee935efc8c3"
+      },
+      {
+        "id": "skip-check-if-001",
+        "name": "✅ Skip?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          460,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "skip-cond-1",
+                "leftValue": "={{ $json._skip }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "skip-response-code-001",
+        "name": "🔧 Skip Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          680,
+          180
+        ],
+        "parameters": {
+          "jsCode": "// _skip=true: kein Gerät dieser Klasse → leere Analyse zurückgeben\nconst inp = $input.first().json;\nreturn [{ json: {\n  session_id: 'skip_' + Date.now(),\n  response_text: JSON.stringify({\n    hostname: inp.system_name || '__skip__',\n    ip: inp.system_ip || null,\n    ssh_success: false,\n    has_findings: false,\n    findings: [],\n    error: 'skip_no_devices'\n  }),\n  model: 'skip',\n  tokens_used: 0,\n  execution_time_ms: 0,\n  error: null\n} }];"
+        }
+      }
+    ],
+    "connections": {
+      "📥 Input from Master": {
+        "main": [
+          [
+            {
+              "node": "✅ Skip?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Build Request": {
+        "main": [
+          [
+            {
+              "node": "🤖 Claude API: Send Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 Claude API: Send Prompt": {
+        "main": [
+          [
+            {
+              "node": "🔧 Parse Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ Skip?": {
+        "main": [
+          [
+            {
+              "node": "🔧 Skip Response",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔧 Build Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-29T09:27:25.116Z",
+        "id": 278,
+        "workflowId": "l4ee6BahShsiEXjI",
+        "versionId": "976285ab-a525-4e93-90eb-209945925731",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      },
+      {
+        "createdAt": "2026-03-29T09:27:25.101Z",
+        "id": 277,
+        "workflowId": "l4ee6BahShsiEXjI",
+        "versionId": "976285ab-a525-4e93-90eb-209945925731",
+        "event": "deactivated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  }
+}
