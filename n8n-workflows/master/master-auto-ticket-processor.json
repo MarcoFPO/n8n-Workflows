@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-31T15:02:30.504Z",
+  "updatedAt": "2026-03-31T17:17:27.067Z",
   "createdAt": "2026-03-30T18:30:54.857Z",
   "id": "U9IJAwuzasHVscgY",
   "name": "MASTER: Auto-Ticket-Processor",
@@ -13,7 +13,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "*/30 * * * *"
+              "expression": "*/5 * * * *"
             }
           ]
         }
@@ -54,7 +54,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket?{{ $json.query_string }}",
+        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch?{{ $json.query_string }}",
         "options": {
           "allowUnauthorizedCerts": true,
           "timeout": 15000
@@ -351,9 +351,9 @@
   },
   "meta": null,
   "pinData": null,
-  "versionId": "721a7732-7fb8-446b-adfc-7d7eca87e3b3",
-  "activeVersionId": "721a7732-7fb8-446b-adfc-7d7eca87e3b3",
-  "versionCounter": 7,
+  "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
+  "activeVersionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
+  "versionCounter": 13,
   "triggerCount": 1,
   "shared": [
     {
@@ -376,9 +376,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-03-31T15:02:30.507Z",
-    "createdAt": "2026-03-31T15:02:30.507Z",
-    "versionId": "721a7732-7fb8-446b-adfc-7d7eca87e3b3",
+    "updatedAt": "2026-03-31T17:17:27.069Z",
+    "createdAt": "2026-03-31T17:17:27.069Z",
+    "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
     "workflowId": "U9IJAwuzasHVscgY",
     "nodes": [
       {
@@ -387,7 +387,7 @@
             "interval": [
               {
                 "field": "cronExpression",
-                "expression": "*/30 * * * *"
+                "expression": "*/5 * * * *"
               }
             ]
           }
@@ -428,7 +428,7 @@
       {
         "parameters": {
           "method": "GET",
-          "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket?{{ $json.query_string }}",
+          "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch?{{ $json.query_string }}",
           "options": {
             "allowUnauthorizedCerts": true,
             "timeout": 15000
@@ -718,18 +718,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-03-31T15:02:30.552Z",
-        "id": 395,
+        "createdAt": "2026-03-31T17:17:27.114Z",
+        "id": 399,
         "workflowId": "U9IJAwuzasHVscgY",
-        "versionId": "721a7732-7fb8-446b-adfc-7d7eca87e3b3",
+        "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
         "event": "activated",
         "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
       },
       {
-        "createdAt": "2026-03-31T15:02:30.536Z",
-        "id": 394,
+        "createdAt": "2026-03-31T17:17:27.099Z",
+        "id": 398,
         "workflowId": "U9IJAwuzasHVscgY",
-        "versionId": "721a7732-7fb8-446b-adfc-7d7eca87e3b3",
+        "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
         "event": "deactivated",
         "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
       }

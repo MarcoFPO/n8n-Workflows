@@ -1,6 +1,11 @@
 {
+  "updatedAt": "2026-03-31T17:17:27.179Z",
+  "createdAt": "2026-03-23T18:25:43.818Z",
   "id": "XtpJW0B4twnclvtk",
   "name": "SUB: Znuny Ticket Search",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -27,7 +32,8 @@
       "position": [
         200,
         300
-      ]
+      ],
+      "id": "33aba74a-0a7e-4588-9f13-5d1b283613e2"
     },
     {
       "parameters": {
@@ -39,12 +45,13 @@
       "position": [
         400,
         300
-      ]
+      ],
+      "id": "5d11fffc-f47c-4b51-aa8f-5afa228f03ac"
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket?{{ $json.query_string }}",
+        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch?{{ $json.query_string }}",
         "options": {
           "allowUnauthorizedCerts": true,
           "timeout": 15000
@@ -57,7 +64,8 @@
         600,
         300
       ],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "id": "770ad319-e33a-4720-be38-1a7f81d66859"
     },
     {
       "parameters": {
@@ -69,7 +77,8 @@
       "position": [
         800,
         300
-      ]
+      ],
+      "id": "154a6f7a-8209-43d1-be33-0e337fb35bc5"
     }
   ],
   "connections": {
@@ -109,8 +118,172 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "pinData": {},
-  "_n8n_id": "XtpJW0B4twnclvtk"
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "f2cad9a9-ed9e-4c22-a022-cb91d261a5c4",
+  "activeVersionId": "f2cad9a9-ed9e-4c22-a022-cb91d261a5c4",
+  "versionCounter": 18,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-23T18:25:43.824Z",
+      "createdAt": "2026-03-23T18:25:43.824Z",
+      "role": "workflow:owner",
+      "workflowId": "XtpJW0B4twnclvtk",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-31T17:17:27.181Z",
+    "createdAt": "2026-03-31T17:17:27.181Z",
+    "versionId": "f2cad9a9-ed9e-4c22-a022-cb91d261a5c4",
+    "workflowId": "XtpJW0B4twnclvtk",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "state",
+                "type": "string"
+              },
+              {
+                "name": "queue",
+                "type": "string"
+              },
+              {
+                "name": "limit",
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "name": "📥 Input from Master",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "33aba74a-0a7e-4588-9f13-5d1b283613e2"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.first().json;\nif (!input.state) throw new Error('state ist erforderlich (z.B. \"pausiert\")');\n\n// Znuny TicketSearch: State-Filter als Query-Parameter\nconst params = new URLSearchParams({\n  UserLogin: 'root@localhost',\n  Password: 'ZnunyAdmin2026!',\n  'States[0]': input.state,\n  Limit: String(input.limit || 100)\n});\n\n// Optional: Queue-Filter\nif (input.queue) params.append('Queues[0]', input.queue);\n\nreturn [{ json: { state: input.state, query_string: params.toString() } }];"
+        },
+        "name": "🔧 Build Search Query",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          400,
+          300
+        ],
+        "id": "5d11fffc-f47c-4b51-aa8f-5afa228f03ac"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch?{{ $json.query_string }}",
+          "options": {
+            "allowUnauthorizedCerts": true,
+            "timeout": 15000
+          }
+        },
+        "name": "🔍 Znuny API: TicketSearch",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          300
+        ],
+        "continueOnFail": true,
+        "id": "770ad319-e33a-4720-be38-1a7f81d66859"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $('📥 Input from Master').first().json;\nconst r = $input.first().json;\n\n// Znuny liefert: { TicketID: [1, 2, 3] } oder { Error: {...} }\nif (r.Error) {\n  return [{ json: { ticket_ids: [], count: 0, state: input.state,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}` } }];\n}\n\n// TicketID kann Array oder einzelner Wert sein\nconst raw = r.TicketID;\nconst ticket_ids = Array.isArray(raw) ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\nreturn [{ json: { ticket_ids, count: ticket_ids.length, state: input.state, error: null } }];"
+        },
+        "name": "🔧 Parse Ticket IDs",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          300
+        ],
+        "id": "154a6f7a-8209-43d1-be33-0e337fb35bc5"
+      }
+    ],
+    "connections": {
+      "📥 Input from Master": {
+        "main": [
+          [
+            {
+              "node": "🔧 Build Search Query",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Build Search Query": {
+        "main": [
+          [
+            {
+              "node": "🔍 Znuny API: TicketSearch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔍 Znuny API: TicketSearch": {
+        "main": [
+          [
+            {
+              "node": "🔧 Parse Ticket IDs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-31T17:17:27.253Z",
+        "id": 401,
+        "workflowId": "XtpJW0B4twnclvtk",
+        "versionId": "f2cad9a9-ed9e-4c22-a022-cb91d261a5c4",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      },
+      {
+        "createdAt": "2026-03-31T17:17:27.227Z",
+        "id": 400,
+        "workflowId": "XtpJW0B4twnclvtk",
+        "versionId": "f2cad9a9-ed9e-4c22-a022-cb91d261a5c4",
+        "event": "deactivated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  }
 }
