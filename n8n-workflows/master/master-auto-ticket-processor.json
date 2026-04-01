@@ -1,738 +1,762 @@
 {
-  "updatedAt": "2026-03-31T17:17:27.067Z",
-  "createdAt": "2026-03-30T18:30:54.857Z",
-  "id": "U9IJAwuzasHVscgY",
-  "name": "MASTER: Auto-Ticket-Processor",
-  "description": null,
-  "active": true,
-  "isArchived": false,
-  "nodes": [
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "*/5 * * * *"
-            }
-          ]
-        }
-      },
-      "name": "⏰ Schedule: Alle 30 Minuten",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        200,
-        300
-      ],
-      "id": "954f4ced-4e77-4e92-984a-cbbe494d44a8"
-    },
-    {
-      "parameters": {},
-      "name": "▶️ Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        200,
-        500
-      ],
-      "id": "52b6c43a-49cf-4e74-be37-08946cbb4e11"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Zeitfilter: Tickets älter als 5 Minuten\nconst now = new Date();\nconst cutoffMs = now.getTime() - (5 * 60 * 1000);\nconst cutoff = new Date(cutoffMs);\n\nconst pad = n => String(n).padStart(2, '0');\nconst cutoffStr = `${cutoff.getUTCFullYear()}-${pad(cutoff.getUTCMonth()+1)}-${pad(cutoff.getUTCDate())} ${pad(cutoff.getUTCHours())}:${pad(cutoff.getUTCMinutes())}:${pad(cutoff.getUTCSeconds())}`;\n\n// URLSearchParams nicht verfügbar im n8n Task-Runner → manuell encoden\nfunction ep(k, v) { return encodeURIComponent(k) + '=' + encodeURIComponent(v); }\n\nconst queryString = [\n  ep('UserLogin', 'root@localhost'),\n  ep('Password', 'ZnunyAdmin2026!'),\n  ep('States[0]', 'new'),\n  ep('TicketCreateTimeOlderDate', cutoffStr),\n  ep('Limit', '20'),\n  ep('SortBy', 'Age'),\n  ep('OrderBy', 'Down')\n].join('&');\n\nreturn [{ json: {\n  run_time: now.toISOString(),\n  cutoff_time: cutoffStr,\n  max_tickets: 2,\n  query_string: queryString\n} }];"
-      },
-      "name": "📋 Set Config",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        450,
-        400
-      ],
-      "id": "87f96cc4-fd10-4252-a85e-cac93808efe7"
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch?{{ $json.query_string }}",
-        "options": {
-          "allowUnauthorizedCerts": true,
-          "timeout": 15000
-        }
-      },
-      "name": "🔍 Znuny: TicketSearch",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        700,
-        400
-      ],
-      "continueOnFail": true,
-      "id": "99421cbf-a0da-4f0d-b2b8-fd8bb16155ad"
-    },
-    {
-      "parameters": {
-        "jsCode": "const config = $('📋 Set Config').first().json;\nconst r = $input.first().json;\n\nif (r.Error) {\n  return [{ json: {\n    ticket_ids: [],\n    count: 0,\n    total_found: 0,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}`\n  } }];\n}\n\nconst raw = r.TicketID;\nconst all_ids = Array.isArray(raw)\n  ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\n// Auf max. 2 Tickets begrenzen\n// SortBy=Age&OrderBy=Down → älteste Tickets zuerst\nconst ticket_ids = all_ids.slice(0, config.max_tickets);\n\nreturn [{ json: {\n  ticket_ids,\n  count: ticket_ids.length,\n  total_found: all_ids.length,\n  cutoff_time: config.cutoff_time,\n  error: null\n} }];"
-      },
-      "name": "🔧 Parse & Limit auf 2",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        950,
-        400
-      ],
-      "id": "d14c13fa-943b-47be-9df2-156ccbee4f7d"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.count }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ]
-        }
-      },
-      "name": "✅ IF: Tickets gefunden?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1200,
-        400
-      ],
-      "id": "7c198807-0576-4948-861a-b2eee8d28fe7"
-    },
-    {
-      "parameters": {
-        "jsCode": "const result = $input.first().json;\nreturn [{ json: {\n  status: 'no_new_tickets',\n  message: `Keine Tickets im Status 'new' (älter als 5 Min) gefunden.`,\n  total_found: result.total_found || 0,\n  checked_at: new Date().toISOString()\n} }];"
-      },
-      "name": "📋 Log: Keine Tickets",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1450,
-        600
-      ],
-      "id": "c1ab5a37-c1d6-4ec6-b285-b8a2083b4830"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Ticket-IDs in Einzel-Items aufteilen für den Loop\nconst { ticket_ids, cutoff_time } = $input.first().json;\nreturn ticket_ids.map(id => ({ json: { ticket_id: id, cutoff_time } }));"
-      },
-      "name": "🔧 Split zu Items",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1450,
-        300
-      ],
-      "id": "0cd21bd8-db51-485a-a2ab-ce3dc618ec27"
-    },
-    {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "name": "🔄 Loop: Pro Ticket",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        1700,
-        300
-      ],
-      "id": "08547690-3e0e-4e84-b5f0-6574afbf686e"
-    },
-    {
-      "parameters": {
-        "jsCode": "const { ticket_id } = $input.first().json;\nreturn [{ json: {\n  ticket_id: ticket_id,\n  triggered_at: new Date().toISOString()\n} }];"
-      },
-      "name": "🔧 Build Webhook Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1950,
-        300
-      ],
-      "id": "3e2ae4bd-14e6-4581-8626-f6249fc5f2b2"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://10.1.1.180:80/webhook/znuny-new-ticket",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id }) }}",
-        "options": {
-          "timeout": 10000
-        }
-      },
-      "name": "🚀 Trigger: Incident Response",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2200,
-        300
-      ],
-      "continueOnFail": true,
-      "id": "3260e246-d7cc-48e2-8608-22b781487a2f"
-    },
-    {
-      "parameters": {
-        "jsCode": "// N→1 Collapse vor Loop-Rückpfad (splitInBatches Constraint)\nreturn [{ json: { done: true } }];"
-      },
-      "name": "🔧 Collapse",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2450,
-        300
-      ],
-      "id": "bb906b1a-73d7-4042-aa94-b5fae1dad398"
-    }
-  ],
-  "connections": {
-    "⏰ Schedule: Alle 30 Minuten": {
-      "main": [
-        [
-          {
-            "node": "📋 Set Config",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "▶️ Manual Trigger": {
-      "main": [
-        [
-          {
-            "node": "📋 Set Config",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "📋 Set Config": {
-      "main": [
-        [
-          {
-            "node": "🔍 Znuny: TicketSearch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔍 Znuny: TicketSearch": {
-      "main": [
-        [
-          {
-            "node": "🔧 Parse & Limit auf 2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Parse & Limit auf 2": {
-      "main": [
-        [
-          {
-            "node": "✅ IF: Tickets gefunden?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "✅ IF: Tickets gefunden?": {
-      "main": [
-        [
-          {
-            "node": "🔧 Split zu Items",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "📋 Log: Keine Tickets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Split zu Items": {
-      "main": [
-        [
-          {
-            "node": "🔄 Loop: Pro Ticket",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔄 Loop: Pro Ticket": {
-      "main": [
-        [
-          {
-            "node": "🔧 Build Webhook Payload",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "🔧 Build Webhook Payload": {
-      "main": [
-        [
-          {
-            "node": "🚀 Trigger: Incident Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🚀 Trigger: Incident Response": {
-      "main": [
-        [
-          {
-            "node": "🔧 Collapse",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔧 Collapse": {
-      "main": [
-        [
-          {
-            "node": "🔄 Loop: Pro Ticket",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "executionTimeout": 300,
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
-  },
-  "staticData": {
-    "node:⏰ Schedule: Alle 30 Minuten": {
-      "recurrenceRules": []
-    }
-  },
-  "meta": null,
-  "pinData": null,
-  "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
-  "activeVersionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
-  "versionCounter": 13,
-  "triggerCount": 1,
-  "shared": [
-    {
-      "updatedAt": "2026-03-30T18:30:54.869Z",
-      "createdAt": "2026-03-30T18:30:54.869Z",
-      "role": "workflow:owner",
-      "workflowId": "U9IJAwuzasHVscgY",
-      "projectId": "TKpGt6PASoN8CNtU",
-      "project": {
-        "updatedAt": "2025-10-04T18:35:36.086Z",
-        "createdAt": "2025-10-04T18:27:37.663Z",
-        "id": "TKpGt6PASoN8CNtU",
-        "name": "Marco Doehler <marcofpo@gmail.com>",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
-      }
-    }
-  ],
-  "tags": [],
-  "activeVersion": {
-    "updatedAt": "2026-03-31T17:17:27.069Z",
-    "createdAt": "2026-03-31T17:17:27.069Z",
-    "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
-    "workflowId": "U9IJAwuzasHVscgY",
+    "updatedAt": "2026-03-31T18:14:00.291Z",
+    "createdAt": "2026-03-30T18:30:54.857Z",
+    "id": "U9IJAwuzasHVscgY",
+    "name": "MASTER: Auto-Ticket-Processor",
+    "description": null,
+    "active": true,
+    "isArchived": false,
     "nodes": [
-      {
-        "parameters": {
-          "rule": {
-            "interval": [
-              {
-                "field": "cronExpression",
-                "expression": "*/5 * * * *"
-              }
-            ]
-          }
-        },
-        "name": "⏰ Schedule: Alle 30 Minuten",
-        "type": "n8n-nodes-base.scheduleTrigger",
-        "typeVersion": 1.1,
-        "position": [
-          200,
-          300
-        ],
-        "id": "954f4ced-4e77-4e92-984a-cbbe494d44a8"
-      },
-      {
-        "parameters": {},
-        "name": "▶️ Manual Trigger",
-        "type": "n8n-nodes-base.manualTrigger",
-        "typeVersion": 1,
-        "position": [
-          200,
-          500
-        ],
-        "id": "52b6c43a-49cf-4e74-be37-08946cbb4e11"
-      },
-      {
-        "parameters": {
-          "jsCode": "// Zeitfilter: Tickets älter als 5 Minuten\nconst now = new Date();\nconst cutoffMs = now.getTime() - (5 * 60 * 1000);\nconst cutoff = new Date(cutoffMs);\n\nconst pad = n => String(n).padStart(2, '0');\nconst cutoffStr = `${cutoff.getUTCFullYear()}-${pad(cutoff.getUTCMonth()+1)}-${pad(cutoff.getUTCDate())} ${pad(cutoff.getUTCHours())}:${pad(cutoff.getUTCMinutes())}:${pad(cutoff.getUTCSeconds())}`;\n\n// URLSearchParams nicht verfügbar im n8n Task-Runner → manuell encoden\nfunction ep(k, v) { return encodeURIComponent(k) + '=' + encodeURIComponent(v); }\n\nconst queryString = [\n  ep('UserLogin', 'root@localhost'),\n  ep('Password', 'ZnunyAdmin2026!'),\n  ep('States[0]', 'new'),\n  ep('TicketCreateTimeOlderDate', cutoffStr),\n  ep('Limit', '20'),\n  ep('SortBy', 'Age'),\n  ep('OrderBy', 'Down')\n].join('&');\n\nreturn [{ json: {\n  run_time: now.toISOString(),\n  cutoff_time: cutoffStr,\n  max_tickets: 2,\n  query_string: queryString\n} }];"
-        },
-        "name": "📋 Set Config",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          450,
-          400
-        ],
-        "id": "87f96cc4-fd10-4252-a85e-cac93808efe7"
-      },
-      {
-        "parameters": {
-          "method": "GET",
-          "url": "=https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch?{{ $json.query_string }}",
-          "options": {
-            "allowUnauthorizedCerts": true,
-            "timeout": 15000
-          }
-        },
-        "name": "🔍 Znuny: TicketSearch",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          700,
-          400
-        ],
-        "continueOnFail": true,
-        "id": "99421cbf-a0da-4f0d-b2b8-fd8bb16155ad"
-      },
-      {
-        "parameters": {
-          "jsCode": "const config = $('📋 Set Config').first().json;\nconst r = $input.first().json;\n\nif (r.Error) {\n  return [{ json: {\n    ticket_ids: [],\n    count: 0,\n    total_found: 0,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}`\n  } }];\n}\n\nconst raw = r.TicketID;\nconst all_ids = Array.isArray(raw)\n  ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\n// Auf max. 2 Tickets begrenzen\n// SortBy=Age&OrderBy=Down → älteste Tickets zuerst\nconst ticket_ids = all_ids.slice(0, config.max_tickets);\n\nreturn [{ json: {\n  ticket_ids,\n  count: ticket_ids.length,\n  total_found: all_ids.length,\n  cutoff_time: config.cutoff_time,\n  error: null\n} }];"
-        },
-        "name": "🔧 Parse & Limit auf 2",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          950,
-          400
-        ],
-        "id": "d14c13fa-943b-47be-9df2-156ccbee4f7d"
-      },
-      {
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": true
-            },
-            "conditions": [
-              {
-                "leftValue": "={{ $json.count }}",
-                "rightValue": 0,
-                "operator": {
-                  "type": "number",
-                  "operation": "gt"
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "*/5 * * * *"
+                        }
+                    ]
                 }
-              }
-            ]
-          }
+            },
+            "name": "\u23f0 Schedule: Alle 30 Minuten",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                200,
+                300
+            ],
+            "id": "954f4ced-4e77-4e92-984a-cbbe494d44a8"
         },
-        "name": "✅ IF: Tickets gefunden?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          1200,
-          400
-        ],
-        "id": "7c198807-0576-4948-861a-b2eee8d28fe7"
-      },
-      {
-        "parameters": {
-          "jsCode": "const result = $input.first().json;\nreturn [{ json: {\n  status: 'no_new_tickets',\n  message: `Keine Tickets im Status 'new' (älter als 5 Min) gefunden.`,\n  total_found: result.total_found || 0,\n  checked_at: new Date().toISOString()\n} }];"
+        {
+            "parameters": {},
+            "name": "\u25b6\ufe0f Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                500
+            ],
+            "id": "52b6c43a-49cf-4e74-be37-08946cbb4e11"
         },
-        "name": "📋 Log: Keine Tickets",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1450,
-          600
-        ],
-        "id": "c1ab5a37-c1d6-4ec6-b285-b8a2083b4830"
-      },
-      {
-        "parameters": {
-          "jsCode": "// Ticket-IDs in Einzel-Items aufteilen für den Loop\nconst { ticket_ids, cutoff_time } = $input.first().json;\nreturn ticket_ids.map(id => ({ json: { ticket_id: id, cutoff_time } }));"
+        {
+            "parameters": {
+                "jsCode": "// Zeitfilter: Tickets \u00e4lter als 5 Minuten\nconst now = new Date();\nconst cutoffMs = now.getTime() - (5 * 60 * 1000);\nconst cutoff = new Date(cutoffMs);\nconst pad = n => String(n).padStart(2, '0');\nconst cutoffStr = `${cutoff.getUTCFullYear()}-${pad(cutoff.getUTCMonth()+1)}-${pad(cutoff.getUTCDate())} ${pad(cutoff.getUTCHours())}:${pad(cutoff.getUTCMinutes())}:${pad(cutoff.getUTCSeconds())}`;\n\nreturn [{ json: {\n  run_time: now.toISOString(),\n  cutoff_time: cutoffStr,\n  max_tickets: 2,\n  search_body: {\n    UserLogin: 'root@localhost',\n    Password: 'ZnunyApi2026',\n    StateIDs: [1],\n    TicketCreateTimeOlderDate: cutoffStr,\n    Limit: 20,\n    SortBy: 'Age',\n    OrderBy: 'Up'\n  }\n} }];"
+            },
+            "name": "\ud83d\udccb Set Config",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                400
+            ],
+            "id": "87f96cc4-fd10-4252-a85e-cac93808efe7"
         },
-        "name": "🔧 Split zu Items",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1450,
-          300
-        ],
-        "id": "0cd21bd8-db51-485a-a2ab-ce3dc618ec27"
-      },
-      {
-        "parameters": {
-          "batchSize": 1,
-          "options": {}
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch",
+                "options": {
+                    "allowUnauthorizedCerts": true,
+                    "timeout": 15000
+                },
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify($json.search_body) }}"
+            },
+            "name": "\ud83d\udd0d Znuny: TicketSearch",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                700,
+                400
+            ],
+            "continueOnFail": true,
+            "id": "99421cbf-a0da-4f0d-b2b8-fd8bb16155ad"
         },
-        "name": "🔄 Loop: Pro Ticket",
-        "type": "n8n-nodes-base.splitInBatches",
-        "typeVersion": 3,
-        "position": [
-          1700,
-          300
-        ],
-        "id": "08547690-3e0e-4e84-b5f0-6574afbf686e"
-      },
-      {
-        "parameters": {
-          "jsCode": "const { ticket_id } = $input.first().json;\nreturn [{ json: {\n  ticket_id: ticket_id,\n  triggered_at: new Date().toISOString()\n} }];"
+        {
+            "parameters": {
+                "jsCode": "const config = $('\ud83d\udccb Set Config').first().json;\nconst r = $input.first().json;\n\nif (r.Error) {\n  return [{ json: {\n    ticket_ids: [],\n    count: 0,\n    total_found: 0,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}`\n  } }];\n}\n\nconst raw = r.TicketID;\nconst all_ids = Array.isArray(raw)\n  ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\n// Auf max. 2 Tickets begrenzen\n// SortBy=Age&OrderBy=Down \u2192 \u00e4lteste Tickets zuerst\nconst ticket_ids = all_ids.slice(0, config.max_tickets);\n\nreturn [{ json: {\n  ticket_ids,\n  count: ticket_ids.length,\n  total_found: all_ids.length,\n  cutoff_time: config.cutoff_time,\n  error: null\n} }];"
+            },
+            "name": "\ud83d\udd27 Parse & Limit auf 2",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                400
+            ],
+            "id": "d14c13fa-943b-47be-9df2-156ccbee4f7d"
         },
-        "name": "🔧 Build Webhook Payload",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1950,
-          300
-        ],
-        "id": "3e2ae4bd-14e6-4581-8626-f6249fc5f2b2"
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "http://10.1.1.180:80/webhook/znuny-new-ticket",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          },
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id }) }}",
-          "options": {
-            "timeout": 10000
-          }
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.count }}",
+                            "rightValue": 0,
+                            "operator": {
+                                "type": "number",
+                                "operation": "gt"
+                            }
+                        }
+                    ]
+                }
+            },
+            "name": "\u2705 IF: Tickets gefunden?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1200,
+                400
+            ],
+            "id": "7c198807-0576-4948-861a-b2eee8d28fe7"
         },
-        "name": "🚀 Trigger: Incident Response",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          2200,
-          300
-        ],
-        "continueOnFail": true,
-        "id": "3260e246-d7cc-48e2-8608-22b781487a2f"
-      },
-      {
-        "parameters": {
-          "jsCode": "// N→1 Collapse vor Loop-Rückpfad (splitInBatches Constraint)\nreturn [{ json: { done: true } }];"
+        {
+            "parameters": {
+                "jsCode": "const result = $input.first().json;\nreturn [{ json: {\n  status: 'no_new_tickets',\n  message: `Keine Tickets im Status 'new' (\u00e4lter als 5 Min) gefunden.`,\n  total_found: result.total_found || 0,\n  checked_at: new Date().toISOString()\n} }];"
+            },
+            "name": "\ud83d\udccb Log: Keine Tickets",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                600
+            ],
+            "id": "c1ab5a37-c1d6-4ec6-b285-b8a2083b4830"
         },
-        "name": "🔧 Collapse",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          2450,
-          300
-        ],
-        "id": "bb906b1a-73d7-4042-aa94-b5fae1dad398"
-      }
+        {
+            "parameters": {
+                "jsCode": "// Ticket-IDs in Einzel-Items aufteilen f\u00fcr den Loop\nconst { ticket_ids, cutoff_time } = $input.first().json;\nreturn ticket_ids.map(id => ({ json: { ticket_id: id, cutoff_time } }));"
+            },
+            "name": "\ud83d\udd27 Split zu Items",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                300
+            ],
+            "id": "0cd21bd8-db51-485a-a2ab-ce3dc618ec27"
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "name": "\ud83d\udd04 Loop: Pro Ticket",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 3,
+            "position": [
+                1700,
+                300
+            ],
+            "id": "08547690-3e0e-4e84-b5f0-6574afbf686e"
+        },
+        {
+            "parameters": {
+                "jsCode": "const { ticket_id } = $input.first().json;\nreturn [{ json: {\n  ticket_id: ticket_id,\n  triggered_at: new Date().toISOString()\n} }];"
+            },
+            "name": "\ud83d\udd27 Build Webhook Payload",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1950,
+                300
+            ],
+            "id": "3e2ae4bd-14e6-4581-8626-f6249fc5f2b2"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://10.1.1.180:80/webhook/znuny-new-ticket",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id }) }}",
+                "options": {
+                    "timeout": 10000
+                }
+            },
+            "name": "\ud83d\ude80 Trigger: Incident Response",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2200,
+                300
+            ],
+            "continueOnFail": true,
+            "id": "3260e246-d7cc-48e2-8608-22b781487a2f"
+        },
+        {
+            "parameters": {
+                "jsCode": "// N\u21921 Collapse vor Loop-R\u00fcckpfad (splitInBatches Constraint)\nreturn [{ json: { done: true } }];"
+            },
+            "name": "\ud83d\udd27 Collapse",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2450,
+                300
+            ],
+            "id": "bb906b1a-73d7-4042-aa94-b5fae1dad398"
+        }
     ],
     "connections": {
-      "⏰ Schedule: Alle 30 Minuten": {
-        "main": [
-          [
-            {
-              "node": "📋 Set Config",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "▶️ Manual Trigger": {
-        "main": [
-          [
-            {
-              "node": "📋 Set Config",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📋 Set Config": {
-        "main": [
-          [
-            {
-              "node": "🔍 Znuny: TicketSearch",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔍 Znuny: TicketSearch": {
-        "main": [
-          [
-            {
-              "node": "🔧 Parse & Limit auf 2",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Parse & Limit auf 2": {
-        "main": [
-          [
-            {
-              "node": "✅ IF: Tickets gefunden?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "✅ IF: Tickets gefunden?": {
-        "main": [
-          [
-            {
-              "node": "🔧 Split zu Items",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "📋 Log: Keine Tickets",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Split zu Items": {
-        "main": [
-          [
-            {
-              "node": "🔄 Loop: Pro Ticket",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔄 Loop: Pro Ticket": {
-        "main": [
-          [
-            {
-              "node": "🔧 Build Webhook Payload",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          []
-        ]
-      },
-      "🔧 Build Webhook Payload": {
-        "main": [
-          [
-            {
-              "node": "🚀 Trigger: Incident Response",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🚀 Trigger: Incident Response": {
-        "main": [
-          [
-            {
-              "node": "🔧 Collapse",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "🔧 Collapse": {
-        "main": [
-          [
-            {
-              "node": "🔄 Loop: Pro Ticket",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
+        "\u23f0 Schedule: Alle 30 Minuten": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Set Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u25b6\ufe0f Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Set Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Set Config": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Znuny: TicketSearch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Znuny: TicketSearch": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Parse & Limit auf 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Parse & Limit auf 2": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 IF: Tickets gefunden?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 IF: Tickets gefunden?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Split zu Items",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udccb Log: Keine Tickets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Split zu Items": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Loop: Pro Ticket",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd04 Loop: Pro Ticket": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Build Webhook Payload",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "\ud83d\udd27 Build Webhook Payload": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\ude80 Trigger: Incident Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\ude80 Trigger: Incident Response": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Collapse",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Collapse": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd04 Loop: Pro Ticket",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
     },
-    "authors": "Marco Doehler",
-    "name": null,
-    "description": null,
-    "autosaved": false,
-    "workflowPublishHistory": [
-      {
-        "createdAt": "2026-03-31T17:17:27.114Z",
-        "id": 399,
+    "settings": {
+        "executionOrder": "v1",
+        "executionTimeout": 300,
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": {
+        "node:\u23f0 Schedule: Alle 30 Minuten": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": null,
+    "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+    "activeVersionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+    "versionCounter": 31,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-03-30T18:30:54.869Z",
+            "createdAt": "2026-03-30T18:30:54.869Z",
+            "role": "workflow:owner",
+            "workflowId": "U9IJAwuzasHVscgY",
+            "projectId": "TKpGt6PASoN8CNtU",
+            "project": {
+                "updatedAt": "2025-10-04T18:35:36.086Z",
+                "createdAt": "2025-10-04T18:27:37.663Z",
+                "id": "TKpGt6PASoN8CNtU",
+                "name": "Marco Doehler <marcofpo@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-31T18:14:00.292Z",
+        "createdAt": "2026-03-31T18:14:00.292Z",
+        "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
         "workflowId": "U9IJAwuzasHVscgY",
-        "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
-        "event": "activated",
-        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
-      },
-      {
-        "createdAt": "2026-03-31T17:17:27.099Z",
-        "id": 398,
-        "workflowId": "U9IJAwuzasHVscgY",
-        "versionId": "7a2b81dc-182a-4e78-965b-0aaa9af0ebce",
-        "event": "deactivated",
-        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
-      }
-    ]
-  }
+        "nodes": [
+            {
+                "parameters": {
+                    "rule": {
+                        "interval": [
+                            {
+                                "field": "cronExpression",
+                                "expression": "*/5 * * * *"
+                            }
+                        ]
+                    }
+                },
+                "name": "\u23f0 Schedule: Alle 30 Minuten",
+                "type": "n8n-nodes-base.scheduleTrigger",
+                "typeVersion": 1.1,
+                "position": [
+                    200,
+                    300
+                ],
+                "id": "954f4ced-4e77-4e92-984a-cbbe494d44a8"
+            },
+            {
+                "parameters": {},
+                "name": "\u25b6\ufe0f Manual Trigger",
+                "type": "n8n-nodes-base.manualTrigger",
+                "typeVersion": 1,
+                "position": [
+                    200,
+                    500
+                ],
+                "id": "52b6c43a-49cf-4e74-be37-08946cbb4e11"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Zeitfilter: Tickets \u00e4lter als 5 Minuten\nconst now = new Date();\nconst cutoffMs = now.getTime() - (5 * 60 * 1000);\nconst cutoff = new Date(cutoffMs);\nconst pad = n => String(n).padStart(2, '0');\nconst cutoffStr = `${cutoff.getUTCFullYear()}-${pad(cutoff.getUTCMonth()+1)}-${pad(cutoff.getUTCDate())} ${pad(cutoff.getUTCHours())}:${pad(cutoff.getUTCMinutes())}:${pad(cutoff.getUTCSeconds())}`;\n\nreturn [{ json: {\n  run_time: now.toISOString(),\n  cutoff_time: cutoffStr,\n  max_tickets: 2,\n  search_body: {\n    UserLogin: 'root@localhost',\n    Password: 'ZnunyApi2026',\n    StateIDs: [1],\n    TicketCreateTimeOlderDate: cutoffStr,\n    Limit: 20,\n    SortBy: 'Age',\n    OrderBy: 'Up'\n  }\n} }];"
+                },
+                "name": "\ud83d\udccb Set Config",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    450,
+                    400
+                ],
+                "id": "87f96cc4-fd10-4252-a85e-cac93808efe7"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch",
+                    "options": {
+                        "allowUnauthorizedCerts": true,
+                        "timeout": 15000
+                    },
+                    "sendBody": true,
+                    "contentType": "json",
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify($json.search_body) }}"
+                },
+                "name": "\ud83d\udd0d Znuny: TicketSearch",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    700,
+                    400
+                ],
+                "continueOnFail": true,
+                "id": "99421cbf-a0da-4f0d-b2b8-fd8bb16155ad"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const config = $('\ud83d\udccb Set Config').first().json;\nconst r = $input.first().json;\n\nif (r.Error) {\n  return [{ json: {\n    ticket_ids: [],\n    count: 0,\n    total_found: 0,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}`\n  } }];\n}\n\nconst raw = r.TicketID;\nconst all_ids = Array.isArray(raw)\n  ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\n// Auf max. 2 Tickets begrenzen\n// SortBy=Age&OrderBy=Down \u2192 \u00e4lteste Tickets zuerst\nconst ticket_ids = all_ids.slice(0, config.max_tickets);\n\nreturn [{ json: {\n  ticket_ids,\n  count: ticket_ids.length,\n  total_found: all_ids.length,\n  cutoff_time: config.cutoff_time,\n  error: null\n} }];"
+                },
+                "name": "\ud83d\udd27 Parse & Limit auf 2",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    950,
+                    400
+                ],
+                "id": "d14c13fa-943b-47be-9df2-156ccbee4f7d"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true
+                        },
+                        "conditions": [
+                            {
+                                "leftValue": "={{ $json.count }}",
+                                "rightValue": 0,
+                                "operator": {
+                                    "type": "number",
+                                    "operation": "gt"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "name": "\u2705 IF: Tickets gefunden?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    1200,
+                    400
+                ],
+                "id": "7c198807-0576-4948-861a-b2eee8d28fe7"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const result = $input.first().json;\nreturn [{ json: {\n  status: 'no_new_tickets',\n  message: `Keine Tickets im Status 'new' (\u00e4lter als 5 Min) gefunden.`,\n  total_found: result.total_found || 0,\n  checked_at: new Date().toISOString()\n} }];"
+                },
+                "name": "\ud83d\udccb Log: Keine Tickets",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1450,
+                    600
+                ],
+                "id": "c1ab5a37-c1d6-4ec6-b285-b8a2083b4830"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Ticket-IDs in Einzel-Items aufteilen f\u00fcr den Loop\nconst { ticket_ids, cutoff_time } = $input.first().json;\nreturn ticket_ids.map(id => ({ json: { ticket_id: id, cutoff_time } }));"
+                },
+                "name": "\ud83d\udd27 Split zu Items",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1450,
+                    300
+                ],
+                "id": "0cd21bd8-db51-485a-a2ab-ce3dc618ec27"
+            },
+            {
+                "parameters": {
+                    "batchSize": 1,
+                    "options": {}
+                },
+                "name": "\ud83d\udd04 Loop: Pro Ticket",
+                "type": "n8n-nodes-base.splitInBatches",
+                "typeVersion": 3,
+                "position": [
+                    1700,
+                    300
+                ],
+                "id": "08547690-3e0e-4e84-b5f0-6574afbf686e"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const { ticket_id } = $input.first().json;\nreturn [{ json: {\n  ticket_id: ticket_id,\n  triggered_at: new Date().toISOString()\n} }];"
+                },
+                "name": "\ud83d\udd27 Build Webhook Payload",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1950,
+                    300
+                ],
+                "id": "3e2ae4bd-14e6-4581-8626-f6249fc5f2b2"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://10.1.1.180:80/webhook/znuny-new-ticket",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id }) }}",
+                    "options": {
+                        "timeout": 10000
+                    }
+                },
+                "name": "\ud83d\ude80 Trigger: Incident Response",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2200,
+                    300
+                ],
+                "continueOnFail": true,
+                "id": "3260e246-d7cc-48e2-8608-22b781487a2f"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// N\u21921 Collapse vor Loop-R\u00fcckpfad (splitInBatches Constraint)\nreturn [{ json: { done: true } }];"
+                },
+                "name": "\ud83d\udd27 Collapse",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2450,
+                    300
+                ],
+                "id": "bb906b1a-73d7-4042-aa94-b5fae1dad398"
+            }
+        ],
+        "connections": {
+            "\u23f0 Schedule: Alle 30 Minuten": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Set Config",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u25b6\ufe0f Manual Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udccb Set Config",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udccb Set Config": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd0d Znuny: TicketSearch",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd0d Znuny: TicketSearch": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Parse & Limit auf 2",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Parse & Limit auf 2": {
+                "main": [
+                    [
+                        {
+                            "node": "\u2705 IF: Tickets gefunden?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\u2705 IF: Tickets gefunden?": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Split zu Items",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "\ud83d\udccb Log: Keine Tickets",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Split zu Items": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd04 Loop: Pro Ticket",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd04 Loop: Pro Ticket": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Build Webhook Payload",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    []
+                ]
+            },
+            "\ud83d\udd27 Build Webhook Payload": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\ude80 Trigger: Incident Response",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\ude80 Trigger: Incident Response": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd27 Collapse",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "\ud83d\udd27 Collapse": {
+                "main": [
+                    [
+                        {
+                            "node": "\ud83d\udd04 Loop: Pro Ticket",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Marco Doehler",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-03-31T18:14:00.332Z",
+                "id": 419,
+                "workflowId": "U9IJAwuzasHVscgY",
+                "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+                "event": "activated",
+                "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+            },
+            {
+                "createdAt": "2026-03-31T18:14:02.501Z",
+                "id": 421,
+                "workflowId": "U9IJAwuzasHVscgY",
+                "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+                "event": "activated",
+                "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+            },
+            {
+                "createdAt": "2026-03-31T18:14:00.317Z",
+                "id": 418,
+                "workflowId": "U9IJAwuzasHVscgY",
+                "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+                "event": "deactivated",
+                "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+            },
+            {
+                "createdAt": "2026-03-31T18:14:02.461Z",
+                "id": 420,
+                "workflowId": "U9IJAwuzasHVscgY",
+                "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+                "event": "deactivated",
+                "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+            }
+        ]
+    }
 }
