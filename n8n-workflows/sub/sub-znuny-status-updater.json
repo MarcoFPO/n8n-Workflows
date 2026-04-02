@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst ticket_id = input.ticket_id;\nconst new_state = input.new_state;\n\nif (!ticket_id) throw new Error('ticket_id ist erforderlich');\nif (!new_state) throw new Error('new_state ist erforderlich');\n\n// Erlaubte Znuny-Stati\nconst allowed = ['neu', 'in Arbeit', 'geschlossen', 'eskaliert', 'pausiert', 'closed successful', 'new', 'open'];\nif (!allowed.includes(new_state)) {\n  throw new Error(`Unbekannter Status: '${new_state}'. Erlaubt: ${allowed.join(', ')}`);\n}\n\nreturn [{\n  json: {\n    ticket_id,\n    new_state,\n    payload: {\n      UserLogin: 'root@localhost',\n      Password: 'ZnunyAdmin2026!',\n      Ticket: {\n        State: new_state\n      }\n    },\n    changed_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst ticket_id = input.ticket_id;\nconst new_state = input.new_state;\n\nif (!ticket_id) throw new Error('ticket_id ist erforderlich');\nif (!new_state) throw new Error('new_state ist erforderlich');\n\n// Erlaubte Znuny-Stati\nconst allowed = ['neu', 'in Arbeit', 'geschlossen', 'eskaliert', 'pausiert', 'closed successful', 'new', 'open'];\nif (!allowed.includes(new_state)) {\n  throw new Error(`Unbekannter Status: '${new_state}'. Erlaubt: ${allowed.join(', ')}`);\n}\n\nreturn [{\n  json: {\n    ticket_id,\n    new_state,\n    payload: {\n      UserLogin: 'root@localhost',\n      Password: 'ZnunyApi2026',\n      Ticket: {\n        State: new_state\n      }\n    },\n    changed_at: new Date().toISOString()\n  }\n}];"
       },
       "name": "🔧 Build Status Payload",
       "type": "n8n-nodes-base.code",
