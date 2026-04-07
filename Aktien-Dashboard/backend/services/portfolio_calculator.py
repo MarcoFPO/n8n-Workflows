@@ -198,12 +198,29 @@ def get_portfolio_history(db_conn) -> list[dict]:
     """)
     all_wkns = [row["wkn"] for row in cursor.fetchall()]
 
+    # Filter: nur WKNs berücksichtigen, die auch im Snapshot gelistet sind.
+    # Hintergrund: acquisition_lots enthält historische Positionen (z.B. DEKA 933744),
+    # die nie in den comdirect-Depotübersichten auftauchten. Ohne diesen Filter würde
+    # _invested_at_date() den Einstand dieser "Geister-Positionen" mitsummieren, während
+    # depot_snapshots sie nicht abbildet → gewinn = depotwert - investiert wird
+    # systematisch zu klein/negativ. Mit Filter werden nur WKNs gerechnet, deren
+    # Bezeichnung im Snapshot vorhanden ist.
+    cursor.execute("SELECT DISTINCT bezeichnung FROM depot_snapshots")
+    snapshot_bezeichnungen = {r["bezeichnung"] for r in cursor.fetchall()}
+
+    cursor.execute("SELECT wkn, bezeichnung FROM securities")
+    wkn_to_bez = {r["wkn"]: r["bezeichnung"] for r in cursor.fetchall()}
+
+    all_wkns_filtered = [
+        w for w in all_wkns if wkn_to_bez.get(w) in snapshot_bezeichnungen
+    ]
+
     result = []
     for row in snapshots:
         snapshot_date = row["snapshot_date"]
         depotwert = row["depotwert"] or 0
 
-        investiert = _invested_at_date(cursor, all_wkns, snapshot_date)
+        investiert = _invested_at_date(cursor, all_wkns_filtered, snapshot_date)
         gewinn = depotwert - investiert
 
         result.append({
