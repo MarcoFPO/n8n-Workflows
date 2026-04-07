@@ -171,8 +171,12 @@ def get_current_holdings(db_conn) -> list[dict]:
 def get_portfolio_history(db_conn) -> list[dict]:
     """Portfolio-Entwicklung über Zeit aus Depotübersichten.
 
-    Investiertes Kapital wird aus Transaktionen berechnet (Netto-Investitionen),
-    nicht aus Depotübersichten, um Umschichtungen korrekt zu erfassen.
+    Investiertes Kapital = Einstandswert aller zum Stichtag OFFENEN Positionen
+    (FIFO-Bewertung über acquisition_lots als Primärquelle, transactions als
+    Fallback/Ergänzung – analog zu get_current_holdings).
+
+    Umschichtungen (Verkauf + Neukauf am selben Tag) wirken sich dadurch nur
+    in Höhe der Kostendifferenz aus und nicht mit dem vollen Cash-Umsatz.
     """
     cursor = db_conn.cursor()
 
@@ -186,28 +190,20 @@ def get_portfolio_history(db_conn) -> list[dict]:
     """)
     snapshots = cursor.fetchall()
 
+    # Alle WKNs mit Aktivität ermitteln (einmalig)
+    cursor.execute("""
+        SELECT DISTINCT wkn FROM transactions
+        UNION
+        SELECT DISTINCT wkn FROM acquisition_lots
+    """)
+    all_wkns = [row["wkn"] for row in cursor.fetchall()]
+
     result = []
     for row in snapshots:
         snapshot_date = row["snapshot_date"]
         depotwert = row["depotwert"] or 0
 
-        # Netto-Investiertes Kapital bis zu diesem Datum aus Transaktionen
-        # Käufe: investiertes Kapital (positiv)
-        # Verkäufe: Rückfluss von Kapital (reduziert Netto-Investition)
-        cursor.execute("""
-            SELECT
-                COALESCE(SUM(CASE WHEN transaction_type = 'kauf' THEN ABS(umsatz_eur) ELSE 0 END), 0) AS kaeufe,
-                COALESCE(SUM(CASE WHEN transaction_type = 'verkauf' THEN ABS(umsatz_eur) ELSE 0 END), 0) AS verkaeufe
-            FROM transactions
-            WHERE buchungstag <= ?
-        """, (snapshot_date,))
-
-        tx_row = cursor.fetchone()
-        kaeufe = tx_row["kaeufe"] or 0
-        verkaeufe = tx_row["verkaeufe"] or 0
-
-        # Netto-Investition = investiertes Kapital - Rückflüsse aus Verkäufen
-        investiert = kaeufe - verkaeufe
+        investiert = _invested_at_date(cursor, all_wkns, snapshot_date)
         gewinn = depotwert - investiert
 
         result.append({
@@ -218,6 +214,101 @@ def get_portfolio_history(db_conn) -> list[dict]:
         })
 
     return result
+
+
+def _invested_at_date(cursor, all_wkns: list[str], stichtag: str) -> float:
+    """Einstandswert aller zum Stichtag offenen Positionen (FIFO).
+
+    Baut je WKN die Lot-Liste zum Stichtag auf (acquisition_lots bevorzugt,
+    transactions als Fallback oder Ergänzung nach dem letzten Lot-Datum),
+    verbraucht die Abgänge (verkauf / uebertrag_aus) bis zum Stichtag via
+    FIFO und summiert die verbleibenden Lot-Kosten.
+    """
+    total = 0.0
+
+    for wkn in all_wkns:
+        # Abgänge bis Stichtag
+        cursor.execute("""
+            SELECT geschaeftstag, stueck
+            FROM transactions
+            WHERE wkn = ? AND transaction_type IN ('verkauf', 'uebertrag_aus')
+              AND geschaeftstag <= ?
+            ORDER BY geschaeftstag ASC, id ASC
+        """, (wkn, stichtag))
+        abgaenge = [dict(r) for r in cursor.fetchall()]
+
+        # Lots aufbauen
+        if _has_acquisition_lots(cursor, wkn):
+            cursor.execute("""
+                SELECT datum, anzahl, anschaffungskosten, kaufkurs
+                FROM acquisition_lots
+                WHERE wkn = ? AND datum <= ?
+                ORDER BY datum ASC, id ASC
+            """, (wkn, stichtag))
+            lots = [
+                {
+                    "stueck": r["anzahl"],
+                    "kurs_eur": (
+                        r["anschaffungskosten"] / r["anzahl"]
+                        if r["anzahl"] > 0 else r["kaufkurs"]
+                    ),
+                }
+                for r in cursor.fetchall()
+            ]
+
+            cursor.execute(
+                "SELECT MAX(datum) FROM acquisition_lots WHERE wkn = ?", (wkn,)
+            )
+            max_lot_date = cursor.fetchone()[0] or "2000-01-01"
+
+            cursor.execute("""
+                SELECT stueck, umsatz_eur, ausfuehrungskurs
+                FROM transactions
+                WHERE wkn = ?
+                  AND transaction_type IN ('kauf', 'uebertrag_ein', 'waehrungsumbuchung')
+                  AND geschaeftstag > ? AND geschaeftstag <= ?
+                ORDER BY geschaeftstag ASC, id ASC
+            """, (wkn, max_lot_date, stichtag))
+            for tx in cursor.fetchall():
+                s = abs(float(tx["stueck"]))
+                u = float(tx["umsatz_eur"])
+                k = float(tx["ausfuehrungskurs"])
+                if float(tx["stueck"]) > 0 and s > 0:
+                    kurs_eur = abs(u) / s if u != 0 else k
+                    lots.append({"stueck": s, "kurs_eur": kurs_eur})
+        else:
+            cursor.execute("""
+                SELECT geschaeftstag, stueck, umsatz_eur, ausfuehrungskurs, transaction_type
+                FROM transactions
+                WHERE wkn = ?
+                  AND transaction_type IN ('kauf', 'uebertrag_ein', 'waehrungsumbuchung')
+                  AND geschaeftstag <= ?
+                ORDER BY geschaeftstag ASC, id ASC
+            """, (wkn, stichtag))
+            lots = []
+            for tx in cursor.fetchall():
+                s = abs(float(tx["stueck"]))
+                u = float(tx["umsatz_eur"])
+                k = float(tx["ausfuehrungskurs"])
+                if float(tx["stueck"]) > 0 and s > 0:
+                    if u != 0:
+                        kurs_eur = abs(u) / s
+                    elif k and k > 0:
+                        kurs_eur = k
+                    else:
+                        # uebertrag_ein ohne Kaufpreis: Proxy-Einstand via
+                        # 1) Tageskurs aus prices, 2) Snapshot-Wert, 3) späterer
+                        #    Verkaufskurs (letzter Ausweg → 0 Gewinn)
+                        kurs_eur = _fallback_einstand(cursor, wkn, tx["geschaeftstag"])
+                    lots.append({"stueck": s, "kurs_eur": kurs_eur})
+
+        # FIFO-Verbrauch der Abgänge
+        for tx in abgaenge:
+            _consume_fifo(lots, abs(float(tx["stueck"])))
+
+        total += sum(l["stueck"] * l["kurs_eur"] for l in lots)
+
+    return total
 
 
 def get_position_history(db_conn, wkn: str) -> list[dict]:
@@ -254,6 +345,45 @@ def get_summary(db_conn) -> dict:
         "anzahl_verkaeufe": verkauf_count,
         "anzahl_lots": lot_count,
     }
+
+
+def _fallback_einstand(cursor, wkn: str, stichtag: str) -> float:
+    """Proxy-Einstandskurs für uebertrag_ein ohne Kaufpreis.
+
+    Reihenfolge: prices am/vor Stichtag → depot_snapshots → späterer
+    Verkaufskurs aus transactions → 0.
+    """
+    cursor.execute(
+        "SELECT kurs FROM prices WHERE wkn = ? AND datum <= ? ORDER BY datum DESC LIMIT 1",
+        (wkn, stichtag),
+    )
+    r = cursor.fetchone()
+    if r and r[0]:
+        return float(r[0])
+
+    cursor.execute(
+        """SELECT aktueller_kurs FROM depot_snapshots
+           WHERE bezeichnung IN (SELECT bezeichnung FROM securities WHERE wkn = ?)
+             AND snapshot_date >= ? AND aktueller_kurs IS NOT NULL
+           ORDER BY snapshot_date ASC LIMIT 1""",
+        (wkn, stichtag),
+    )
+    r = cursor.fetchone()
+    if r and r[0]:
+        return float(r[0])
+
+    cursor.execute(
+        """SELECT ausfuehrungskurs FROM transactions
+           WHERE wkn = ? AND transaction_type = 'verkauf'
+             AND ausfuehrungskurs > 0
+           ORDER BY buchungstag ASC LIMIT 1""",
+        (wkn,),
+    )
+    r = cursor.fetchone()
+    if r and r[0]:
+        return float(r[0])
+
+    return 0.0
 
 
 def _consume_fifo(lots: list[dict], stueck_benoetigt: float):
