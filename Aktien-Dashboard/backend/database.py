@@ -140,14 +140,56 @@ def init_db():
     CREATE INDEX IF NOT EXISTS idx_sells_wkn_datum   ON sells(wkn, datum);
     CREATE INDEX IF NOT EXISTS idx_events_datum      ON events(datum);
     CREATE INDEX IF NOT EXISTS idx_events_wkn        ON events(wkn);
+
+    -- Tägliche Aggregationen: Investierte Beträge pro Position und Datum
+    CREATE TABLE IF NOT EXISTS daily_invested (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        datum             DATE NOT NULL,
+        wkn               TEXT NOT NULL,
+        bezeichnung       TEXT NOT NULL,
+        invested_eur      REAL NOT NULL,          -- Kumulierte Anschaffungskosten bis zu diesem Tag
+        daily_total_eur   REAL NOT NULL,          -- Summe aller Positionen an diesem Tag
+        created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(datum, wkn),
+        FOREIGN KEY (wkn) REFERENCES securities(wkn)
+    );
+
+    -- Tägliche Aggregationen: Gewinne/Verluste pro Position und Datum
+    CREATE TABLE IF NOT EXISTS daily_gains (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        datum                 DATE NOT NULL,
+        wkn                   TEXT NOT NULL,
+        bezeichnung           TEXT NOT NULL,
+        anzahl                REAL NOT NULL,           -- Bestand an diesem Tag
+        kurs_eur              REAL,                    -- Kurs an diesem Tag (NULL wenn nicht verfügbar)
+        invested_eur          REAL NOT NULL,           -- Kumulierte Anschaffungskosten
+        wert_eur              REAL,                    -- Marktwert (anzahl * kurs), NULL wenn kurs NULL
+        gewinn_eur            REAL,                    -- wert_eur - invested_eur
+        gewinn_pct            REAL,                    -- Gewinn in %, NULL wenn invested_eur = 0
+        daily_total_wert      REAL,                    -- Gesamtwert aller Positionen an diesem Tag
+        daily_total_invested  REAL NOT NULL,           -- Gesamtanschaffungskosten an diesem Tag
+        daily_total_gewinn    REAL,                    -- Gesamtgewinn an diesem Tag
+        created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(datum, wkn),
+        FOREIGN KEY (wkn) REFERENCES securities(wkn)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_daily_invested_datum  ON daily_invested(datum);
+    CREATE INDEX IF NOT EXISTS idx_daily_invested_wkn    ON daily_invested(wkn, datum);
+    CREATE INDEX IF NOT EXISTS idx_daily_gains_datum     ON daily_gains(datum);
+    CREATE INDEX IF NOT EXISTS idx_daily_gains_wkn       ON daily_gains(wkn, datum);
     """)
     conn.commit()
     conn.close()
 
     # Migration: importiere Altdaten in die neuen Tabellen
     from .services.migrate_legacy import run_migration
+    from .services.daily_snapshots import calculate_daily_snapshots
+
     conn = get_db()
     try:
         run_migration(conn)
+        print("Berechne tägliche Snapshots...")
+        calculate_daily_snapshots(conn)
     finally:
         conn.close()
