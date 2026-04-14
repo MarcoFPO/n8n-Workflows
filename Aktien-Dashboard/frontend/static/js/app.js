@@ -120,7 +120,7 @@ async function loadDashboard() {
     document.getElementById("karte-positionen").textContent = summary.anzahl_positionen;
     document.getElementById("karte-verkaeufe").textContent = summary.anzahl_verkaeufe;
 
-    renderPortfolioChart(_filterByRange(history, _portfolioRange));
+    renderPortfolioChart(_filterByRange(_portfolioHistoryData, _portfolioRange));
   } catch (e) {
     console.error(e);
   }
@@ -520,10 +520,13 @@ async function loadTransaktionen(reset = true) {
     tbody.innerHTML = "";
     for (const tx of data.items) {
       const typBadge = {
+        "Zugang": "badge-kauf",
+        "Abgang": "badge-verkauf",
+        // Backward-Compatibility für alte Werte
         kauf: "badge-kauf",
         verkauf: "badge-verkauf",
-        uebertrag_ein: "badge-uebertrag",
-        uebertrag_aus: "badge-uebertrag",
+        uebertrag_ein: "badge-kauf",
+        uebertrag_aus: "badge-verkauf",
         waehrungsumbuchung: "badge-sonstig",
       }[tx.transaction_type] || "badge-sonstig";
 

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aktien-Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="notification"></div>
+
+<div class="app">
+  <!-- Navigation -->
+  <nav>
+    <div class="logo">📊 Depot</div>
+    <a href="#" data-page="dashboard" class="active">🏠 Dashboard</a>
+    <a href="#" data-page="positionen">📈 Positionen</a>
+    <a href="#" data-page="steuern">🧾 Steuern</a>
+    <a href="#" data-page="transaktionen">🔄 Transaktionen</a>
+    <a href="#" data-page="upload">⬆️ Import</a>
+    <a href="#" data-page="wertpapiere">⚙️ Wertpapiere</a>
+  </nav>
+
+  <main>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page active">
+      <h1>Dashboard</h1>
+      <div class="cards">
+        <div class="card">
+          <div class="label">Depotwert</div>
+          <div class="value" id="karte-depotwert">–</div>
+        </div>
+        <div class="card">
+          <div class="label">Investiert</div>
+          <div class="value" id="karte-investiert">–</div>
+        </div>
+        <div class="card">
+          <div class="label">Gewinn (unrealisiert)</div>
+          <div class="value" id="karte-gewinn">–</div>
+        </div>
+        <div class="card">
+          <div class="label">Rendite gesamt</div>
+          <div class="value" id="karte-rendite">–</div>
+        </div>
+        <div class="card">
+          <div class="label">Positionen</div>
+          <div class="value" id="karte-positionen">–</div>
+          <div class="sub">aktuelle Bestände</div>
+        </div>
+        <div class="card">
+          <div class="label">Verkäufe</div>
+          <div class="value" id="karte-verkaeufe">–</div>
+          <div class="sub">realisierte Trades</div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 style="margin:0">Portfolio-Entwicklung</h2>
+          <div class="tag-selector" style="margin:0" id="dashboard-range-selector">
+            <span class="tag range-filter active" data-range="max">Max</span>
+            <span class="tag range-filter" data-range="20yr">20J</span>
+            <span class="tag range-filter" data-range="10yr">10J</span>
+            <span class="tag range-filter" data-range="5yr">5J</span>
+            <span class="tag range-filter" data-range="1yr">1J</span>
+            <span class="tag range-filter" data-range="6mo">6M</span>
+            <span class="tag range-filter" data-range="3mo">3M</span>
+            <span class="tag range-filter" data-range="1mo">1M</span>
+          </div>
+        </div>
+        <canvas id="chart-portfolio"></canvas>
+      </div>
+    </div>
+
+    <!-- ── POSITIONEN ── -->
+    <div id="page-positionen" class="page">
+      <h1>Positionen</h1>
+
+      <div class="tag-selector">
+        <span class="tag pos-filter active" data-filter="aktiv">Aktiv</span>
+        <span class="tag pos-filter" data-filter="geschlossen">Geschlossen</span>
+        <span class="tag pos-filter" data-filter="alle">Alle</span>
+      </div>
+
+      <div id="position-chart-box" style="display:none">
+        <div class="chart-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 id="position-chart-title" style="margin:0"></h2>
+            <div class="tag-selector" style="margin:0" id="position-range-selector">
+              <span class="tag pos-range-filter active" data-range="max">Max</span>
+              <span class="tag pos-range-filter" data-range="20yr">20J</span>
+              <span class="tag pos-range-filter" data-range="10yr">10J</span>
+              <span class="tag pos-range-filter" data-range="5yr">5J</span>
+              <span class="tag pos-range-filter" data-range="1yr">1J</span>
+              <span class="tag pos-range-filter" data-range="6mo">6M</span>
+              <span class="tag pos-range-filter" data-range="3mo">3M</span>
+              <span class="tag pos-range-filter" data-range="1mo">1M</span>
+            </div>
+          </div>
+          <canvas id="chart-position"></canvas>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Wertpapier</th>
+              <th class="text-right">Stück</th>
+              <th class="text-right">Einstand</th>
+              <th class="text-right">∅ Kurs</th>
+              <th class="text-right">Akt. Kurs</th>
+              <th class="text-right">Akt. Wert</th>
+              <th class="text-right">Gewinn</th>
+              <th class="text-right">Rendite</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="holdings-tbody">
+            <tr><td colspan="9" class="loading">Lade...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── STEUERN ── -->
+    <div id="page-steuern" class="page">
+      <h1>Steuern</h1>
+      <p class="text-muted" style="margin-bottom:20px">
+        Abgeltungssteuer 25% + Solidaritätszuschlag 5,5% = <strong>26,375%</strong> auf steuerpflichtige Gewinne.
+        Teilfreistellung je nach Fondstyp. <strong>Ohne Freibeträge.</strong>
+      </p>
+      <div id="steuer-container"><div class="loading">Lade...</div></div>
+    </div>
+
+    <!-- ── TRANSAKTIONEN ── -->
+    <div id="page-transaktionen" class="page">
+      <h1>Transaktionen</h1>
+      <div class="tag-selector">
+        <span class="tag tx-filter active" data-type="">Alle</span>
+        <span class="tag tx-filter" data-type="Zugang">📈 Zugang</span>
+        <span class="tag tx-filter" data-type="Abgang">📉 Abgang</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span id="tx-count" class="text-muted"></span>
+        <div style="display:flex;gap:8px">
+          <button id="tx-prev" class="btn btn-secondary" disabled>← Zurück</button>
+          <button id="tx-next" class="btn btn-secondary">Weiter →</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Buchungstag</th>
+              <th>Wertpapier</th>
+              <th>Typ</th>
+              <th class="text-right">Stück</th>
+              <th class="text-right">Kurs</th>
+              <th class="text-right">Umsatz EUR</th>
+            </tr>
+          </thead>
+          <tbody id="tx-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── UPLOAD ── -->
+    <div id="page-upload" class="page">
+      <h1>CSV Import</h1>
+      <p class="text-muted" style="margin-bottom:20px">
+        Unterstützte Formate: <strong>Umsätze Depot</strong> und <strong>Depotübersicht</strong> von comdirect.
+        Duplikate werden automatisch ignoriert.
+      </p>
+
+      <div class="upload-area" id="upload-area">
+        <div class="icon">📁</div>
+        <p>CSV-Datei hierher ziehen oder klicken zum Auswählen</p>
+        <p style="margin-top:8px;font-size:12px">Mehrere Dateien gleichzeitig möglich</p>
+        <input type="file" id="file-input" accept=".csv" multiple>
+      </div>
+
+      <div id="import-log"></div>
+
+      <div style="margin-top:24px">
+        <h2>Kurse aktualisieren</h2>
+        <p class="text-muted" style="margin-bottom:12px">
+          Tagesaktuelle Kurse von Yahoo Finance abrufen (benötigt Yahoo-Ticker in Wertpapiere).
+        </p>
+        <button id="btn-kurse" class="btn btn-primary" onclick="updateKurse()">Kurse aktualisieren</button>
+      </div>
+    </div>
+
+    <!-- ── WERTPAPIERE ── -->
+    <div id="page-wertpapiere" class="page">
+      <h1>Wertpapiere</h1>
+      <p class="text-muted" style="margin-bottom:20px">
+        Yahoo-Ticker für Kursabfragen hinterlegen. Teilfreistellung nach Fondstyp einstellen.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>WKN</th>
+              <th>Bezeichnung</th>
+              <th>ISIN</th>
+              <th>Yahoo Ticker</th>
+              <th>Teilfreistellung</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sec-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
