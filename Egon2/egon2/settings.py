@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # --- Matrix (optional — soft-fail wenn leer) ---
     matrix_homeserver: str = "https://matrix.doehlercomputing.de"
-    matrix_user_id: str = "@egon2:doehlercomputing.de"
+    matrix_user_id: str = "@egon:doehlercomputing.de"
     matrix_password: str = ""
     matrix_device_name: str = "Egon2-Bot"
 
