@@ -24,24 +24,35 @@ class Settings(BaseSettings):
     """Globale Egon2-Konfiguration."""
 
     # --- LLM ---
-    llm_api_url: str = "http://10.1.1.105:3001/v1/chat/completions"
+    llm_api_url: str = ""  # z.B. http://<host>:<port>/v1/chat/completions
     llm_model: str = "claude-sonnet-4-6"
     llm_max_tokens: int = 4096
     llm_timeout: float = 60.0
 
     # --- Matrix (optional — soft-fail wenn leer) ---
-    matrix_homeserver: str = "https://matrix.doehlercomputing.de"
-    matrix_user_id: str = "@egon:doehlercomputing.de"
+    matrix_homeserver: str = ""  # z.B. https://matrix.example.org
+    matrix_user_id: str = ""     # z.B. @egon:example.org
     matrix_password: str = ""
     matrix_device_name: str = "Egon2-Bot"
+    matrix_access_token: str = ""   # bevorzugt gegenüber Passwort-Login
+    matrix_device_id: str = ""      # Pflicht wenn access_token gesetzt
 
     # --- Telegram (optional — soft-fail wenn leer) ---
     telegram_token: str = ""
     telegram_whitelist: list[int] = Field(default_factory=list)
 
     # --- Externe Dienste ---
-    knowledge_url: str = "http://10.1.1.107:8080"
-    searxng_url: str = "http://10.1.1.204"
+    knowledge_url: str = ""  # z.B. http://<host>:8080
+    searxng_url: str = ""    # z.B. http://<host>:8080
+
+    bookstack_url: str = ""  # z.B. https://bookstack.example.org
+    bookstack_token_id: str = ""
+    bookstack_token_secret: str = ""
+    bookstack_egon_book_id: int = 1
+
+    news_report_matrix_room: str = ""   # Matrix-Room-ID für das tägliche Briefing
+    news_report_telegram_chat: str = "" # Telegram-Chat-ID für das tägliche Briefing
+    news_report_query: str = "Nachrichten Deutschland Technologie"
 
     # --- Pfade ---
     data_dir: Path = Path("/opt/egon2/data")
@@ -69,7 +80,7 @@ class Settings(BaseSettings):
 
     @property
     def matrix_enabled(self) -> bool:
-        return bool(self.matrix_password)
+        return bool(self.matrix_access_token) or bool(self.matrix_password)
 
     @property
     def telegram_enabled(self) -> bool:

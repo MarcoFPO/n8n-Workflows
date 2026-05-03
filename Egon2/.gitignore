@@ -1,0 +1,29 @@
+# Laufzeitdaten (nie committen)
+.env
+.env.*
+!.env.example
+data/
+backup/
+*.db
+*.db-shm
+*.db-wal
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Deployment-Artefakte
+*.tar.gz

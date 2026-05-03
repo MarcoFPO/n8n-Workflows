@@ -15,18 +15,18 @@ Egon2 ist ein persönlicher KI-Assistent (kein Chatbot, sondern Handlungsträger
 - **Dynamische Agenten:** LLM erzeugt System-Prompts vollständig frei — kein Template, kein Approval
 
 ## Stack
-- Python 3.12 / FastAPI / aiosqlite / matrix-nio / python-telegram-bot v21
+- Python 3.13 / FastAPI / aiosqlite / matrix-nio / python-telegram-bot v21.11.1
 - APScheduler **3.10.x** (NICHT 4.x!) / asyncssh / uv
 - **LLM-Backend:** Claude Code API `http://10.1.1.105:3001/v1/chat/completions` (OpenAI-kompatibel)
 - **Deployment:** LXC 128 (`Egon2`), IP `10.1.1.202`, 6C/6GB/20GB, `/opt/egon2/`
-- **Quellcode:** `/opt/Projekte/Egon2/` (Monorepo, auf LXC 126)
+- **Quellcode:** `/opt/Projekte/Egon2/` (Monorepo auf LXC 126)
 - **Docs:** `/opt/Projekte/Egon2/docs/`
 
 ## Persönlichkeit
 "Egon der 2." / kurz "Egon" — britisch-satirischer Humor (Douglas Adams / Blackadder), Deutsch, gelegentliche englische Einwürfe, direkt, nie servil
 
 ## Kernfunktionen
-- Matrix-Bot (@egon2:doehlercomputing.de) + Telegram-Bot
+- Matrix-Bot (@egon:doehlercomputing.de) + Telegram-Bot (@Egon)
 - Task-Manager (pending→running→done|failed|cancelled|waiting_approval)
 - Scheduler: täglich 07:30 News-Report via SearXNG (10.1.1.204)
 - SSH-Executor via User `egon` — Argv-basiert (kein Shell-String), Argument-Allowlist je Binary, pct Vollzugriff
@@ -35,8 +35,7 @@ Egon2 ist ein persönlicher KI-Assistent (kein Chatbot, sondern Handlungsträger
 
 ## Spezialisten-System (10 Builtin + dynamisch erweiterbar)
 - researcher, journalist, it_admin, developer (→ LXC 126), analyst, controller, archivist (→ LXC 107), designer, secretary, inspector
-- **Dynamische Agenten:** Egon erzeugt neue Spezialisten eigenständig wenn kein Builtin passt (Confidence < 0.6); LLM generiert System-Prompt frei; max. 20 dynamische Agenten aktiv
-- Confidence-Score normiert: `keyword_matches / len(capabilities)`, Schwelle 0.6 (Builtin) / 0.4 (Dynamic-Reuse)
+- **Dynamische Agenten:** Egon erzeugt neue Spezialisten eigenständig wenn kein Builtin passt; LLM generiert System-Prompt frei; max. 20 dynamische Agenten aktiv
 - IDs immer mit Underscore: `it_admin`, `dynamic_legal_analyst` etc.
 - Buchhaltung: `agent_assignments` (Brief, Ergebnis, Token, Kosten, Qualität, prompt_version_used)
 - Prompt-Versionshistorie: `agent_prompt_history` (Rollback möglich via `/agenten rollback <id>`)
@@ -48,66 +47,64 @@ Egon2 ist ein persönlicher KI-Assistent (kein Chatbot, sondern Handlungsträger
 - DATETIME: immer ISO8601-UTC `datetime.now(timezone.utc)` — niemals `datetime.utcnow()`
 - Sync-Flags: 0=pending / 1=synced / 2=error (kein Boolean)
 
-## Startup-Reihenfolge (kanonisch, 9 Stufen)
-1. DB init + WAL + Migrationen
-2. recover_orphaned() → running→pending
-3. Knowledge Store Client (soft-fail)
-4. LLM Client + Verbindungstest (retry 3×, backoff [1,2,4]s)
-5. MessageConsumer (create_task + Semaphore(3)) + AgentDispatcher
-6. Matrix Bot (sync → dann callbacks)
-7. Telegram Bot (initialize→start→start_polling, stop_signals=None!)
-8. **Scheduler zuletzt** — nach beiden Interfaces (verhindert misfire-Runs ohne Bot)
-
-## Shutdown-Reihenfolge (kanonisch, 7 Stufen)
-1. Scheduler shutdown
-2. Matrix Bot stop
-3. Telegram Bot stop
-4. Message Queue drain (join, 30s Timeout)
-5. Consumer stop + alle laufenden Tasks awaiten
-6. SSHExecutor.aclose()
-7. DB WAL-checkpoint + close
-
-## Security-Entscheidungen (alle akzeptiert, Heimnetz)
-- SSH-Executor: Argv-Übergabe (kein Shell-String), Argument-Allowlist je Binary
-- **pct: Vollzugriff** (lesen + schreiben) — autonomes Handlungsmandat, kein Approval
-- **Dynamische Agenten: freier LLM-generierter System-Prompt** — kein Template-Zwang
-- safe_wrap() für alle externen Inputs (Matrix/Telegram/SearXNG/Knowledge) → `<external source="…">`
-- Internes HTTP ohne TLS (LLM/Knowledge/SearXNG): akzeptiertes Risiko
-- LXC 126 kein seccomp/cgroup: akzeptiertes Risiko
-
-## Slash-Kommandos
-/task /note /wissen /status /stats /suche /agenten /hilfe
-
 ## Technische Invarianten
 - APScheduler immer 3.10.x pinnen (nicht 4.x)
-- PTB v21: `stop_signals=None` zwingend
+- PTB v21: `stop_signals` NICHT auf `Updater.start_polling()` — nur auf `run_polling()` (nicht verwendet)
 - Kein `Application.run_polling()` im Lifespan
 - Consumer: `create_task` statt `await` im Hot-Path
 - Retry: nur bei ConnectError/Timeout, kein Circuit Breaker
 - Sub-Tasks: max. Tiefe 2
+- claude-code-api LXC 105: `--bare` Flag in claude-executor.js entfernt (unterbricht OAuth-Auth in v2.1.126)
 
-## System-Account
-User `egon`, sudo NOPASSWD für apt/systemctl/pct, SSH Key Ed25519
-Bot-Tokens: beim Start aus Vaultwarden geladen (nicht aus .env)
+## Bekannte Bugfixes / Eigenheiten
+- **PTB 21.11**: `stop_signals` existiert NICHT auf `Updater.start_polling()` → entfernt
+- **claude-code-api**: `--bare` Flag in `/home/claude/claude-code-api/claude-executor.js` Zeile 127 auskommentiert — unterbricht OAuth-Auth in CLI v2.1.126. Bei Update der API prüfen!
+- **LLM-Ping**: `max_tokens=10` (nicht 1 — zu restriktiv für den Wrapper)
 
-## Vorbereitungsaufgaben (ausstehend)
-- Matrix-Account @egon2:doehlercomputing.de einrichten
-- Telegram-Bot via @BotFather → Token in Vaultwarden (Org "Bots")
-- GitHub-Repo `egon2-knowledge` anlegen (privat)
-- User `egon` auf Proxmox + alle LXCs anlegen (sudo, SSH-Key)
-- Marco's Telegram User-ID für Whitelist ermitteln
+## Credentials & Zugänge
+- **Matrix**: @egon:doehlercomputing.de, Passwort aus Vaultwarden "Matrix - Egon", Homeserver https://matrix.doehlercomputing.de
+- **Telegram**: Bot @Egon, Token in `/opt/egon2/.env` (noch NICHT in Vaultwarden — Admin-TODO)
+- **Telegram Whitelist**: [6124084259] (Marco)
+- **SSH-Key**: `/opt/egon2/.ssh/id_ed25519` (Public Key: `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOh/rdT+bchs7lF6iF2ufNkGdTWtEqaqMaA3YNXH2XAA egon2@doehlercomputing.de`)
+- **User `egon`**: lokal angelegt auf Proxmox-Host + LXC 104/107/109/110/117/118/121/122/125/126/127/130, Key-Auth bestätigt
 
-## Status (2026-05-02)
-- HLD **v1.7** ✅
-- LLD-Architektur **v1.3** ✅, LLD-Core **v1.3** ✅, LLD-Agenten **v1.3** ✅
-- LLD-Persistenz **v1.3** ✅, LLD-Interfaces **v1.3** ✅, Spec-UX v1.1 ✅
-- Security-Audit + 4 Fachreviews ✅ + alle Findings eingearbeitet (Runde 1 + Runde 2)
-- **Audit-Runde-2-Findings vollständig behoben** ✅ (2026-05-02)
-- **Nächster Schritt: Phase 1 Implementierung**
+## Status (2026-05-02) — LIVE, VOLLSTÄNDIG IMPLEMENTIERT ✅
 
-## Behobene Findings (Audit-Runde 2 — nicht mehr offen)
-- LLD-Core: SYNONYM_BOOST `it-admin`→`it_admin`, `task_done()` Timing, `join()`, `sender_id`
-- LLD-Agenten: Syntax-Fehler (fehlende ` ``` `), `_slug()` Separator `-`→`_`
-- LLD-Persistenz: `bump_prompt_version()` (changed_at→created_at + id), DDL-Spalten (use_count/last_used_at/sender_id), AssignmentStatus+CHECK 'cancelled', cost_sum datetime-Format
-- LLD-Interfaces: Startup-Reihenfolge (Scheduler Stage 8, nach beiden Bots), pct Vollzugriff in Allowlist, systemctl/apt Schreibzugriff, safe_wrap() in Bots, AgentDispatcher keyword-args
-- LLD-Architektur: datetime.utcnow()→UTC, AgentDispatcher API (handle/dispatch)
+### Vollständig implementiert ✅
+- Alle Grundmodule: database, llm_client, personality, message_queue, task_manager, context_manager
+- agent_registry (10 Builtin-Agenten + dynamische Agenten via `create_dynamic_agent()`), agent_dispatcher
+- matrix_bot, telegram_bot, scheduler (APScheduler WAL-Modus + 2 Jobs registriert)
+- SSH-Executor (Argv-Allowlist, 18 Binaries, pct Vollzugriff) + Shell-Executor
+- main.py (9-stufiger Lifespan, 7-stufiger Shutdown)
+- egon2.service: active/running, autostart enabled
+- **`/stats`** — echte DB-Abfragen (Tasks-per-Status, Top-3-Agenten, Kosten, Tokens)
+- **`/agenten`** — Listing aller Agenten + `/agenten rollback <id>`
+- **`/suche <query>`** — SearXNG-HTTP-Client → researcher-Spezialist
+- **Dynamische Agenten** — `create_dynamic_agent()`, Limit 20, Duplikat-Check (Jaccard ≥ 0.4), `rollback_prompt()`
+- **Sub-Tasks** — `_handle_subtasks()` + `_run_subtask()` (max Tiefe 2, asyncio.gather parallel)
+- **Knowledge-Client** (`egon2/knowledge/client.py`) — HTTP gegen LXC 107, graceful degradation
+- **News-Report-Job** — täglich 07:30 Europe/Berlin, SearXNG → journalist → Matrix+Telegram
+- **BookStack-Sync** (`egon2/sync/bookstack.py`) — alle 30 min, notes.synced_bookstack 0→1
+
+### Admin-TODOs 🟢
+1. Telegram-Token in Vaultwarden Org "Bots" ablegen
+2. GitHub-Repo `egon2-knowledge` (privat) anlegen
+3. `BOOKSTACK_TOKEN_ID` + `BOOKSTACK_TOKEN_SECRET` in `/opt/egon2/.env` setzen (für BookStack-Sync)
+4. `NEWS_REPORT_MATRIX_ROOM` + `NEWS_REPORT_TELEGRAM_CHAT` in `.env` setzen (für News-Versand)
+
+## Neue Module (2026-05-02)
+- `egon2/jobs/news_report.py` — `news_report_job()` (no-kwarg, Modul-Global `_app`)
+- `egon2/jobs/bookstack_sync.py` — `bookstack_sync_job()` (no-kwarg, Modul-Global `_app`)
+- `egon2/knowledge/client.py` — `KnowledgeClient` + `KnowledgeEntry`
+- `egon2/sync/bookstack.py` — `BookStackSync`
+
+## APScheduler-Pickle-Pattern (WICHTIG K1)
+Jobs DÜRFEN keine non-picklable kwargs erhalten (FastAPI, httpx-Client, asyncio.Lock nicht picklebar!).
+Muster: Modul-Level `_app: FastAPI | None = None`, `register_*()` setzt `_app = app`, Job greift auf `_app.state.egon` zu.
+
+## Behobene Findings (Audit-Runde 1+2 — nicht mehr offen)
+- LLD-Core: SYNONYM_BOOST, task_done() Timing, join(), sender_id
+- LLD-Agenten: Syntax-Fehler, _slug() Separator
+- LLD-Persistenz: bump_prompt_version(), DDL-Spalten, AssignmentStatus, cost_sum datetime
+- LLD-Interfaces: Startup-Reihenfolge, pct Vollzugriff, safe_wrap(), AgentDispatcher keyword-args
+- LLD-Architektur: datetime.utcnow()→UTC, AgentDispatcher API

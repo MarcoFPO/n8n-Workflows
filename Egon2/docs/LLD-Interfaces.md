@@ -1,6 +1,6 @@
 # LLD — Interface Layer & Scheduler (Egon2)
 
-**Version:** 1.3
+**Version:** 1.4
 **Stand:** 2026-05-02
 **Bezug:** HLD-Egon2.md v1.5 — Abschnitte 7.1, 7.4, 7.5, 9 / Audit-Reports (FastAPI-Review, Architektur-Review, Security-Audit) v2026-05-02
 **Module:** `egon2/main.py`, `egon2/interfaces/matrix_bot.py`, `egon2/interfaces/telegram_bot.py`, `egon2/core/scheduler.py`, `egon2/executors/ssh_executor.py`, `egon2/executors/shell_executor.py`, `egon2/security/safe_wrap.py`
@@ -10,6 +10,17 @@
 - §2.2: Telegram `Application.builder().build()` mit `stop_signals=None` — verhindert Konflikt mit uvicorn-Lifespan (Finding 3).
 - §2.6: Hinweis zu Matrix `session.json` Permissions/Token-Rotation (Finding 4).
 - §5: SSH-Executor komplett überarbeitet — `argv`-Übergabe statt Shell-String, `_SSH_COMMAND_ALLOWLIST` mit Argument-Patterns; `pct` mit Vollzugriff (lesen + schreiben) — autonomes Handlungsmandat (Finding 1, korrigiert v1.2.1).
+
+**Änderungen v1.4 (Audit-Runde-3-Findings 2026-05-02 — Single-User-Vereinfachungen):**
+- Fix (K1): APScheduler-Jobs ohne `dispatcher`/`db`-kwargs — Job-Funktionen greifen direkt auf `app.state.egon` zu (`SQLAlchemyJobStore` pickelt kwargs, `httpx.AsyncClient`/`asyncio.Lock`/`asyncssh`-Connections sind nicht pickelbar) (§4.3).
+- Fix (K5): PTB `concurrent_updates(False)` — Single-User: sequenzielle Verarbeitung reicht und vereinfacht Backpressure (§3.3).
+- Fix (H1): Matrix-Federation-Hardening — Whitelist nur für eigenen Homeserver (`*:doehlercomputing.de`) für `event.sender` UND `room.room_id` (§2.4).
+- Fix (H4): `IncomingMessage` mit getrennten Feldern `raw_text` (Cancel-Erkennung, Status-Titel) und `wrapped_text` (LLM-Calls). Bots befüllen beide; Konsumenten verwenden den passenden (§0.2, §2.4, §3.3).
+- Fix (H6): `recover_orphaned()` setzt orphaned Tasks auf `status='failed'` mit `cancelled_reason='service_crash'` — kein Re-Dispatch (Single-User, Marco fragt bei Bedarf neu) (§1.3).
+- Fix (M3): Telegram Forwarded-Messages markieren `metadata["forwarded"]=True`; Cancel-Intent wird nur bei `not forwarded` erkannt (§3.3).
+- Fix (M8): Onboarding-Check via DB (`db.has_any_assistant_message()`), kein AppState-Flag (§1.3 Stage 9).
+- Fix (M12): Scheduler-Jobs prüfen `agent.status='active'` vor Dispatcher-Call; `inactive` → `scheduler_log.status='skipped'` (§4.3).
+- Fix (M13): `scheduler.db` wird vor `SQLAlchemyJobStore`-Erzeugung mit `PRAGMA journal_mode=WAL` initialisiert (§4.2).
 
 **Änderungen v1.3 (Audit-Runde-2-Findings 2026-05-02):**
 - Fix (KRITISCH): Startup-Reihenfolge korrigiert — Scheduler war Stage 6 (vor beiden Bots); jetzt Stage 8 nach Matrix (6) und Telegram (7), Queue-Consumer bleibt Stage 9 (§1.3).
@@ -67,12 +78,40 @@ class ExecResult:
 
 ### 0.2 Datenmodell `IncomingMessage`
 
-`IncomingMessage` ist **nicht** in diesem LLD definiert. Die kanonische Definition liegt in
-`LLD-Core.md` → `egon2.core.message_queue.IncomingMessage` (Pydantic V2 BaseModel).
+`IncomingMessage` ist kanonisch in `LLD-Core.md` → `egon2.core.message_queue.IncomingMessage`
+definiert. Hier wird die für die Interface-Schicht verbindliche Feldstruktur dokumentiert
+(Audit-Runde-3, Finding H4):
+
+```python
+# egon2/core/message_queue.py — kanonisch hier in LLD-Core.md, Auszug:
+import uuid
+from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass(slots=True, frozen=True)
+class IncomingMessage:
+    channel: Channel              # "matrix" | "telegram"
+    chat_id: str
+    user_id: str
+    raw_text: str                 # Original-Text (für Cancel-Erkennung, /status-Titel, Logs)
+    wrapped_text: str             # safe_wrap()-Ergebnis (für ALLE LLM-Calls)
+    ts_ms: int
+    message_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
+    metadata: dict[str, Any] = field(default_factory=dict)
+```
+
+**Begründung der Trennung (Finding H4):** Die Cancel-Intent-Erkennung im Consumer prüft auf
+Phrasen wie "abbrechen", "stop", "vergiss es". Würde sie gegen den gewrappten Text
+(`<external source="telegram">stop</external>`) prüfen, würden die Tag-Zeichen die Phrase
+verfälschen — Cancel würde nie greifen. Daher: `raw_text` für Pattern-Matching/Status-Titel,
+`wrapped_text` ausschließlich für LLM-Eingaben.
+
+**Befüllung (verbindlich):**
+- `MatrixBot._on_room_message`: `raw_text=event.body, wrapped_text=safe_wrap("matrix", event.body)`
+- `TelegramBot._enqueue`: `raw_text=text, wrapped_text=safe_wrap("telegram", text)`
 
 Sowohl `MatrixBot` als auch `TelegramBot` erzeugen Instanzen dieses Modells und legen sie via
-`MessageQueue.put()` in die Queue. Felder, Validatoren und Serialisierung werden ausschließlich
-in `LLD-Core.md` festgelegt.
+`MessageQueue.put()` in die Queue.
 
 ### 0.3 Secret-Loading (Vaultwarden)
 
@@ -126,8 +165,8 @@ def safe_wrap(source: Source, content: str) -> str:
 
 | Modul / Methode | Quelle (`source=`) | Wo gewrappt |
 |---|---|---|
-| `MatrixBot._on_room_message` → `IncomingMessage(text=...)` | `matrix` | beim Befüllen von `text` vor `queue.put()` |
-| `TelegramBot._enqueue` → `IncomingMessage(text=...)` | `telegram` | analog, vor `queue.put()` |
+| `MatrixBot._on_room_message` → `IncomingMessage(wrapped_text=...)` | `matrix` | `wrapped_text=safe_wrap("matrix", event.body)`; `raw_text=event.body` bleibt unverändert |
+| `TelegramBot._enqueue` → `IncomingMessage(wrapped_text=...)` | `telegram` | `wrapped_text=safe_wrap("telegram", text)`; `raw_text=text` bleibt unverändert |
 | `KnowledgeClient.search()` Resultatverarbeitung | `knowledge_store` | beim Einfügen in das Kontext-Fenster (Top-N-Treffer) |
 | Researcher-Spezialist beim Konsumieren von SearXNG-`snippet`/`title` | `searxng` | vor Übergabe an Brief.context |
 | `AgentDispatcher._build_brief()` für `objective`/`context`-Strings, die User-Inhalt enthalten | `brief_objective` | vor JSON-Serialisierung des Briefs |
@@ -242,12 +281,12 @@ Pflicht-Reihenfolge — jede Stufe muss erfolgreich sein bevor die nächste star
 | 2 | Knowledge-Client-Check | `state.knowledge = KnowledgeClient(settings.mcp_url); await state.knowledge.ping()` (HTTP GET, Timeout 5s, 3 Retries mit Exp-Backoff 1s/2s/4s) | Soft-Fail: Warnung loggen, weiter |
 | 3 | LLM-Client | `state.llm = LLMClient(settings.llm_url, settings.llm_token)` — `httpx.AsyncClient` eager im `__init__`, Pool dort erzeugt | n/a |
 | 4 | Queue + Dispatcher | `state.task_repo = TaskRepository(state.db); state.queue = MessageQueue(maxsize=100); state.dispatcher = AgentDispatcher(state.db, state.task_repo, state.knowledge, state.llm)` | Hard-Fail |
-| 4.5 | Recover Orphaned | `await state.task_repo.recover_orphaned()` — alle Tasks im Status `running` zurück auf `pending` setzen (Crash-Recovery, vor Scheduler-Start ausgeführt, sonst würden Cron-Jobs auf inkonsistentem State laufen) | Hard-Fail |
+| 4.5 | Recover Orphaned | `await state.task_repo.recover_orphaned()` — alle Tasks im Status `running` werden auf `status='failed'` mit `cancelled_reason='service_crash'` gesetzt (Single-User: kein Re-Dispatch, Marco fragt bei Bedarf neu nach). Crash-Recovery vor Scheduler-Start, sonst würden Cron-Jobs auf inkonsistentem State laufen. | Hard-Fail |
 | 5 | Executors | `state.ssh_executor = SSHExecutor(...); state.shell_executor = ShellExecutor(cwd=Path("/opt/egon2/work"))` — keine I/O, nur Konstruktion | Hard-Fail |
 | 6 | Matrix-Bot | `state.matrix_bot = MatrixBot(settings, state.queue); await state.matrix_bot.start()` — Login + Initial-Sync + Background-Sync-Task (Callbacks erst NACH Initial-Sync, siehe §2.2) | Hard-Fail |
 | 7 | Telegram-Bot | `state.telegram_bot = TelegramBot(settings, state.queue); await state.telegram_bot.start()` — `initialize → start → updater.start_polling` | Hard-Fail |
 | 8 | Scheduler | `state.scheduler = EgonScheduler(settings, state.dispatcher, state.db); await state.scheduler.start()` — JobStore initialisieren, **genau 5 Jobs** registrieren, `scheduler.start()` aufrufen — **nach beiden Bots**, damit kein Job-Misfire ohne aktives Interface ausgelöst wird | Hard-Fail |
-| 9 | Queue-Consumer | `state.consumer_task = asyncio.create_task(_consume(state), name="egon-consumer")` | Hard-Fail |
+| 9 | Queue-Consumer + Onboarding-Check | `state.consumer_task = asyncio.create_task(_consume(state), name="egon-consumer")`. Im Anschluss: `first_run = not await state.db.has_any_assistant_message()` — Onboarding-Begrüßung wird genau dann ausgelöst. **Kein Flag im AppState** — Check läuft bei jedem Start, ist aber idempotent durch DB-Auswertung. | Hard-Fail |
 
 ```python
 async def _startup(state: AppState) -> None:
@@ -277,6 +316,8 @@ async def _startup(state: AppState) -> None:
         knowledge_client=state.knowledge,
     )
 
+    # Single-User: orphaned Tasks werden als failed (cancelled_reason='service_crash')
+    # markiert — KEIN Re-Dispatch. Marco kann bei Bedarf einfach neu anfragen.
     n_recovered = await state.task_repo.recover_orphaned()
     log.info("startup.recover_orphaned", count=n_recovered)
 
@@ -300,6 +341,14 @@ async def _startup(state: AppState) -> None:
     log.info("startup.scheduler_started")
 
     state.consumer_task = asyncio.create_task(_consume(state), name="egon-consumer")
+
+    # Onboarding-Check via DB (kein AppState-Flag — überlebt Restarts).
+    # Idempotent: sobald die erste Assistant-Nachricht in DB liegt, wird nicht mehr gefeuert.
+    first_run = not await state.db.has_any_assistant_message()
+    if first_run:
+        log.info("startup.first_run_detected")
+        # Onboarding-Begrüßung wird vom Consumer beim ersten User-Event gesendet
+        # (oder direkt hier, je nach Implementierung — siehe LLD-Core.md).
     log.info("startup.complete")
 ```
 
@@ -503,22 +552,34 @@ Events, die an Callbacks gebunden sind (alle anderen werden ignoriert):
 
 | Event-Typ | Handler | Aktion |
 |---|---|---|
-| `RoomMessageText` | `_on_room_message` | Filter: `event.sender != self._user_id` (kein Echo), Sender in `_whitelist`, Raum in `_room_whitelist` (siehe Audit S5.1). Erzeugt `IncomingMessage` (kanonisch in `LLD-Core.md`) und legt es in die Queue. |
-| `InviteMemberEvent` | `_on_invite` | Wenn `event.state_key == self._user_id` und `event.sender in self._whitelist` → `client.join(room.room_id)`. Andere Invites werden mit `client.room_leave` abgelehnt. |
+| `RoomMessageText` | `_on_room_message` | Filter: `event.sender != self._user_id` (kein Echo), Sender in `_whitelist`, **Sender-MXID endet auf `:doehlercomputing.de`** (eigener HS), **`room.room_id` endet auf `:doehlercomputing.de`** (kein fremder Raum) — Federation-Hardening (Finding H1). Erzeugt `IncomingMessage` (kanonisch in `LLD-Core.md`) mit `raw_text=event.body` und `wrapped_text=safe_wrap("matrix", event.body)` und legt es in die Queue. |
+| `InviteMemberEvent` | `_on_invite` | Wenn `event.state_key == self._user_id`, `event.sender in self._whitelist`, **Sender-MXID endet auf `:doehlercomputing.de`** UND **`room.room_id` endet auf `:doehlercomputing.de`** → `client.join(room.room_id)`. Andere Invites werden mit `client.room_leave` abgelehnt. |
 
 ```python
+# Federation-Hardening (Finding H1): Egon2 akzeptiert ausschließlich Nachrichten/Invites
+# vom eigenen Homeserver. MXID-Whitelist allein reicht NICHT — sie prüft nur den String,
+# erlaubt aber Räume auf fremden Homeservern (deren Owner Marcos MXID frei einladen kann).
+_OWN_HS_SUFFIX = ":doehlercomputing.de"
+
 async def _on_room_message(self, room: MatrixRoom, event: RoomMessageText) -> None:
     if event.sender == self._user_id:
         return
     if event.sender not in self._whitelist:
-        log.warning("matrix.msg.unauthorized", sender=event.sender)
+        log.warning("matrix.msg.unauthorized_sender", sender=event.sender)
+        return
+    if not event.sender.endswith(_OWN_HS_SUFFIX):
+        log.warning("matrix.msg.foreign_homeserver", sender=event.sender)
+        return
+    if not room.room_id.endswith(_OWN_HS_SUFFIX):
+        log.warning("matrix.msg.foreign_room", room=room.room_id, sender=event.sender)
         return
     msg = IncomingMessage(
         channel="matrix",
         chat_id=room.room_id,
         user_id=event.sender,
-        text=safe_wrap("matrix", event.body),
-        timestamp=datetime.now(UTC),
+        raw_text=event.body,
+        wrapped_text=safe_wrap("matrix", event.body),
+        ts_ms=int(datetime.now(UTC).timestamp() * 1000),
     )
     ok = await self._queue.put(msg)
     if not ok:
@@ -528,12 +589,19 @@ async def _on_invite(self, room: MatrixRoom, event: InviteMemberEvent) -> None:
     assert self._client is not None
     if event.state_key != self._user_id:
         return
-    if event.sender in self._whitelist:
+    # Federation-Hardening: Sender UND Raum müssen auf eigenem HS liegen.
+    if (event.sender in self._whitelist
+            and event.sender.endswith(_OWN_HS_SUFFIX)
+            and room.room_id.endswith(_OWN_HS_SUFFIX)):
         await self._client.join(room.room_id)
         log.info("matrix.invite.joined", room=room.room_id, by=event.sender)
     else:
         await self._client.room_leave(room.room_id)
-        log.warning("matrix.invite.rejected", room=room.room_id, by=event.sender)
+        log.warning(
+            "matrix.invite.rejected",
+            room=room.room_id, by=event.sender,
+            reason="not_whitelisted_or_foreign_hs",
+        )
 ```
 
 ### 2.5 Reconnect-Logik
@@ -652,10 +720,14 @@ class TelegramBot:
         # seinerseits self.stop() aufruft — siehe §1.4). Ohne diese
         # Konfiguration treten Race-Conditions zwischen PTB und uvicorn
         # auf, die zu unsauberem Shutdown führen.
+        # Single-User: sequenzielle Verarbeitung durch PTB ist ausreichend und
+        # vereinfacht Backpressure-Logik (Finding K5). Mit concurrent_updates(True)
+        # würde PTB alle Updates parallel dispatchen — die Queue-Semaphore liefe
+        # bei Burst-Traffic voll. Marco erzeugt keinen relevanten parallelen Load.
         self._app = (
             ApplicationBuilder()
             .token(self._token)
-            .concurrent_updates(True)
+            .concurrent_updates(False)
             .stop_signals(None)
             .build()
         )
@@ -720,17 +792,28 @@ class TelegramBot:
         u = update.effective_user
         c = update.effective_chat
         assert u is not None and c is not None
-        ts = (
-            update.effective_message.date.replace(tzinfo=UTC)
-            if update.effective_message and update.effective_message.date
-            else datetime.now(UTC)
+        m = update.effective_message
+        ts_ms = (
+            int(m.date.replace(tzinfo=UTC).timestamp() * 1000)
+            if m and m.date
+            else int(datetime.now(UTC).timestamp() * 1000)
         )
+        # Forwarded-Message-Detection (Finding M3): eine weitergeleitete Nachricht
+        # könnte Cancel-Phrasen enthalten und einen aktiven Task fälschlich abbrechen.
+        # → metadata["forwarded"]=True; Consumer prüft das Flag, bevor er Cancel-Intent
+        # auf raw_text auswertet.
+        forwarded = m is not None and getattr(m, "forward_origin", None) is not None
+        metadata: dict[str, object] = {}
+        if forwarded:
+            metadata["forwarded"] = True
         ok = await self._queue.put(IncomingMessage(
             channel="telegram",
             chat_id=str(c.id),
             user_id=str(u.id),
-            text=safe_wrap("telegram", text),
-            timestamp=ts,
+            raw_text=text,
+            wrapped_text=safe_wrap("telegram", text),
+            ts_ms=ts_ms,
+            metadata=metadata,
         ))
         if not ok and update.effective_chat is not None:
             await self.send_message(c.id, "Bin gerade ausgelastet, bitte einen Moment.")
@@ -807,6 +890,16 @@ class EgonScheduler:
 
     async def start(self) -> None:
         self._loop = asyncio.get_running_loop()
+        # Finding M13: scheduler.db einmalig in WAL-Modus initialisieren VOR JobStore-Erzeugung.
+        # SQLAlchemyJobStore auf SQLite ohne WAL kann unter Last (paralleler Listener-Write +
+        # Scheduler-Tick) Locks produzieren. PRAGMA journal_mode=WAL ist persistent
+        # (auf File-Ebene) — einmalige Initialisierung reicht.
+        import sqlite3
+        _conn = sqlite3.connect(str(self._settings.scheduler_db_path))
+        try:
+            _conn.execute("PRAGMA journal_mode=WAL")
+        finally:
+            _conn.close()
         jobstore = SQLAlchemyJobStore(url=f"sqlite:///{self._settings.scheduler_db_path}")
         self._scheduler = AsyncIOScheduler(
             timezone="Europe/Berlin",
@@ -835,55 +928,94 @@ class EgonScheduler:
 
 `replace_existing=True` sorgt dafür, dass bei Code-Änderungen die im JobStore persistierten Trigger aktualisiert werden. Job-IDs sind stabil, sodass `scheduler_log` über Restarts hinweg konsistente Auswertungen erlaubt.
 
+**Wichtig (Finding K1): Job-Funktionen nehmen KEINE Argumente.**
+`SQLAlchemyJobStore` pickelt `kwargs` zur Persistenz. Der `AgentDispatcher` enthält jedoch
+`httpx.AsyncClient`, `asyncio.Lock` und `asyncssh`-Connections — keines davon ist pickelbar.
+Job-Funktionen greifen daher direkt auf den globalen Application-State zu:
+
+```python
+# egon2/jobs/_state.py
+from egon2.main import app
+
+def get_state():
+    """Liefert AppState aus FastAPI app.state — synchron, da Scheduler-Job läuft im Loop."""
+    return app.state.egon
+```
+
+```python
+# egon2/jobs/news_report.py — Beispiel-Job (analog für alle 5)
+from egon2.jobs._state import get_state
+
+async def news_report_job() -> None:
+    state = get_state()
+    # Finding M12: Vor LLM-Call prüfen, ob der Ziel-Spezialist 'active' ist.
+    target_agent = "researcher"  # Ziel-Spezialist für news_report
+    agent = await state.agent_repo.get(target_agent)
+    if agent is None or agent.status != "active":
+        # Listener loggt diesen Job als 'skipped' in scheduler_log.
+        # Wir werfen eine spezielle Sentinel-Exception, die _on_event als skipped klassifiziert,
+        # ODER wir loggen direkt und returnen — Implementierungsdetail (siehe _on_event-Kommentar).
+        import structlog
+        structlog.get_logger("egon2.scheduler").info(
+            "scheduler.skipped_inactive", job="news_report_job", agent=target_agent,
+        )
+        return
+    await state.dispatcher.run_brief(...)
+```
+
 ```python
 def _register_jobs(self) -> None:
     assert self._scheduler is not None
     s = self._scheduler
-    d = self._dispatcher
-    db = self._db
     tz = "Europe/Berlin"
 
+    # Finding K1: KEIN kwargs-Passing von dispatcher/db — diese sind nicht pickelbar.
+    # Job-Funktionen greifen direkt auf app.state.egon zu (siehe egon2/jobs/_state.py).
     s.add_job(
         news_report_job, id="news_report_job", name="News-Report",
         trigger=CronTrigger(hour=7, minute=30, timezone=tz),
-        kwargs={"dispatcher": d, "db": db},
+        kwargs={},
         replace_existing=True,
     )
     s.add_job(
         health_check_job, id="health_check_job", name="System-Health-Check",
         trigger=CronTrigger(hour=3, minute=0, timezone=tz),
-        kwargs={"dispatcher": d, "db": db},
+        kwargs={},
         replace_existing=True,
     )
     s.add_job(
         weekly_audit_job, id="weekly_audit_job", name="Wissens-Audit",
         trigger=CronTrigger(day_of_week="mon", hour=4, minute=0, timezone=tz),
-        kwargs={"dispatcher": d, "db": db},
+        kwargs={},
         replace_existing=True,
     )
     s.add_job(
         weekly_summary_job, id="weekly_summary_job", name="Wochenzusammenfassung",
         trigger=CronTrigger(day_of_week="sat", hour=20, minute=0, timezone=tz),
-        kwargs={"dispatcher": d, "db": db},
+        kwargs={},
         replace_existing=True,
     )
     s.add_job(
         backup_job, id="backup_job", name="DB-Backup",
         trigger=CronTrigger(hour=2, minute=0, timezone=tz),
-        kwargs={"db_path": self._settings.db_path,
-                "backup_dir": self._settings.backup_dir,
-                "retention_days": 7},
+        kwargs={},   # Auch backup_job liest db_path/backup_dir aus state.settings
         replace_existing=True,
     )
 ```
 
-| Job-ID | Name | CronTrigger (Europe/Berlin) | Kwargs |
-|---|---|---|---|
-| `news_report_job` | News-Report | täglich 07:30 | `dispatcher`, `db` |
-| `health_check_job` | System-Health-Check | täglich 03:00 | `dispatcher`, `db` |
-| `weekly_audit_job` | Wissens-Audit | Mo 04:00 | `dispatcher`, `db` |
-| `weekly_summary_job` | Wochenzusammenfassung | Sa 20:00 | `dispatcher`, `db` |
-| `backup_job` | DB-Backup | täglich 02:00 | `db_path`, `backup_dir`, `retention_days=7` |
+| Job-ID | Name | CronTrigger (Europe/Berlin) | Kwargs | State-Zugriff |
+|---|---|---|---|---|
+| `news_report_job` | News-Report | täglich 07:30 | `{}` | `app.state.egon.dispatcher`, `.agent_repo` |
+| `health_check_job` | System-Health-Check | täglich 03:00 | `{}` | `app.state.egon.dispatcher`, `.agent_repo` |
+| `weekly_audit_job` | Wissens-Audit | Mo 04:00 | `{}` | `app.state.egon.dispatcher`, `.agent_repo` |
+| `weekly_summary_job` | Wochenzusammenfassung | Sa 20:00 | `{}` | `app.state.egon.dispatcher`, `.agent_repo` |
+| `backup_job` | DB-Backup | täglich 02:00 | `{}` | `app.state.egon.settings.db_path`, `.backup_dir` |
+
+**Hinweis (Finding M12 — `is_active`-Check):**
+Job-Funktionen, die einen Spezialisten ansprechen (alle außer `backup_job`), MÜSSEN vor dem
+Dispatcher-Call prüfen, ob der Ziel-Spezialist `status='active'` hat. Bei `status='inactive'`:
+Job loggen, kein LLM-Call. Der Scheduler-Listener (§4.4) klassifiziert solche Runs als
+`scheduler_log.status='skipped'`. Damit lassen sich deaktivierte Agenten nicht via Cron umgehen.
 
 **Es werden genau diese 5 Jobs registriert — keine weiteren** (BookStack-/GitHub-Sync sind aus Phase 1 entfernt).
 
@@ -1462,5 +1594,4 @@ Beide Executoren sind in `_shutdown` zu schließen:
 - Telegram `send_formatted` mit strukturierten Blöcken — Phase 2.
 - SSH-Key-Rotation — Phase 5.
 - Scheduler-Pause via Admin-Kommando (`/scheduler pause`) — Phase 4.
-- Onboarding-Check beim ersten User-Event (Flag im AppState) — Phase 2.
 - BookStack-/GitHub-Sync-Jobs — Phase 3 (nicht in den 5 Phase-1-Jobs enthalten).

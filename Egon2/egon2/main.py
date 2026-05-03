@@ -5,6 +5,8 @@ Lifespan in 9 Stufen — siehe `docs/LLD-Interfaces.md` §1.3.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -104,9 +106,27 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         ssh_executor=state.ssh_executor,
     )
 
+    async def _typing_loop(msg: IncomingMessage) -> None:
+        """Sendet alle 4 s einen Typing-Indicator bis zur Cancellation."""
+        while True:
+            try:
+                if msg.channel == Channel.MATRIX and state.matrix_bot:
+                    await state.matrix_bot.send_typing(msg.chat_id)
+                elif msg.channel == Channel.TELEGRAM and state.telegram_bot:
+                    await state.telegram_bot.send_typing(msg.chat_id)
+            except Exception:  # noqa: BLE001
+                pass
+            await asyncio.sleep(4)
+
     async def dispatch_and_reply(msg: IncomingMessage) -> None:
         assert state.dispatcher is not None
-        reply = await state.dispatcher.handle(msg)
+        typing_task = asyncio.create_task(_typing_loop(msg), name="typing-loop")
+        try:
+            reply = await state.dispatcher.handle(msg)
+        finally:
+            typing_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await typing_task
         try:
             if msg.channel == Channel.MATRIX and state.matrix_bot:
                 await state.matrix_bot.send_message(msg.chat_id, reply)
@@ -146,6 +166,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Stufe 9 — Scheduler
     state.scheduler = EgonScheduler(settings.scheduler_db_path)
     state.scheduler.start()
+
+    from egon2.jobs.news_report import register_jobs
+    from egon2.jobs.bookstack_sync import register_bookstack_sync
+    register_jobs(state.scheduler, app)
+    register_bookstack_sync(state.scheduler, app)
 
     # Onboarding-Hinweis im Log
     if not await state.db.has_any_assistant_message():
@@ -219,6 +244,16 @@ async def readyz(request: Request) -> dict[str, bool]:
         "queue": state.queue is not None,
         "consumer": state.consumer is not None,
     }
+
+
+@app.post("/admin/jobs/run/{job_name}")
+async def run_job_now(job_name: str, request: Request) -> dict[str, str]:
+    """Manueller Job-Trigger für Entwicklung/Debug."""
+    if job_name == "news_report":
+        from egon2.jobs.news_report import news_report_job
+        asyncio.create_task(news_report_job(), name=f"manual_{job_name}")
+        return {"status": "triggered", "job": job_name}
+    return {"status": "unknown_job", "job": job_name}
 
 
 __all__ = ["app", "lifespan"]

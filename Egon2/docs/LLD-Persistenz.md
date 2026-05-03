@@ -1,6 +1,6 @@
 # LLD — Egon2: Persistenz-Schicht
 
-**Version:** 1.3
+**Version:** 1.4
 **Stand:** 2026-05-02
 **Bezug:** HLD-Egon2.md v1.5, Abschnitt 8 (Persistenz); Audit-Report `docs/audit/Persistenz-Review.md`
 **Autor:** Marco Doehler / Claude
@@ -8,6 +8,13 @@
 **Changelog v1.1:** Audit-Findings eingearbeitet (Migrations-Atomarität, Multi-Repo-Transaktionen, Per-Connection-Pragmas, ISO8601-Datetime, fehlende Indizes/Spalten/Tabellen, Backup-Rotation Off-by-One, Knowledge-Migration mit gestopptem MCP-Server).
 
 **Changelog v1.2:** Spec-Findings eingearbeitet: Backup-Einschränkungen dokumentiert (F1), Sync-Flags dreistufig + BookStack-ID-Tracking (F2), fehlende Schema-Spalten `deactivated_reason`/`promoted_to_builtin`/`prompt_version_used`/`cancelled_reason`/`request_id` + vollständige `agent_prompt_history`-Spec (F3).
+
+**Changelog v1.4 (2026-05-02):**
+- Neu: `UnitOfWork`-Pattern für atomare Multi-Repo-Writes (§2.4, §7) — schlanke Wrapper-Klasse über `Database.connection()`, ein `BEGIN`/`COMMIT` umschließt mehrere Repository-Aufrufe via `conn=`-Parameter (H5).
+- Neu: Tabelle `command_audit` für Mutations-Slash-Kommandos (`/agenten promote|rollback|deaktiviere` etc.), Audit-Trail für Heimnetz-Bedarf (§3.10, M2).
+- Neu: Spalten `tasks.overhead_tokens_input` / `overhead_tokens_output` für Aggregation der Overhead-Calls (Intent-Klassifikation, Compose-Reply, Smoke-Tests) — Single-User-tauglich ohne separate Tabelle (§3.2, M6).
+- Neu: Tabelle `werkstatt_retention` für robusten Werkstatt-Cleanup mit Crash-Recovery (§3.11, M11). Cleanup-Job nutzt diese Tabelle statt `tasks.status`.
+- Schema-Wechsel: `agents.is_active BOOLEAN` → `agents.status TEXT ('pending_approval'|'active'|'inactive')`. `deactivated_reason` bleibt und wird bei `status='inactive'` gesetzt (§3.1).
 
 **Changelog v1.3 (Audit-Runde-2-Findings 2026-05-02):**
 - Fix: `bump_prompt_version()` INSERT verwendete `changed_at` (nicht existent) statt `created_at` und fehlte `id`-Feld (PRIMARY KEY ohne DEFAULT) — hätte `OperationalError` bei Laufzeit verursacht (§6.6).
@@ -57,6 +64,8 @@ YYYY-MM-DDTHH:MM:SS.ffffffZ        z.B. 2026-05-02T13:14:15.123456Z
 ### 2.2 Verbindungs-Management
 
 aiosqlite öffnet pro Operation eine kurzlebige Connection. Wichtig: **Per-Connection-Pragmas** (`foreign_keys`, `synchronous`, `temp_store`, `cache_size`, `busy_timeout`) müssen bei **jeder** neuen Connection erneut gesetzt werden — nur `journal_mode=WAL` ist persistent in der DB-Datei.
+
+> **Multi-Repo-Transaktionen:** Wenn mehrere Repository-Methoden atomar laufen sollen (Task-Update + Assignment + Agent-Stats in *einer* Transaktion), muss derselbe `aiosqlite.Connection`-Handle an alle Aufrufe weitergereicht werden — verschiedene Connections sehen verschiedene Transaktionen. Hierfür stellt §2.4 das `UnitOfWork`-Pattern bereit, das eine geteilte Connection mit umschließendem `BEGIN`/`COMMIT` kapselt. Repository-Methoden akzeptieren einen optionalen `conn=`-Parameter (siehe §6.1).
 
 ```python
 # egon2/database.py
@@ -178,8 +187,8 @@ class Database:
                 """
                 INSERT INTO agents (id, name, description, system_prompt,
                                     capabilities, work_location, prompt_version,
-                                    is_active, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
+                                    status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, 1, 'active', ?, ?)
                 ON CONFLICT(id) DO NOTHING
                 """,
                 (
@@ -231,6 +240,8 @@ MIGRATIONS: Final[dict[int, tuple[str, ...]]] = {
         SQL_CREATE_NOTES,
         SQL_CREATE_HEALTH_CHECKS,
         SQL_CREATE_SCHEDULER_LOG,
+        SQL_CREATE_COMMAND_AUDIT,
+        SQL_CREATE_WERKSTATT_RETENTION,
         SQL_INDEX_CONVERSATIONS,
         SQL_INDEX_TASKS_STATUS,
         SQL_INDEX_TASKS_PARENT,
@@ -241,6 +252,8 @@ MIGRATIONS: Final[dict[int, tuple[str, ...]]] = {
         SQL_INDEX_AGENT_ASSIGNMENTS_TASK,
         SQL_INDEX_AGENT_ASSIGNMENTS_ASSIGNED_AT,
         SQL_INDEX_HEALTH_CHECKS,
+        SQL_INDEX_COMMAND_AUDIT,
+        SQL_INDEX_WERKSTATT_RETENTION_PENDING,
     ),
 }
 ```
@@ -267,6 +280,96 @@ async def run_migration(conn: aiosqlite.Connection, statements: list[str]) -> No
 
 ---
 
+### 2.4 UnitOfWork-Pattern (Multi-Repo-Transaktionen)
+
+Damit der HLD-Vertrag *"Task-Status + agent_assignment + Agent-Stats in einer Transaktion"* erfüllt wird, kapselt `UnitOfWork` eine geteilte Connection mit explizitem `BEGIN`/`COMMIT`. Alle Repository-Methoden, die im UnitOfWork-Kontext aufgerufen werden, erhalten die Connection via `conn=`-Keyword und committen **nicht selbst** (siehe §6.1 Connection-Parameter-Pattern).
+
+Das Pattern ist bewusst schlank — keine Framework-Migration, kein Identity-Map. Es ist ein dünner Wrapper um `Database.connection()` mit Transaktions-Lifecycle.
+
+```python
+# egon2/repositories/unit_of_work.py
+from __future__ import annotations
+
+import logging
+from types import TracebackType
+from typing import Self
+
+import aiosqlite
+
+from egon2.database import db as default_db, Database
+
+logger = logging.getLogger(__name__)
+
+
+class UnitOfWork:
+    """Geteilte Connection für atomare Multi-Repo-Writes.
+
+    Verwendung:
+        async with UnitOfWork() as uow:
+            await tasks_repo.update_status(task_id, 'done', conn=uow.conn)
+            await assignments_repo.complete(assignment_id, ..., conn=uow.conn)
+            await agents_repo.bump_use_count(agent_id, conn=uow.conn)
+        # Commit beim sauberen Verlassen, Rollback bei Exception.
+    """
+
+    def __init__(self, database: Database | None = None) -> None:
+        self._db: Database = database or default_db
+        self._cm = None
+        self._conn: aiosqlite.Connection | None = None
+
+    @property
+    def conn(self) -> aiosqlite.Connection:
+        if self._conn is None:
+            raise RuntimeError("UnitOfWork is not entered (use 'async with')")
+        return self._conn
+
+    async def __aenter__(self) -> Self:
+        self._cm = self._db.connection()
+        self._conn = await self._cm.__aenter__()
+        await self._conn.execute("BEGIN")
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        assert self._conn is not None and self._cm is not None
+        try:
+            if exc_type is None:
+                await self._conn.execute("COMMIT")
+            else:
+                logger.warning("UnitOfWork rollback (%s)", exc_type.__name__)
+                await self._conn.execute("ROLLBACK")
+        finally:
+            await self._cm.__aexit__(exc_type, exc, tb)
+            self._conn = None
+            self._cm = None
+```
+
+**Verbindliche Regeln:**
+
+1. **Eine UnitOfWork = eine Transaktion.** Verschachteln nicht erlaubt — wenn ein Caller bereits eine UoW geöffnet hat, reicht er `uow.conn` an die innere Funktion weiter.
+2. **Repository-Methoden mit `conn=` committen nicht.** Der äußere `BEGIN`/`COMMIT` der UoW regelt die Atomarität (§6.1).
+3. **Nur Schreiboperationen** brauchen UoW. Reine Lesevorgänge können weiterhin pro Operation eine eigene Connection nutzen.
+4. **Keine externen I/O-Operationen** (HTTP, Subprocess, MCP-Calls) innerhalb der UoW — Transaktion kurz halten, sonst riskiert man `database is locked`. External I/O läuft *vor* oder *nach* der UoW.
+
+Beispiel (im `agent_dispatcher`, vereinfachte Variante von §7):
+
+```python
+async def complete_assignment(
+    task_id: str, assignment_id: str, agent_id: str, result: str, **metrics,
+) -> None:
+    async with UnitOfWork() as uow:
+        await assignments.complete(assignment_id, status='done', result=result,
+                                   conn=uow.conn, **metrics)
+        await tasks.update_status(task_id, 'done', result=result, conn=uow.conn)
+        await agents.bump_use_count(agent_id, conn=uow.conn)
+```
+
+---
+
 ## 3. Vollständiges SQLite-Schema (`egon2.db`)
 
 Alle Statements sind direkt ausführbar (keine Platzhalter, alle Constraints inkl. Indizes). Alle DATETIME-Spalten sind `TEXT` mit ISO8601-UTC-Default (siehe §1.1).
@@ -285,12 +388,13 @@ CREATE TABLE IF NOT EXISTS agents (
     work_location        TEXT NOT NULL
                          CHECK (work_location IN ('local', 'lxc126', 'lxc_any')),
     prompt_version       INTEGER NOT NULL DEFAULT 1,
-    is_active            INTEGER NOT NULL DEFAULT 1  CHECK (is_active IN (0, 1)),
+    status               TEXT NOT NULL DEFAULT 'active'
+                         CHECK (status IN ('pending_approval', 'active', 'inactive')),
     deactivated_reason   TEXT
                          CHECK (deactivated_reason IN (
                              'inactive_14d', '3_failed_assignments',
                              'user_request', 'limit_reached'
-                         )),                         -- NULL wenn is_active=1
+                         )),                         -- NULL außer wenn status='inactive'
     promoted_to_builtin  INTEGER NOT NULL DEFAULT 0  CHECK (promoted_to_builtin IN (0, 1)),
     use_count            INTEGER NOT NULL DEFAULT 0,
     last_used_at         TEXT,
@@ -300,7 +404,12 @@ CREATE TABLE IF NOT EXISTS agents (
 -- (Kein zusätzlicher Unique-Index auf id — der PRIMARY KEY ist bereits unique.)
 ```
 
-> **`deactivated_reason`:** Wird gesetzt wenn `is_active` auf `0` wechselt. Werte:
+> **`status`:** Lifecycle eines Agenten:
+> - `'pending_approval'` — neu erstellter dynamischer Spezialist wartet auf User-Freigabe (`/agenten freigabe <id>`). Wird vom Dispatcher NICHT für Assignments ausgewählt.
+> - `'active'` — produktiv, wird vom Dispatcher berücksichtigt.
+> - `'inactive'` — deaktiviert; `deactivated_reason` zwingend gesetzt. Bleibt für Audit/Rollback erhalten.
+>
+> **`deactivated_reason`:** Wird gesetzt wenn `status` auf `'inactive'` wechselt. Werte:
 > - `'inactive_14d'` — kein Einsatz in 14 Tagen (automatisch durch Inspector)
 > - `'3_failed_assignments'` — drei aufeinanderfolgende fehlgeschlagene Assignments
 > - `'user_request'` — explizit per `/agenten deaktiviere <id>` vom User
@@ -326,6 +435,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     sender_id        TEXT,                           -- Matrix-MXID oder Telegram-User-ID
     cancelled_reason TEXT,                           -- gesetzt wenn status='cancelled'
     request_id       TEXT,                           -- 8-Zeichen Correlation-ID vom IncomingMessage
+    overhead_tokens_input  INTEGER NOT NULL DEFAULT 0, -- Intent-Klassifikation, compose_reply, Smoke-Tests
+    overhead_tokens_output INTEGER NOT NULL DEFAULT 0,
     created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
@@ -342,6 +453,8 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assigned_agent
 > **`tasks.cancelled_reason`:** Freitext, der den Grund für eine User- oder System-initiierte Stornierung beschreibt (z.B. `'user_correction'`, `'intent_mismatch'`). Nur gesetzt wenn `status = 'cancelled'`.
 >
 > **`tasks.request_id`:** 8-Zeichen alphanumerische Correlation-ID. Wird vom IncomingMessage-Processor generiert und durch den gesamten Task-Lebenszyklus mitgeführt. Ermöglicht Korrelation von Logs, Health-Checks und User-Antworten zu einem eingehenden Request.
+>
+> **`tasks.overhead_tokens_input` / `overhead_tokens_output`:** Aggregat aller Overhead-LLM-Calls, die nicht in `agent_assignments` erfasst werden — `classify_intent()`, `_compose_user_reply()`, Smoke-Tests, Inspector-Reflektion, etc. Wird inkrementell hochgezählt (`UPDATE tasks SET overhead_tokens_input = overhead_tokens_input + ?`). Für Single-User-Setup ausreichend; falls je granulareres Tracking benötigt wird, kann eine separate `overhead_calls`-Tabelle ergänzt werden.
 
 ### 3.3 `agent_assignments`
 
@@ -502,6 +615,50 @@ CREATE TABLE IF NOT EXISTS schema_version (
     applied_at TEXT NOT NULL
 );
 ```
+
+### 3.10 `command_audit`
+
+Audit-Trail für **mutierende** Slash-Kommandos (`/agenten promote`, `/agenten rollback`, `/agenten deaktiviere`, `/agenten freigabe`, etc.). Wird **nicht** für reine Lese-Kommandos oder normale Task-/Note-Operationen befüllt — die laufen bereits über `tasks` bzw. `notes`. Single-User-Setup: Trail ist ein simpler Append-Only-Log, keine Aufbewahrungs-Rotation nötig.
+
+```sql
+CREATE TABLE IF NOT EXISTS command_audit (
+    id           TEXT PRIMARY KEY,
+    sender_id    TEXT,                           -- z.B. '@marco:doehlercomputing.de' oder Telegram-User-ID
+    channel      TEXT CHECK (channel IN ('matrix', 'telegram')),
+    command      TEXT NOT NULL,                   -- Vollständige Kommando-Zeile, z.B. '/agenten promote researcher'
+    result       TEXT NOT NULL,                   -- 'ok' oder 'error: <reason>'
+    executed_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_command_audit_executed
+    ON command_audit (executed_at DESC);
+```
+
+> **Befüllung:** Im Slash-Handler vor und nach Ausführung. Bei Erfolg `result = 'ok'`, bei Exception `result = 'error: <message>'`. Niemals abbrechen wegen Audit-Fehler — der Audit-Insert läuft im Try/Except, die eigentliche Aktion bleibt davon unberührt.
+
+### 3.11 `werkstatt_retention`
+
+Recovery-fester Cleanup für die Werkstatt-Verzeichnisse (`/opt/Projekte/Egon2/werkstatt/<task-id>/`). Ohne diese Tabelle würde ein Crash zwischen Task-Abschluss und 24h-Cleanup die Verzeichnisse unaufgeräumt lassen, weil der Cleanup-Job nicht mehr weiß, *welche* Verzeichnisse noch zu räumen sind.
+
+```sql
+CREATE TABLE IF NOT EXISTS werkstatt_retention (
+    task_id     TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+    path        TEXT NOT NULL,                   -- '/opt/Projekte/Egon2/werkstatt/<task-id>/'
+    expires_at  TEXT NOT NULL,                   -- completed_at + 24h, ISO8601-UTC
+    cleaned_up  INTEGER NOT NULL DEFAULT 0
+                CHECK (cleaned_up IN (0, 1))      -- 0=pending, 1=done
+);
+
+CREATE INDEX IF NOT EXISTS idx_werkstatt_retention_pending
+    ON werkstatt_retention (expires_at) WHERE cleaned_up = 0;
+```
+
+> **Cleanup-Job (täglich 01:00):**
+> 1. `SELECT task_id, path FROM werkstatt_retention WHERE cleaned_up = 0 AND expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`
+> 2. Pro Eintrag: `shutil.rmtree(path, ignore_errors=True)` + `UPDATE werkstatt_retention SET cleaned_up = 1 WHERE task_id = ?`.
+> 3. **Idempotent:** Bereits aufgeräumte Pfade werden nicht erneut bearbeitet (`cleaned_up = 1` filtert sie aus). Existiert das Verzeichnis nicht mehr (manueller Cleanup), ist `rmtree` mit `ignore_errors=True` ein No-Op und der Eintrag wird trotzdem auf `1` gesetzt.
+>
+> **Befüllung:** Wird vom `agent_dispatcher.finalise_assignment()` direkt nach Task-Completion in derselben UnitOfWork-Transaktion eingefügt (siehe §7).
 
 ---
 
@@ -1063,6 +1220,8 @@ AssignmentStatus = Literal["running", "done", "failed", "cancelled"]
 HealthCheckType = Literal["system", "data", "agent"]
 HealthStatus = Literal["ok", "repaired", "warning", "degraded", "critical"]
 DeactivatedReason = Literal["inactive_14d", "3_failed_assignments", "user_request", "limit_reached"]
+AgentStatus = Literal["pending_approval", "active", "inactive"]
+CommandChannel = Literal["matrix", "telegram"]
 SyncStatus = Literal[0, 1, 2]   # 0=pending, 1=synced, 2=error
 
 
@@ -1121,9 +1280,11 @@ class Agent(_TzAware):
     capabilities: list[str]
     work_location: WorkLocation
     prompt_version: int = 1
-    is_active: bool = True
+    status: AgentStatus = "active"
     deactivated_reason: DeactivatedReason | None = None
     promoted_to_builtin: bool = False
+    use_count: int = 0
+    last_used_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -1495,22 +1656,21 @@ class AgentRepository:
             return None
         d = dict(row)
         d["capabilities"] = json.loads(d.get("capabilities") or "[]")
-        d["is_active"] = bool(d["is_active"])
         return Agent.model_validate(d)
 
     async def list_active(
         self, *, conn: aiosqlite.Connection | None = None,
     ) -> list[Agent]:
+        """Liefert nur Agenten mit status='active' (kein 'pending_approval' und kein 'inactive')."""
         async with _conn(conn) as (c, _owns):
             cur = await c.execute(
-                "SELECT * FROM agents WHERE is_active = 1 ORDER BY id"
+                "SELECT * FROM agents WHERE status = 'active' ORDER BY id"
             )
             rows = await cur.fetchall()
         out: list[Agent] = []
         for r in rows:
             d = dict(r)
             d["capabilities"] = json.loads(d.get("capabilities") or "[]")
-            d["is_active"] = bool(d["is_active"])
             out.append(Agent.model_validate(d))
         return out
 
@@ -1521,7 +1681,7 @@ class AgentRepository:
             await c.execute(
                 """INSERT INTO agents (id, name, description, system_prompt,
                                        capabilities, work_location, prompt_version,
-                                       is_active, created_at, updated_at)
+                                       status, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(id) DO UPDATE SET
                        name = excluded.name,
@@ -1530,23 +1690,53 @@ class AgentRepository:
                        capabilities = excluded.capabilities,
                        work_location = excluded.work_location,
                        prompt_version = excluded.prompt_version,
-                       is_active = excluded.is_active,
+                       status = excluded.status,
                        updated_at = excluded.updated_at""",
                 (agent.id, agent.name, agent.description, agent.system_prompt,
                  json.dumps(agent.capabilities), agent.work_location,
-                 agent.prompt_version, int(agent.is_active),
+                 agent.prompt_version, agent.status,
                  iso_utc_now(), iso_utc_now()),
             )
             if owns:
                 await c.commit()
 
-    async def set_active(
-        self, agent_id: str, active: bool, *, conn: aiosqlite.Connection | None = None,
+    async def set_status(
+        self,
+        agent_id: str,
+        status: str,
+        *,
+        deactivated_reason: str | None = None,
+        conn: aiosqlite.Connection | None = None,
     ) -> None:
+        """Setzt agents.status. Bei status='inactive' wird deactivated_reason gesetzt;
+        bei 'active'/'pending_approval' wird deactivated_reason auf NULL zurückgesetzt.
+        """
+        async with _conn(conn) as (c, owns):
+            if status == "inactive":
+                await c.execute(
+                    "UPDATE agents SET status = ?, deactivated_reason = ?, updated_at = ? WHERE id = ?",
+                    (status, deactivated_reason, iso_utc_now(), agent_id),
+                )
+            else:
+                await c.execute(
+                    "UPDATE agents SET status = ?, deactivated_reason = NULL, updated_at = ? WHERE id = ?",
+                    (status, iso_utc_now(), agent_id),
+                )
+            if owns:
+                await c.commit()
+
+    async def bump_use_count(
+        self, agent_id: str, *, conn: aiosqlite.Connection | None = None,
+    ) -> None:
+        """Inkrementiert use_count und setzt last_used_at auf jetzt."""
         async with _conn(conn) as (c, owns):
             await c.execute(
-                "UPDATE agents SET is_active = ?, updated_at = ? WHERE id = ?",
-                (int(active), iso_utc_now(), agent_id),
+                """UPDATE agents
+                       SET use_count = use_count + 1,
+                           last_used_at = ?,
+                           updated_at = ?
+                       WHERE id = ?""",
+                (iso_utc_now(), iso_utc_now(), agent_id),
             )
             if owns:
                 await c.commit()
@@ -1844,67 +2034,180 @@ class SchedulerLogRepository:
         return [SchedulerLogEntry.model_validate(dict(r)) for r in rows]
 ```
 
+### 6.10 CommandAuditRepository
+
+```python
+# egon2/repositories/command_audit.py
+from __future__ import annotations
+
+import uuid
+
+import aiosqlite
+
+from egon2.database import iso_utc_now
+from egon2.repositories._base import _conn
+
+
+class CommandAuditRepository:
+    async def record(
+        self,
+        sender_id: str | None,
+        channel: str | None,
+        command: str,
+        result: str,
+        *,
+        conn: aiosqlite.Connection | None = None,
+    ) -> str:
+        """Append-only Eintrag für Mutations-Slash-Kommandos.
+
+        Wird im Slash-Handler nach Ausführung gerufen. Niemals abbrechen wegen
+        Audit-Fehler — Caller umschließt mit try/except.
+        """
+        entry_id = str(uuid.uuid4())
+        async with _conn(conn) as (c, owns):
+            await c.execute(
+                """INSERT INTO command_audit
+                       (id, sender_id, channel, command, result, executed_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (entry_id, sender_id, channel, command, result, iso_utc_now()),
+            )
+            if owns:
+                await c.commit()
+        return entry_id
+```
+
+### 6.11 WerkstattRetentionRepository
+
+```python
+# egon2/repositories/werkstatt_retention.py
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+import aiosqlite
+
+from egon2.database import iso_utc_now
+from egon2.repositories._base import _conn
+
+
+class WerkstattRetentionRepository:
+    async def schedule_cleanup(
+        self,
+        task_id: str,
+        path: str,
+        *,
+        retention_hours: int = 24,
+        conn: aiosqlite.Connection | None = None,
+    ) -> None:
+        """Trägt einen Werkstatt-Pfad zum späteren Cleanup ein.
+
+        Wird typischerweise innerhalb der finalise_assignment-UoW gerufen,
+        damit Eintrag und Task-Completion atomar sind.
+        """
+        expires = (datetime.now(timezone.utc)
+                   + timedelta(hours=retention_hours)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        async with _conn(conn) as (c, owns):
+            await c.execute(
+                """INSERT INTO werkstatt_retention (task_id, path, expires_at, cleaned_up)
+                   VALUES (?, ?, ?, 0)
+                   ON CONFLICT(task_id) DO UPDATE SET
+                       path = excluded.path,
+                       expires_at = excluded.expires_at""",
+                (task_id, path, expires),
+            )
+            if owns:
+                await c.commit()
+
+    async def list_due(
+        self, *, limit: int = 200, conn: aiosqlite.Connection | None = None,
+    ) -> list[tuple[str, str]]:
+        """(task_id, path) für fällige, noch nicht aufgeräumte Einträge."""
+        async with _conn(conn) as (c, _owns):
+            cur = await c.execute(
+                """SELECT task_id, path FROM werkstatt_retention
+                       WHERE cleaned_up = 0 AND expires_at <= ?
+                       ORDER BY expires_at LIMIT ?""",
+                (iso_utc_now(), limit),
+            )
+            rows = await cur.fetchall()
+        return [(r[0], r[1]) for r in rows]
+
+    async def mark_cleaned(
+        self, task_id: str, *, conn: aiosqlite.Connection | None = None,
+    ) -> None:
+        async with _conn(conn) as (c, owns):
+            await c.execute(
+                "UPDATE werkstatt_retention SET cleaned_up = 1 WHERE task_id = ?",
+                (task_id,),
+            )
+            if owns:
+                await c.commit()
+```
+
 ---
 
-## 7. Transaktion über mehrere Repositories
+## 7. Transaktion über mehrere Repositories (UnitOfWork-Pattern)
 
-Der Agent-Dispatcher (HLD §7.2) verlangt: **Task-Update + agent_assignment** in **einer** Transaktion. Dies wird über das `conn=`-Parameter-Pattern gelöst (siehe §6.1).
+Der Agent-Dispatcher (HLD §7.2) verlangt: **Task-Update + agent_assignment + Agent-Stats** in **einer** Transaktion. Implementiert über das `UnitOfWork`-Pattern aus §2.4 in Kombination mit dem `conn=`-Parameter-Pattern aus §6.1.
 
-**Verbindliche Regel:** Die Repository-Methoden `task_repo.update_status()` und `assignment_repo.create_assignment()` / `assignment_repo.complete()` MÜSSEN atomar in einer Transaktion laufen. Ohne diese Atomarität entsteht inkonsistenter Zustand (Task ist `done`, aber kein Assignment-Record — oder umgekehrt).
+**Verbindliche Regel:** Alle Repository-Methoden, die im selben atomaren Schritt schreiben, MÜSSEN denselben `conn=uow.conn` übergeben bekommen und MÜSSEN auf eigenes `commit()` verzichten (eingebaut über `_conn(conn)` Helper). Ohne diese Atomarität entsteht inkonsistenter Zustand (Task ist `done`, aber kein Assignment-Record — oder umgekehrt).
 
 ```python
 # egon2/core/agent_dispatcher.py (Auszug)
-from egon2.database import db
 from egon2.repositories.tasks import TaskRepository
 from egon2.repositories.agent_assignments import AgentAssignmentRepository
+from egon2.repositories.agents import AgentRepository
+from egon2.repositories.werkstatt_retention import WerkstattRetentionRepository
+from egon2.repositories.unit_of_work import UnitOfWork
 
 tasks = TaskRepository()
 assignments = AgentAssignmentRepository()
+agents = AgentRepository()
+werkstatt = WerkstattRetentionRepository()
 
 
 async def dispatch_assignment(
     task_id: str, agent_id: str, brief: dict,
 ) -> str:
-    """Atomare Operation: Task auf 'running' setzen + Assignment anlegen."""
-    async with db.connection() as conn:
-        await conn.execute("BEGIN")
-        try:
-            await tasks.update_status(
-                task_id, "running", assigned_agent=agent_id, conn=conn,
-            )
-            assignment = await assignments.create_assignment(
-                agent_id=agent_id, task_id=task_id, brief=brief, conn=conn,
-            )
-            await conn.execute("COMMIT")
-            return assignment.id
-        except Exception:
-            await conn.execute("ROLLBACK")
-            raise
+    """Atomar: Task auf 'running' setzen + Assignment anlegen."""
+    async with UnitOfWork() as uow:
+        await tasks.update_status(
+            task_id, "running", assigned_agent=agent_id, conn=uow.conn,
+        )
+        assignment = await assignments.create_assignment(
+            agent_id=agent_id, task_id=task_id, brief=brief, conn=uow.conn,
+        )
+        return assignment.id
 
 
 async def finalise_assignment(
-    task_id: str, assignment_id: str, status, result: str, **metrics,
+    task_id: str, assignment_id: str, agent_id: str,
+    status, result: str, *, werkstatt_path: str | None = None, **metrics,
 ) -> None:
-    """Atomare Operation: Assignment komplettieren + Task finalisieren."""
-    async with db.connection() as conn:
-        await conn.execute("BEGIN")
-        try:
-            await assignments.complete(
-                assignment_id, status=status, result=result, conn=conn, **metrics,
+    """Atomar: Assignment komplettieren + Task finalisieren + Agent-Stats +
+    Werkstatt-Retention anlegen.
+    """
+    async with UnitOfWork() as uow:
+        await assignments.complete(
+            assignment_id, status=status, result=result, conn=uow.conn, **metrics,
+        )
+        await tasks.update_status(
+            task_id,
+            "done" if status == "done" else "failed",
+            result=result,
+            conn=uow.conn,
+        )
+        await agents.bump_use_count(agent_id, conn=uow.conn)
+        if werkstatt_path is not None and status == "done":
+            await werkstatt.schedule_cleanup(
+                task_id=task_id, path=werkstatt_path, retention_hours=24,
+                conn=uow.conn,
             )
-            await tasks.update_status(
-                task_id,
-                "done" if status == "done" else "failed",
-                result=result,
-                conn=conn,
-            )
-            await conn.execute("COMMIT")
-        except Exception:
-            await conn.execute("ROLLBACK")
-            raise
 ```
 
-Weil die Repository-Methoden `conn` extern erhalten, rufen sie kein eigenes `commit()` auf — der äußere `BEGIN`/`COMMIT` umschließt beide Statements. Bei einem Fehler im zweiten Statement wird auch das erste zurückgerollt.
+Weil die Repository-Methoden `conn` extern erhalten, rufen sie kein eigenes `commit()` auf — die UnitOfWork umschließt alle Statements mit einem einzigen `BEGIN`/`COMMIT`. Bei einem Fehler in irgendeinem Statement wird die gesamte Transaktion zurückgerollt. External I/O (z.B. Matrix-Reply senden) läuft **außerhalb** der UoW.
+
+> **Anti-Pattern:** Eine Repository-Methode aus einer UoW heraus aufrufen *ohne* `conn=uow.conn` — sie öffnet dann eine zweite Connection mit eigener Transaktion, und die Atomarität ist verloren. Code-Review prüft auf `conn=uow.conn` an jeder Schreibmethode innerhalb von `async with UnitOfWork() as uow:`.
 
 ---
 
@@ -1915,6 +2218,9 @@ Weil die Repository-Methoden `conn` extern erhalten, rufen sie kein eigenes `com
 | Unit | `pytest` + `pytest-asyncio` | Repository-Methoden gegen `:memory:`-DB |
 | Migration | dedizierter Test | Migration zweimal hintereinander → keine Duplikate; absichtlicher Fehler in Statement N → Rollback verifizieren |
 | Multi-Repo-TX | dedizierter Test | `dispatch_assignment` mit Mock-Fehler im 2. Statement → kein Task-Update sichtbar |
+| UnitOfWork | dedizierter Test | Exception innerhalb `async with UnitOfWork()` → ROLLBACK, keine Daten persistiert; sauberes Verlassen → COMMIT |
+| Werkstatt-Retention | dedizierter Test | `schedule_cleanup` + `list_due` mit Zeitsprung; `mark_cleaned` ist idempotent |
+| Command-Audit | dedizierter Test | Slash-Mutation → genau 1 Audit-Row mit `result='ok'`; Exception im Handler → 1 Row mit `result='error: ...'` |
 | Pragma-Persistenz | dedizierter Test | Mehrere Connections öffnen, jede prüft `PRAGMA foreign_keys`, `synchronous`, `busy_timeout` |
 | DATETIME-Format | dedizierter Test | Insert ohne explicit timestamp → DB-Default matcht Regex `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$` |
 | Knowledge-Migration | dedizierter Test | Idempotenz: zweite Ausführung ist No-Op; SQLite-Versions-Gate löst aus bei < 3.35 |

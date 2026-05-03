@@ -1,9 +1,19 @@
 # LLD — Egon2: Core-Engine
 
-**Version:** 1.3
+**Version:** 1.4
 **Stand:** 2026-05-02
 **Bezug:** HLD-Egon2.md v1.5, Abschnitte 4, 7.2, 7.3
 **Modul-Pfad:** `egon2/core/` und `egon2/personality.py`
+
+**Änderungen v1.4 (Audit-Runde-3-Findings 2026-05-02 — Single-User-Pragmatik):**
+- K2: `MessageQueue.join()` aus dem Shutdown-Pfad entfernt — Drain erfolgt über `_running_tasks`-Set (§1.3, §1.6).
+- K3: Sub-Task-Semaphore-Deadlock behoben — Parent gibt Consumer-Slot vor Sub-Task-Spawn frei; Sub-Tasks laufen ohne Semaphore (§4.10).
+- H2: Spezialist-Output wird vor `_compose_user_reply` in `<external source="agent_result">…</external>` gekapselt (§4.9).
+- H4: `IncomingMessage` mit `raw_text` + `wrapped_text` statt mehrdeutigem `text` (§1.2). Cancel/Titel nutzt `raw_text`, LLM-Pfad `wrapped_text`.
+- H6: `recover_orphaned()` setzt `running` → `failed` (statt `pending`) mit `cancelled_reason='service_crash'` — Single-User-Neuanlauf (§3.5).
+- H12: `_compose_user_reply` läuft unter `asyncio.wait_for(..., timeout=30.0)`; Timeout-Fallback: Rohergebnis (§4.9).
+- M5: `_compose_user_reply` nur bei `len(result) > 300` aufrufen — kurze Outputs direkt senden (§4.9).
+- M10: `safe_wrap()` neutralisiert verschachtelte `<external>`-Tags vor dem Wrap (§2.x).
 
 **Änderungen ggü. v1.0 (Audit-Findings eingearbeitet):**
 - C1: `IncomingMessage` als kanonisches Pydantic-BaseModel definiert (Single Source of Truth — siehe §1.2).
@@ -71,10 +81,21 @@ class IncomingMessage(BaseModel):
 
     Kanonische Definition — LLD-Interfaces und LLD-Architektur referenzieren
     dieses Modell. Pydantic v2, frozen (immutable nach Konstruktion).
+
+    **Zwei-Felder-Vertrag (H4):**
+    - `raw_text`: Originaltext vom User. Verwendet für Cancel-Erkennung
+      (Phrasen-Match), `/status`-Anzeige, Task-Titel, User-Antwort und Logs.
+    - `wrapped_text`: Ergebnis von `safe_wrap()` über `raw_text` — wird in
+      ALLEN LLM-Aufrufen verwendet (Intent-Klassifikation, Brief-Objective,
+      Context-Building). Nie `raw_text` an ein LLM geben.
+
+    Adapter (Matrix/Telegram/Scheduler) setzen beide Felder:
+        wrapped_text = safe_wrap(raw_text)  # siehe ContextManager §2.x
     """
     model_config = ConfigDict(frozen=True)
 
-    text: str
+    raw_text: str                           # Original-Text (Cancel, Titel, Log)
+    wrapped_text: str                       # safe_wrap()-Ergebnis (LLM-Pfad)
     channel: Channel
     sender_id: str
     room_id: str | None = None              # Matrix room_id
@@ -141,8 +162,11 @@ class MessageQueue:
     def qsize(self) -> int:
         return self._q.qsize()
 
-    async def join(self) -> None:
-        await self._q.join()
+    # HINWEIS (K2): `Queue.join()` wird NICHT verwendet — Drain im Shutdown
+    # erfolgt ausschließlich über das `_running_tasks`-Set des MessageConsumer
+    # (§1.6). `join()` würde nach `cancel()` des Consumer-Loops nie zurückkehren,
+    # weil `task_done()` für die abgebrochene Iteration nicht mehr aufgerufen wird.
+    # Daher kein `join()` an dieser Klasse exponiert.
 
     def stats(self) -> dict[str, int]:
         return {"size": self._q.qsize(), "max": self._q.maxsize,
@@ -385,7 +409,44 @@ Rückgabe: `list[KnowledgeEntry]` mit `id, title, content, domain, importance, s
   - System-Prompt wird **nie** gekürzt — sollte er das Budget sprengen, ist das ein Konfigurationsfehler → Exception `SystemPromptTooLargeError`.
 - **Final-Check** in `build_context`: `assert estimated_tokens + RESERVED_OUTPUT_TOKENS <= MAX_TOTAL_TOKENS`.
 
-### 2.9 OpenAI-Kontext-Struktur
+### 2.10 `safe_wrap()` — Untrusted-Content-Kapselung (M10)
+
+> Zentrale Funktion zur Kapselung von User-Input und sonstigen untrusted Quellen
+> (Spezialist-Outputs, gespeicherte Knowledge-Snippets, Web-Suchergebnisse).
+> Umschließt den Inhalt mit `<external source="…">…</external>`. Egon's
+> System-Prompt instruiert das Modell, alles innerhalb von `<external>` als
+> reine Daten zu behandeln — nicht als Anweisungen.
+
+```python
+import re
+
+class ContextManager:
+    @staticmethod
+    def safe_wrap(text: str, *, source: str = "user_input") -> str:
+        """Kapselt untrusted Text in <external source="…">…</external>.
+
+        M10 — Tag-Neutralisierung: Vor dem Wrap werden bereits vorhandene
+        `<external` und `</external>`-Tags im Input durch `[external` bzw.
+        `[/external]` ersetzt. Verhindert verschachteltes XML, wenn z. B.
+        ein gespeicherter News-Report (der bereits gewrappte Sub-Snippets
+        enthielt) erneut gewrappt wird — strukturell brüchiges Markup
+        (parser-confusion, prompt-injection-vektor) wird so neutralisiert.
+        """
+        if text is None:
+            return f'<external source="{source}"></external>'
+        # M10: vorhandene <external …>/</external>-Tags neutralisieren
+        # (case-insensitive, mit oder ohne Attribute).
+        cleaned = re.sub(r"<external\b", "[external", text, flags=re.IGNORECASE)
+        cleaned = re.sub(r"</external\s*>", "[/external]", cleaned, flags=re.IGNORECASE)
+        return f'<external source="{source}">{cleaned}</external>'
+```
+
+**Aufrufer:**
+- Interface-Adapter (Matrix/Telegram) befüllen `IncomingMessage.wrapped_text` mit `safe_wrap(raw_text, source="user_input")`.
+- `_compose_user_reply` ruft `safe_wrap(raw, source="agent_result")` (§4.9, H2).
+- `_extract_relevant_context` (§4.7) ruft `safe_wrap(snippet, source="knowledge")` für jeden Knowledge-Snippet aus dem MCP-Store.
+
+### 2.11 OpenAI-Kontext-Struktur
 
 ```python
 [
@@ -563,9 +624,10 @@ class TaskManager:
 
     # --- Recovery ---
     async def recover_orphaned(self) -> int:
-        # Beim Service-Start: alle status='running' -> 'pending'.
-        # 'waiting_approval' bleibt unverändert (User-Aktion erforderlich).
-        # Returns: Anzahl zurückgesetzter Tasks.
+        # H6 (Single-User-Pragmatik): alle status='running' -> 'failed' mit
+        # cancelled_reason='service_crash'. KEIN Re-Dispatch — Marco fragt
+        # bei Bedarf erneut. 'waiting_approval' bleibt unverändert.
+        # Returns: Anzahl als 'failed' markierter Tasks.
         ...
 ```
 
@@ -583,15 +645,16 @@ if n:
     log.info("startup.recovered_running_tasks", count=n)
 ```
 
-SQL:
+SQL (H6 — Single-User: einfacher Neuanlauf, kein Re-Dispatch):
 ```sql
 UPDATE tasks
-SET status = 'pending',
+SET status = 'failed',
+    cancelled_reason = 'service_crash',
     updated_at = CURRENT_TIMESTAMP
 WHERE status = 'running';
 ```
 
-Begründung: Ein Task in `running` ohne aktive Coroutine ist ein Geist — nur ein Restart kann das verursachen. Der Dispatcher übernimmt nach Recovery die Wiederaufnahme über `list_active()`. `waiting_approval` bleibt unangetastet, weil dort ein User-Input erwartet wird.
+Begründung: Ein Task in `running` ohne aktive Coroutine ist ein Geist — nur ein Restart kann das verursachen. Bei einem Multi-Tenant-System würde man re-dispatchen; für Egon2 (Single-User, Marco) wäre Re-Dispatch riskant — der LLM-Call lief evtl. schon teilweise durch, side-effects (SSH-Befehle, Knowledge-Writes) sind unklar. Einfacher: als `failed` markieren mit `cancelled_reason='service_crash'`. Marco sieht im `/status` was ausgefallen ist und fragt bei Bedarf erneut. `waiting_approval` bleibt unangetastet, weil dort ohnehin User-Input erwartet wird.
 
 ### 3.6 Transaktionssemantik
 
@@ -707,14 +770,19 @@ class AgentDispatcher:
     # --- öffentliche API ---
     async def handle(self, msg: IncomingMessage) -> str:
         """Einstiegspunkt aus dem Consumer-Loop. Erzeugt Task aus Message
-        und delegiert an dispatch()."""
-        title = msg.text[:80]
+        und delegiert an dispatch().
+
+        H4 — `raw_text` wird für Titel/Description gespeichert (User sieht
+        den Originaltext im /status). Für LLM-Calls verwendet der Dispatcher
+        intern `msg.wrapped_text` (siehe classify_intent, build_brief).
+        """
+        title = msg.raw_text[:80]
         task = await self._tasks.create(
             title=title,
-            description=msg.text,
+            description=msg.raw_text,        # raw für Anzeige/Titel
             source_channel=str(msg.channel),
         )
-        return await self.dispatch(task)
+        return await self.dispatch(task, wrapped_text=msg.wrapped_text)
 
     async def classify_intent(self, message: str) -> Intent: ...
 
@@ -924,15 +992,19 @@ async def dispatch(task: Task) -> str:
          await task_repo.finish(task.id, result)        # running → done
 
   11. # User-Antwort formulieren (knapp, im Egon-Stil) — auf Basis des
-      # ORIGINAL-Tasks, nicht der sanitisierten Form
-      antwort ← await _compose_user_reply(task, agent, result)
+      # ORIGINAL-Tasks, nicht der sanitisierten Form.
+      # M5: bei kurzen, strukturierten Outputs zweiten LLM-Call sparen.
+      if len(result) <= 300:
+          antwort ← result      # direkt durchreichen
+      else:
+          antwort ← await _compose_user_reply(task, agent, result)
       return antwort
 ```
 
 **Fehlerpfade:**
 
 - LLM-Fehler → `agent_assignments.status='failed'`, `task_repo.fail()`, kurze User-Meldung.
-- Bei Timeout in `_compose_user_reply` → Rohergebnis weiterreichen mit Präfix *„Roh:"*.
+- Bei Timeout in `_compose_user_reply` (H12, 30 s) → Rohergebnis weiterreichen, `quality_score=3` (partial).
 - Schritt 10 ist atomar (Transaktion) — kein Teilergebnis ohne Buchhaltung (HLD §7.2).
 
 ### 4.9 Hilfsfunktionen
@@ -945,9 +1017,52 @@ async def _evaluate_result(result: str, brief: Brief) -> int:
     # +1 wenn Markdown- oder Listenstruktur erkennbar (Heuristik per Regex).
     ...
 
+_COMPOSE_REPLY_TIMEOUT_S: float = 30.0   # H12
+
 async def _compose_user_reply(task: Task, agent: Agent, raw: str) -> str:
-    # Kurzer LLM-Call mit Egon's System-Prompt: Spezialist-Output → User-gerechte Antwort.
-    # max_tokens=400, Temperatur 0.5.
+    """Kurzer LLM-Call mit Egon's System-Prompt: Spezialist-Output → User-gerechte
+    Antwort. max_tokens=400, Temperatur 0.5.
+
+    H2 — Prompt-Injection-Schutz: Das Spezialist-Ergebnis (`raw`) wird VOR der
+    Einbettung in den Egon-Verwalter-Kontext durch denselben safe_wrap()-
+    Mechanismus wie User-Input gekapselt:
+
+        wrapped = safe_wrap(raw, source="agent_result")
+        # ergibt: <external source="agent_result">…</external>
+
+    Egon's System-Prompt instruiert das Modell, Inhalte innerhalb von <external>
+    als Daten zu behandeln — nicht als Anweisungen. So kann ein Spezialist-Output
+    (z. B. eine vom Researcher zurückgegebene Webseite) keine Instruktionen an
+    den Verwalter-Loop schmuggeln.
+
+    H12 — Timeout: der gesamte Call läuft unter
+        await asyncio.wait_for(self._llm.chat(...), timeout=_COMPOSE_REPLY_TIMEOUT_S)
+    Bei TimeoutError: `raw` direkt zurückgeben, `quality_score = 3` (partial)
+    setzen, kein zweiter Versuch. Verhindert dass ein hängender LXC 105 den
+    Consumer-Slot dauerhaft blockiert.
+
+    Pseudocode:
+        wrapped = self._ctx.safe_wrap(raw, source="agent_result")
+        messages = [
+            {"role": "system",
+             "content": personality.render_system_prompt(...)},
+            {"role": "user",
+             "content": f"Spezialist '{agent.id}' hat zu '{task.title}' "
+                        f"folgendes Ergebnis geliefert:\n\n{wrapped}\n\n"
+                        f"Fasse für den User in 1-3 Sätzen zusammen — "
+                        f"kein Roh-Output, dein Stil."},
+        ]
+        try:
+            return await asyncio.wait_for(
+                self._llm.chat(messages, max_tokens=400, temperature=0.5),
+                timeout=_COMPOSE_REPLY_TIMEOUT_S,
+            )
+        except asyncio.TimeoutError:
+            log.warning("compose_user_reply.timeout", task_id=task.id)
+            # Fallback: Rohergebnis durchreichen, quality auf 3 setzen
+            self._mark_partial_quality(task.id)
+            return raw
+    """
     ...
 ```
 
@@ -1029,7 +1144,69 @@ return resp
 - Anschließend `result = await self._aggregate_subtasks(task.id)` und `task_repo.finish(task.id, result)`.
 - Für Tiefe-2 gilt das gleiche; für Tiefe ≥ 3 → `SubTaskDepthExceededError`, der Parent läuft ohne weitere Aufteilung weiter.
 
-**Concurrency:** Sub-Tasks belegen **eigene Slots** des `MessageConsumer._sem` (§1.6) — d. h. ein Parent-Task der 4 Sub-Tasks spawnt verbraucht im Worst Case 4 LLM-Slots, was dank `Semaphore(3)` automatisch serialisiert wird.
+**Concurrency-Modell für Sub-Tasks (K3 — Deadlock-Vermeidung):**
+
+> **Problem (K3):** Bei `Semaphore(3)` würde ein Parent-Task der 3 Sub-Tasks spawnt
+> in einen Deadlock laufen, wenn der Parent seinen Consumer-Slot festhält und
+> die Sub-Tasks ebenfalls einen Slot benötigen — alle 3 verfügbaren Slots wären
+> dann durch den Parent (1) und die wartenden Sub-Tasks (2) belegt, während der
+> dritte Sub-Task ewig auf einen freien Slot wartet.
+
+**Lösung — verbindlich:**
+
+1. **Sub-Tasks gehen NICHT durch den `MessageConsumer._sem`.**
+   Sie werden nicht über die Queue dispatcht, sondern direkt via
+   `asyncio.create_task(self.dispatch(sub_task))` ohne Semaphore-Erwerb.
+   Concurrency-Schutz auf LLM-Backend-Ebene erfolgt einzig durch den
+   ohnehin in `LlmClient` vorhandenen Connection-Pool (httpx) — für 1 User
+   und max. 4–6 parallele Calls völlig ausreichend.
+
+2. **Parent gibt seinen Consumer-Slot frei, bevor er auf Sub-Task-Aggregation wartet.**
+   Der `async with self._sem`-Block wird verlassen, **dann** werden Sub-Tasks
+   gespawnt, **dann** wird auf sie gewartet:
+
+   ```python
+   # in MessageConsumer._handle_with_semaphore (§1.6) ist nur der Spezialist-
+   # Call vom Semaphore umschlossen. Im Dispatcher selbst muss bei Sub-Task-
+   # Spawn der äußere Slot freigegeben werden:
+   async def dispatch(self, task: Task) -> str:
+       # ... Schritte 1-9 wie §4.8 ...
+       if has_subtasks(result):
+           # Slot freigeben BEVOR Sub-Tasks gespawnt werden.
+           # Konkret: dispatch() läuft NICHT mehr unter dem Semaphore-
+           # Kontext-Manager des Consumers — der Consumer hat den Slot bereits
+           # nach Schritt 8 (LLM-Call des Parents) freigegeben.
+           sub_tasks = await self._spawn_subtasks(task, result)  # create_task
+           sub_result = await self._aggregate_subtasks(task.id)  # await + poll
+           await self._tasks.finish(task.id, sub_result)
+           return await self._compose_or_passthrough(task, agent, sub_result)
+       # ... ohne Sub-Tasks: normaler Pfad
+   ```
+
+   Konkret im `MessageConsumer._handle_with_semaphore` (§1.6) wird der
+   Semaphore-Block auf den Spezialist-LLM-Call des Parents reduziert:
+
+   ```python
+   async def _handle_with_semaphore(self, msg):
+       structlog.contextvars.bind_contextvars(req=msg.request_id)
+       try:
+           # KEIN umschließendes `async with self._sem` mehr für den ganzen
+           # dispatch() — Slot-Erwerb erfolgt punktuell um die einzelnen
+           # LLM-Calls herum, nicht um die Sub-Task-Aggregation.
+           await self._dispatcher.handle(msg, sem=self._sem)
+       finally:
+           ...
+   ```
+
+   Der Dispatcher umschließt nur die einzelnen LLM-Calls mit
+   `async with sem:` — nicht das gesamte `dispatch()`. Sub-Task-`dispatch()`-
+   Aufrufe erwerben den Slot genauso punktuell für ihren Spezialist-Call,
+   sodass insgesamt nie mehr als `MAX_CONCURRENT_LLM_CALLS = 3` LLM-Calls
+   gleichzeitig laufen — aber wartende Parents blockieren niemanden.
+
+3. **`asyncio.gather`** über die direkt via `create_task` gespawnten
+   Sub-Task-Coroutinen, mit `return_exceptions=True` damit ein einzelner
+   Sub-Task-Fehler die anderen nicht canceled.
 
 ### 4.11 Cancel-Intent-Erkennung (F7)
 
@@ -1052,23 +1229,26 @@ Erweiterung: Wenn die Nachricht mit einer dieser Phrasen **beginnt** (z. B. „N
 ```
 async def handle(self, msg: IncomingMessage) -> str:
   # 1. Cancel-Intent-Check (kostenlos, vor LLM-Klassifikation)
-  if self._is_cancel_intent(msg.text):
+  #    H4: Cancel-Erkennung nutzt msg.raw_text — nur dort sind die echten
+  #    Cancel-Phrasen sichtbar (im wrapped_text wären sie von <external>-
+  #    Tags umschlossen, was das Phrasen-Matching verhindern würde).
+  if self._is_cancel_intent(msg.raw_text):
       last = await self._tasks.last_task_for_sender(msg.sender_id)
       if last is None:
           return "Es gibt nichts zum Abbrechen."
 
       if last.status == TaskStatus.PENDING:
-          await self._tasks.cancel(last.id, reason=msg.text)
+          await self._tasks.cancel(last.id, reason=msg.raw_text)
           return f"Erledigt — '{last.title}' wurde abgebrochen."
 
       if last.status == TaskStatus.RUNNING:
           # Höflich: nicht den LLM-Call killen
-          await self._tasks.mark_cancel_requested(last.id, reason=msg.text)
+          await self._tasks.mark_cancel_requested(last.id, reason=msg.raw_text)
           return (f"'{last.title}' läuft bereits. Ich lasse den Spezialisten "
                   f"zu Ende arbeiten und verwerfe das Ergebnis.")
 
       if last.status == TaskStatus.WAITING_APPROVAL:
-          await self._tasks.cancel(last.id, reason=msg.text)
+          await self._tasks.cancel(last.id, reason=msg.raw_text)
           return f"Approval verworfen — '{last.title}' abgebrochen."
 
       # done/failed/cancelled — kein sinnvoller Abbruch mehr
@@ -1316,6 +1496,9 @@ message_queue.py ──► consumer-loop ─────┘   (Aufgerufen aus ma
 | `MAX_CONCURRENT_LLM_CALLS = 3` (§1.6) | LLD-Core | LLD-Architektur (Kapazitäts-Reasoning) |
 | `TaskStatus.CANCELLED` (§3.2) | LLD-Core | LLD-Architektur (Schema-Constraint, Statistik) |
 | `simple_retry.retry()` (§6.0) | LLD-Core | LLD-Architektur §5.3 (httpx-native Exceptions im retry_on) |
+| `IncomingMessage.raw_text` / `wrapped_text` (§1.2) | LLD-Core | LLD-Interfaces (Adapter setzen beide), LLD-Architektur (Cancel/LLM-Pfade) |
+| `ContextManager.safe_wrap()` (§2.10) | LLD-Core | LLD-Interfaces (Adapter), Dispatcher (§4.9), Knowledge-Embedding |
+| `recover_orphaned()` Semantik = `running` → `failed` (§3.5) | LLD-Core | LLD-Interfaces (Stage 2 Aufruf) |
 
 ### 6.4 Nicht in diesem LLD
 

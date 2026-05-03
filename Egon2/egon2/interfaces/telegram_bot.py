@@ -31,6 +31,7 @@ from egon2.settings import Settings
 
 try:  # python-telegram-bot v21
     from telegram import Update  # type: ignore[import-untyped]
+    from telegram.constants import ChatAction  # type: ignore[import-untyped]
     from telegram.ext import (  # type: ignore[import-untyped]
         Application,
         ApplicationBuilder,
@@ -40,6 +41,7 @@ try:  # python-telegram-bot v21
         filters,
     )
 except ImportError:  # pragma: no cover
+    ChatAction = None  # type: ignore[assignment,misc]
     Update = None  # type: ignore[assignment,misc]
     Application = None  # type: ignore[assignment,misc]
     ApplicationBuilder = None  # type: ignore[assignment,misc]
@@ -136,6 +138,17 @@ class TelegramBot:
         self._running = False
 
     # --- Outgoing ----------------------------------------------------------
+
+    async def send_typing(self, chat_id: str | int) -> None:
+        """Sendet `typing…`-Indicator (~5 s). Fehler werden unterdrückt."""
+        if not self._enabled or self._app is None or ChatAction is None:
+            return
+        try:
+            await self._app.bot.send_chat_action(
+                chat_id=chat_id, action=ChatAction.TYPING
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
     async def send_message(self, chat_id: str | int, text: str) -> None:
         """Sendet eine Textnachricht. Bei Fehler: `TelegramSendError` loggen."""

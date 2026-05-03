@@ -1,6 +1,6 @@
 """LLMClient — Async-HTTP-Client für den OpenAI-kompatiblen Claude-Wrapper.
 
-Spricht den Endpoint `LLM_API_URL` (z. B. http://10.1.1.105:3001/v1/chat/completions).
+Spricht den Endpoint `LLM_API_URL` (OpenAI-kompatibler Chat-Completions-Endpoint).
 Nutzt `httpx.AsyncClient` als Pool (eager im `__init__`).
 
 Wirft semantisch typisierte Exceptions:

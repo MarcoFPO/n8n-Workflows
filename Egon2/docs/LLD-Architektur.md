@@ -1,10 +1,15 @@
 # LLD — Egon2: Low-Level Design Architektur
 
-**Version:** 1.3
+**Version:** 1.4
 **Stand:** 2026-05-02
 **Basis:** HLD-Egon2.md v1.5
 **Autor:** Marco Doehler / Claude
-**Letzte Änderung:** Audit-Findings aus Architektur-Review v1.0 und Security-Audit v1.0 eingearbeitet (C1, C2, HOCH-Findings, C9). Spec-Findings F1–F7 (2026-05-02): Startup auf 9 Stufen erweitert (Scheduler nach beiden Bots), Shutdown auf 7 Stufen umgestellt (Queue-Drain vor Consumer-Stop), `simple_retry` für externe Clients (F4), `request_id` für Logging (F5), `cancelled` Status in Schema/Statistik (F7), Sub-Task-Aggregation (F6, in LLD-Core §4.10).
+**Letzte Änderung:** Sicherheits-Patches (Knowledge-Store Firewall-Empfehlung in §3.2, Tool-Use-Limitation des LXC 105 Wrappers in §2.6 dokumentiert).
+
+**Änderungen v1.4 (2026-05-02):**
+- Add: Firewall-Empfehlung für Knowledge-Store (LXC 107:8080 auf Egon2-LXC einschränken) in §3.2 — verhindert Manipulation der System-Message-Inhalte durch andere LXCs.
+- Add: Tool-Use-Hinweis in §2.6 LLM Client — Claude Code API Wrapper (LXC 105) unterstützt keine `tool_calls`-Schnittstelle; strukturierte Outputs via JSON-im-`user`-Format. Migrationspfad: `it_admin` zuerst, sobald Tool-Use verfügbar.
+- Neu: `docs/LLD-Tests.md` v1.0 — Test-Strategie (pytest + pytest-asyncio, Unit/Integration/Async/Bot-Tests, Fixtures, Coverage-Ziele).
 
 **Änderungen v1.3 (Audit-Runde-2-Findings 2026-05-02):**
 - Fix: `datetime.utcnow()` → `lambda: datetime.now(UTC)` in `AgentAssignmentRecord` und `HealthCheckRecord`; `UTC` zu Imports ergänzt (§2.1 models.py).
@@ -821,6 +826,8 @@ class LLMClient:
         ...
 ```
 
+> **Tool-Use:** Der Claude Code API Wrapper auf LXC 105 (OpenAI-kompatibler Proxy) unterstützt keine `tool_calls`-Schnittstelle. Alle strukturierten Outputs erfolgen via JSON-im-`user`-Message-Format. Sobald Tool-Use verfügbar: `it_admin`-Spezialist sollte als erstes umgestellt werden.
+
 ---
 
 ### 2.7 SSH Executor
@@ -1124,6 +1131,8 @@ limits = httpx.Limits(
 **Basis-URL:** `http://10.1.1.107:8080`
 **Protokoll:** HTTP/1.1
 **Datenbasis:** `mcp_knowledge_v5.db` (SQLite, per Migration erweitert)
+
+> **Sicherheitshinweis (Heimnetz):** Da Knowledge-Inhalte in den System-Message-Slot des LLM injiziert werden, sollte LXC 107 Port 8080 per iptables auf Egon2-LXC (10.1.1.202) beschränkt werden: `iptables -A INPUT -p tcp --dport 8080 ! -s 10.1.1.202 -j DROP`. Verhindert dass andere LXCs im Subnetz den Knowledge-Store manipulieren können.
 
 **Genutzte Endpoints:**
 
