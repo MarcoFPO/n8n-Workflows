@@ -186,8 +186,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     from egon2.jobs.news_report import register_jobs
     from egon2.jobs.bookstack_sync import register_bookstack_sync
+    from egon2.jobs.mikrotik_update import register_mikrotik_update
     register_jobs(state.scheduler, app)
     register_bookstack_sync(state.scheduler, app)
+    register_mikrotik_update(state.scheduler, app)
 
     # Onboarding-Hinweis im Log
     if not await state.db.has_any_assistant_message():
