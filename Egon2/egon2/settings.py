@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     llm_api_url: str = ""  # z.B. http://<host>:<port>/v1/chat/completions
     llm_model: str = "claude-sonnet-4-6"
     llm_max_tokens: int = 4096
-    llm_timeout: float = 60.0
+    llm_timeout: float = 180.0
 
     # --- Matrix (optional — soft-fail wenn leer) ---
     matrix_homeserver: str = ""  # z.B. https://matrix.example.org

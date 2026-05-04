@@ -238,7 +238,7 @@ class AgentDispatcher:
                     max_tokens=4096,
                     temperature=0.0,
                 ),
-                timeout=120.0,
+                timeout=180.0,
             )
             duration_ms = int((time.monotonic() - t0) * 1000)
 

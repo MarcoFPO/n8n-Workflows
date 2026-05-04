@@ -118,15 +118,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 pass
             await asyncio.sleep(4)
 
+    async def _progress_loop(msg: IncomingMessage) -> None:
+        """Sendet alle 20 s ein '.' als Lebenszeichen bei langen LLM-Calls."""
+        await asyncio.sleep(20)
+        while True:
+            try:
+                if msg.channel == Channel.MATRIX and state.matrix_bot:
+                    await state.matrix_bot.send_message(msg.chat_id, ".")
+                elif msg.channel == Channel.TELEGRAM and state.telegram_bot:
+                    await state.telegram_bot.send_message(msg.chat_id, ".")
+            except Exception:  # noqa: BLE001
+                pass
+            await asyncio.sleep(20)
+
     async def dispatch_and_reply(msg: IncomingMessage) -> None:
         assert state.dispatcher is not None
         typing_task = asyncio.create_task(_typing_loop(msg), name="typing-loop")
+        progress_task = asyncio.create_task(_progress_loop(msg), name="progress-dots")
         try:
             reply = await state.dispatcher.handle(msg)
         finally:
             typing_task.cancel()
+            progress_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await typing_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await progress_task
         try:
             if msg.channel == Channel.MATRIX and state.matrix_bot:
                 await state.matrix_bot.send_message(msg.chat_id, reply)
