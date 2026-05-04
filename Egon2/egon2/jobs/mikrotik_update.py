@@ -216,14 +216,14 @@ def register_mikrotik_update(scheduler: EgonScheduler, app: "FastAPI") -> None:
     scheduler.scheduler.add_job(
         mikrotik_update_job,
         "cron",
-        day_of_week="sun",
-        hour=3,
+        day_of_week="tue",
+        hour=4,
         minute=0,
         timezone="Europe/Berlin",
         id="mikrotik_weekly_update",
         replace_existing=True,
     )
-    logger.info("mikrotik_update.registered cron=Sun_03:00")
+    logger.info("mikrotik_update.registered cron=Tue_04:00")
 
 
 __all__ = ["mikrotik_update_job", "register_mikrotik_update"]
