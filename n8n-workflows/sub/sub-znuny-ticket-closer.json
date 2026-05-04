@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst ticket_id = input.ticket_id;\nif (!ticket_id) throw new Error('ticket_id ist erforderlich');\n\nreturn [{\n  json: {\n    ticket_id,\n    payload: {\n      UserLogin: 'root@localhost',\n      Password: 'ZnunyAdmin2026!',\n      Ticket: {\n        State: 'geschlossen'\n      },\n      Article: {\n        CommunicationChannel: 'Internal',\n        SenderType: 'agent',\n        IsVisibleForCustomer: '0',\n        Subject: 'Ticket geschlossen – Incident automatisch gelöst',\n        Body: input.close_note || 'Incident automatisch durch n8n Incident Response Workflow gelöst.',\n        ContentType: 'text/plain; charset=utf8',\n        MimeType: 'text/plain',\n        Charset: 'utf8'\n      }\n    },\n    closed_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const input = $input.first().json;\nconst ticket_id = input.ticket_id;\nif (!ticket_id) throw new Error('ticket_id ist erforderlich');\n\nreturn [{\n  json: {\n    ticket_id,\n    payload: {\n      UserLogin: 'root@localhost',\n      Password: 'ZnunyApi2026',\n      Ticket: {\n        State: 'geschlossen'\n      },\n      Article: {\n        CommunicationChannel: 'Internal',\n        SenderType: 'agent',\n        IsVisibleForCustomer: '0',\n        Subject: 'Ticket geschlossen – Incident automatisch gelöst',\n        Body: input.close_note || 'Incident automatisch durch n8n Incident Response Workflow gelöst.',\n        ContentType: 'text/plain; charset=utf8',\n        MimeType: 'text/plain',\n        Charset: 'utf8'\n      }\n    },\n    closed_at: new Date().toISOString()\n  }\n}];"
       },
       "name": "🔧 Build Close Payload",
       "type": "n8n-nodes-base.code",

@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-03-29T09:40:06.613Z",
+  "createdAt": "2026-03-23T20:08:19.355Z",
+  "id": "NMxFaLwPpq39MSCF",
   "name": "SUB: Znuny Ticket Creator",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -34,11 +40,12 @@
       "position": [
         200,
         300
-      ]
+      ],
+      "id": "efba2c12-7129-4a3d-a82c-0a5d6fd5675e"
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\n\nif (!input.title) throw new Error('title ist erforderlich');\nif (!input.body)  throw new Error('body ist erforderlich');\n\nconst queue    = input.queue    || 'Raw';\nconst state    = input.state    || 'neu';\nconst priority = input.priority || '3 normal';\n\nconst payload = {\n  UserLogin: 'root@localhost',\n  Password:  'ZnunyAdmin2026!',\n  Ticket: {\n    Title:        input.title,\n    Queue:        queue,\n    State:        state,\n    Priority:     priority,\n    CustomerUser: 'root@localhost'\n  },\n  Article: {\n    Subject:              input.title,\n    Body:                 input.body,\n    ContentType:          'text/plain; charset=utf8',\n    CommunicationChannel: 'Internal',\n    IsVisibleForCustomer: 0\n  }\n};\n\nreturn [{ json: { title: input.title, queue, state, priority, payload } }];"
+        "jsCode": "const input = $input.first().json;\n\nif (!input.title) throw new Error('title ist erforderlich');\nif (!input.body)  throw new Error('body ist erforderlich');\n\nconst queue    = input.queue    || 'Raw';\nconst state    = input.state    || 'new';\nconst priority = input.priority || '3 normal';\n\nconst payload = {\n  UserLogin: 'root@localhost',\n  Password:  $env.ZNUNY_PASSWORD || (() => { throw new Error('ZNUNY_PASSWORD nicht gesetzt'); })(),\n  Ticket: {\n    Title:        input.title,\n    Queue:        queue,\n    State:        state,\n    Priority:     priority,\n    CustomerUser: 'root@localhost'\n  },\n  Article: {\n    Subject:              input.title,\n    Body:                 input.body,\n    ContentType:          'text/plain; charset=utf8',\n    CommunicationChannel: 'Internal',\n    IsVisibleForCustomer: 0\n  }\n};\n\nreturn [{ json: { title: input.title, queue, state, priority, payload } }];"
       },
       "name": "🔧 Build Ticket Payload",
       "type": "n8n-nodes-base.code",
@@ -46,7 +53,8 @@
       "position": [
         420,
         300
-      ]
+      ],
+      "id": "d386af01-4677-4f04-83d1-b9273ad59eba"
     },
     {
       "parameters": {
@@ -76,7 +84,8 @@
         640,
         300
       ],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "id": "a93f4354-cec1-4a7d-b306-0a18694712a6"
     },
     {
       "parameters": {
@@ -88,7 +97,8 @@
       "position": [
         860,
         300
-      ]
+      ],
+      "id": "a85e96d7-f75e-4b2c-bb9b-51b3f60b4766"
     }
   ],
   "connections": {
@@ -128,8 +138,192 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "pinData": {},
-  "_n8n_id": "NMxFaLwPpq39MSCF"
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "90605680-4bbc-4644-aafe-8667e74fa4c8",
+  "activeVersionId": "90605680-4bbc-4644-aafe-8667e74fa4c8",
+  "versionCounter": 18,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-23T20:08:19.362Z",
+      "createdAt": "2026-03-23T20:08:19.362Z",
+      "role": "workflow:owner",
+      "workflowId": "NMxFaLwPpq39MSCF",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-29T09:40:06.614Z",
+    "createdAt": "2026-03-29T09:40:06.614Z",
+    "versionId": "90605680-4bbc-4644-aafe-8667e74fa4c8",
+    "workflowId": "NMxFaLwPpq39MSCF",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "title",
+                "type": "string"
+              },
+              {
+                "name": "body",
+                "type": "string"
+              },
+              {
+                "name": "queue",
+                "type": "string"
+              },
+              {
+                "name": "state",
+                "type": "string"
+              },
+              {
+                "name": "priority",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "name": "📥 Input from Master",
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "efba2c12-7129-4a3d-a82c-0a5d6fd5675e"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.first().json;\n\nif (!input.title) throw new Error('title ist erforderlich');\nif (!input.body)  throw new Error('body ist erforderlich');\n\nconst queue    = input.queue    || 'Raw';\nconst state    = input.state    || 'new';\nconst priority = input.priority || '3 normal';\n\nconst payload = {\n  UserLogin: 'root@localhost',\n  Password:  $env.ZNUNY_PASSWORD || (() => { throw new Error('ZNUNY_PASSWORD nicht gesetzt'); })(),\n  Ticket: {\n    Title:        input.title,\n    Queue:        queue,\n    State:        state,\n    Priority:     priority,\n    CustomerUser: 'root@localhost'\n  },\n  Article: {\n    Subject:              input.title,\n    Body:                 input.body,\n    ContentType:          'text/plain; charset=utf8',\n    CommunicationChannel: 'Internal',\n    IsVisibleForCustomer: 0\n  }\n};\n\nreturn [{ json: { title: input.title, queue, state, priority, payload } }];"
+        },
+        "name": "🔧 Build Ticket Payload",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          300
+        ],
+        "id": "d386af01-4677-4f04-83d1-b9273ad59eba"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/Ticket",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.payload) }}",
+          "options": {
+            "allowUnauthorizedCerts": true,
+            "timeout": 15000
+          }
+        },
+        "name": "🎫 Znuny API: Ticket erstellen",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          640,
+          300
+        ],
+        "continueOnFail": true,
+        "id": "a93f4354-cec1-4a7d-b306-0a18694712a6"
+      },
+      {
+        "parameters": {
+          "jsCode": "const r = $input.first().json;\nconst d = $('🔧 Build Ticket Payload').first().json;\n\nconst success = !r.Error && (r.TicketID != null || r.TicketNumber != null);\n\nreturn [{ json: {\n  success,\n  ticket_id:     r.TicketID     || null,\n  ticket_number: r.TicketNumber || null,\n  title:         d.title,\n  queue:         d.queue,\n  state:         d.state,\n  error: r.Error ? `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}` : null\n} }];"
+        },
+        "name": "🔧 Parse Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          860,
+          300
+        ],
+        "id": "a85e96d7-f75e-4b2c-bb9b-51b3f60b4766"
+      }
+    ],
+    "connections": {
+      "📥 Input from Master": {
+        "main": [
+          [
+            {
+              "node": "🔧 Build Ticket Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Build Ticket Payload": {
+        "main": [
+          [
+            {
+              "node": "🎫 Znuny API: Ticket erstellen",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎫 Znuny API: Ticket erstellen": {
+        "main": [
+          [
+            {
+              "node": "🔧 Parse Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-29T09:40:06.659Z",
+        "id": 292,
+        "workflowId": "NMxFaLwPpq39MSCF",
+        "versionId": "90605680-4bbc-4644-aafe-8667e74fa4c8",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      },
+      {
+        "createdAt": "2026-03-29T09:40:06.643Z",
+        "id": 291,
+        "workflowId": "NMxFaLwPpq39MSCF",
+        "versionId": "90605680-4bbc-4644-aafe-8667e74fa4c8",
+        "event": "deactivated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  }
 }
