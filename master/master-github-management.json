@@ -1,0 +1,2015 @@
+{
+  "name": "MASTER: GitHub Management",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b144df08-4c46-4433-b578-266659c75275",
+      "name": "🌐 Webhook: GitHub Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        520
+      ],
+      "webhookId": "github-events-master"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "2e4511e2-d028-4d03-899f-a701dcb47cd4",
+      "name": "📝 Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const req=$input.first().json;const headers=req.headers||{};const body=req.body||{};const secret=$env.GITHUB_WEBHOOK_SECRET;if(secret){const sig=headers['x-hub-signature-256']||'';if(!sig)throw new Error('Fehlende Webhook-Signatur');const crypto=require('crypto');const exp='sha256='+crypto.createHmac('sha256',secret).update(JSON.stringify(body)).digest('hex');const sigBuf=Buffer.from(sig);const expBuf=Buffer.from(exp);if(sigBuf.length!==expBuf.length||!crypto.timingSafeEqual(sigBuf,expBuf))throw new Error('Ung\\u00fcltige Webhook-Signatur');}const ev=headers['x-github-event']||'unknown';const ac=body.action||'';const repo=(body.repository||{}).full_name||'unknown';const sender=(body.sender||{}).login||'unknown';const stype=(body.sender||{}).type||'User';const default_branch=(body.repository||{}).default_branch||'main';let route='ignored';if(ev==='issues'&&ac==='opened')route='issue_opened';else if(ev==='issues'&&ac==='closed')route='issue_closed';else if(ev==='pull_request'&&ac==='closed'&&(body.pull_request||{}).merged)route='pr_merged';else if(ev==='pull_request'&&['opened','synchronize','reopened'].includes(ac))route='pr_opened';else if(ev==='issue_comment'&&ac==='created'&&stype!=='Bot'&&!(body.comment&&(body.comment.body||'').startsWith('\\ud83e\\udd16')))route='comment_created';else if(ev==='push'&&!body.deleted&&(body.ref||'')==='refs/heads/'+default_branch)route='push_main';else if(ev==='workflow_run'&&ac==='completed'&&(body.workflow_run||{}).conclusion==='failure')route='workflow_failed';return[{json:{event_type:ev,action:ac,repo,sender,sender_type:stype,event_route:route,raw:body,default_branch}}];"
+      },
+      "id": "3cc77992-9088-4978-836c-e346d8f7c09f",
+      "name": "🔧 Parse GitHub Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "issue_opened",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "pr_merged",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "pr_opened",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "comment_created",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "push_main",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "workflow_failed",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.event_route }}",
+                  "rightValue": "issue_closed",
+                  "operator": {
+                    "type": "string",
+                    "operation": "equals"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "e22e3e47-d98c-4e23-9463-26a22357c63a",
+      "name": "🔀 Route: Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        900,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,i=c.raw.issue||{},[ow,rn]=c.repo.split('/');return[{json:{repo:c.repo,owner:ow,repo_name:rn,issue_number:i.number,labels_ep:`/repos/${ow}/${rn}/issues/${i.number}/labels`,comment_ep:`/repos/${ow}/${rn}/issues/${i.number}/comments`,prompt:`Du bist GitHub Issue Analyst f\\u00fcr ${c.repo}. Analysiere und antworte NUR mit JSON.\\nTitel: ${i.title||''}\\nBody: ${(i.body||'').substring(0,1500)}\\nLabels: ${(i.labels||[]).map(l=>l.name).join(', ')||'keine'}\\nAutor: ${c.sender}\\nJSON-Format:\\n{\"category\":\"bug|feature|question|docs|other\",\"priority\":\"critical|high|normal|low\",\"labels\":[\"label\"],\"confidence\":85,\"comment\":\"Deutschsprachiger Kommentar 2-3 S\\u00e4tze\"}`}}];"
+      },
+      "id": "79a0adeb-d540-493b-988c-ff1c441d348f",
+      "name": "🔧 Build Issue Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:800}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "59bcc9be-5132-438e-8216-9635c4472509",
+      "name": "🌐 HTTP: Claude Code (Issue)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build Issue Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}const lbl=[...(a.labels||[])].filter((v,i,s)=>s.indexOf(v)===i).slice(0,3);return[{json:{...c,labels_to_set:lbl,comment_text:a.comment||'Danke f\\u00fcr das Issue!'}}];"
+      },
+      "id": "c0699121-c8fa-45c2-af6b-8518d597efcf",
+      "name": "🔧 Parse Issue Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "PUT",
+            "endpoint": "={{ $json.labels_ep }}",
+            "body": "={{ JSON.stringify({labels:$json.labels_to_set}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "898ed807-96d9-48c5-bd17-4127ec270956",
+      "name": "🏷️ SUB: Set Labels",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $('\\ud83d\\udd27 Parse Issue Analysis').first().json.comment_ep }}",
+            "body": "={{ JSON.stringify({body:$('\\ud83d\\udd27 Parse Issue Analysis').first().json.comment_text}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "2b1ca9f7-fa56-4c45-be8a-9539bf76ddb7",
+      "name": "💬 SUB: Post Issue Comment",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,p=c.raw.pull_request||{},[ow,rn]=c.repo.split('/');return[{json:{repo:c.repo,owner:ow,repo_name:rn,pr_number:p.number,pr_title:p.title||'',pr_body:(p.body||'').substring(0,600),pr_author:(p.user||{}).login||c.sender,base:(p.base||{}).ref||'main',head:(p.head||{}).ref||'',additions:p.additions||0,deletions:p.deletions||0,changed_files:p.changed_files||0,cl_ep:`/repos/${ow}/${rn}/contents/CHANGELOG.md`,tags_ep:`/repos/${ow}/${rn}/git/refs/tags?per_page=100`,rel_ep:`/repos/${ow}/${rn}/releases`,prompt:`Du bist Release Manager f\\u00fcr ${c.repo}. Antworte NUR mit JSON.\\nPR: ${p.title||''}\\nBody: ${(p.body||'').substring(0,800)}\\nBranch: ${(p.base||{}).ref||'main'} \\u2190 ${(p.head||{}).ref||''}\\nAutor: ${(p.user||{}).login||c.sender}, +${p.additions||0}/-${p.deletions||0}\\nJSON-Format:\\n{\"changelog_entry\":\"- Zusammenfassung\",\"semver_bump\":\"patch|minor|major\",\"release_notes\":\"2-3 S\\u00e4tze auf Deutsch\"}`}}];"
+      },
+      "id": "cc36d5c0-07f3-41c2-a601-56f69a4fa0c6",
+      "name": "🔧 Build Changelog Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:600}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "a51b1cf9-77e7-415f-a70d-e158651933ff",
+      "name": "🌐 HTTP: Claude Code (Changelog)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build Changelog Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}const today=new Date().toISOString().split('T')[0];return[{json:{...c,changelog_entry:a.changelog_entry||`- ${c.pr_title}`,semver_bump:a.semver_bump||'patch',release_notes:a.release_notes||c.pr_title,today}}];"
+      },
+      "id": "3d34dcda-eaf5-41af-ac24-86995f0023a7",
+      "name": "🔧 Parse Changelog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "GET",
+            "endpoint": "={{ $json.cl_ep }}",
+            "body": ""
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "f80608ec-55ba-486b-8e3d-164b333d733f",
+      "name": "📄 SUB: Get CHANGELOG",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Parse Changelog').first().json,g=$input.first().json.response||{};const sha=g.sha||null;let ex='';try{if(g.content)ex=Buffer.from(g.content,'base64').toString('utf-8').replace(/\\r\\n/g,'\\n');}catch(e){}const line=`${c.changelog_entry} (${c.today}, PR #${c.pr_number} by @${c.pr_author})`;let nc=ex.includes('# Changelog')?ex.replace('# Changelog\\n',`# Changelog\\n\\n${line}\\n`):(ex?`${line}\\n${ex}`:`# Changelog\\n\\n${line}\\n`);const enc=Buffer.from(nc).toString('base64');return[{json:{...c,existing_sha:sha,upd_body:JSON.stringify({message:`chore: CHANGELOG PR #${c.pr_number}`,content:enc,...(sha?{sha}:{})})}}];"
+      },
+      "id": "36dd60df-31a5-4657-b494-0ec6921d2e1a",
+      "name": "🔧 Build Updated CHANGELOG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "PUT",
+            "endpoint": "={{ $json.cl_ep }}",
+            "body": "={{ $json.upd_body }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "fc816db3-6813-4d75-be11-2a33dbd02864",
+      "name": "📄 SUB: Update CHANGELOG",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2220,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "GET",
+            "endpoint": "={{ $('\\ud83d\\udd27 Build Updated CHANGELOG').first().json.tags_ep }}",
+            "body": ""
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "5aef331c-8a54-48a9-bd26-caf120c4d009",
+      "name": "🔖 SUB: Get Tags",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2440,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build Updated CHANGELOG').first().json,tags=Array.isArray($input.first().json.response)?$input.first().json.response:[];let v=[0,0,0];for(const t of tags){const r=(t.ref||'').replace('refs/tags/',''),m=r.match(/^v?(\\d+)\\.(\\d+)\\.(\\d+)$/);if(m){const n=[+m[1],+m[2],+m[3]];if(n[0]>v[0]||(n[0]===v[0]&&n[1]>v[1])||(n[0]===v[0]&&n[1]===v[1]&&n[2]>v[2]))v=n;}}const b=c.semver_bump||'patch';if(b==='major')v=[v[0]+1,0,0];else if(b==='minor')v=[v[0],v[1]+1,0];else v=[v[0],v[1],v[2]+1];const tag=`v${v[0]}.${v[1]}.${v[2]}`;return[{json:{...c,new_tag:tag,rel_body:JSON.stringify({tag_name:tag,name:`Release ${tag}`,body:`${c.release_notes}\\n\\nPR #${c.pr_number}: ${c.pr_title}`,draft:false,prerelease:false})}}];"
+      },
+      "id": "74c0b400-b2f6-4097-b970-57bb2dff04ec",
+      "name": "🔧 Calculate Release",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2660,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.rel_ep }}",
+            "body": "={{ $json.rel_body }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "e9a0b1c2-d3e4-4567-8345-678901234567",
+      "name": "🚀 SUB: Create Release",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2880,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,p=c.raw.pull_request||{},[ow,rn]=c.repo.split('/');return[{json:{repo:c.repo,owner:ow,repo_name:rn,pr_number:p.number,pr_title:p.title||'',pr_body:(p.body||'').substring(0,600),pr_author:(p.user||{}).login||c.sender,base:(p.base||{}).ref||'main',head:(p.head||{}).ref||'',additions:p.additions||0,deletions:p.deletions||0,changed_files:p.changed_files||0,files_ep:`/repos/${ow}/${rn}/pulls/${p.number}/files`,comment_ep:`/repos/${ow}/${rn}/issues/${p.number}/comments`}}];"
+      },
+      "id": "d0455197-2819-4169-96b2-644c7d6df470",
+      "name": "🔧 Prepare PR Review Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "GET",
+            "endpoint": "={{ $json.files_ep }}",
+            "body": ""
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "f1e2d3c4-b5a6-4789-9abc-def012345670",
+      "name": "📄 SUB: Get PR Files",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        640
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep=$('\\ud83d\\udd27 Prepare PR Review Data').first().json;const resp=$input.first().json;const filesData=resp.response||resp;const files=Array.isArray(filesData)?filesData.slice(0,8):[];const fs=files.map(f=>`${f.status}: ${f.filename} (+${f.additions||0}/-${f.deletions||0})${f.patch?'\\n'+f.patch.substring(0,350):''}`).join('\\n---\\n');return[{json:{...prep,prompt:`Du bist Code Reviewer f\\u00fcr ${prep.repo} und nutzt Claude Code CLI f\\u00fcr tiefe Analyse. Antworte NUR mit JSON.\\nPR #${prep.pr_number}: ${prep.pr_title}\\nAutor: ${prep.pr_author} | ${prep.base} \\u2190 ${prep.head} | +${prep.additions}/-${prep.deletions} in ${prep.changed_files} Dateien\\n\\nDiff (max. 8 Dateien):\\n${fs||'Kein Diff verf\\u00fcgbar'}\\n\\nPR-Beschreibung: ${prep.pr_body}\\n\\nJSON-Format:\\n{\"ready_to_merge\":true,\"quality\":\"excellent|good|needs_work|poor\",\"concerns\":[\"Bedenken\"],\"suggestions\":[\"Vorschlag\"],\"comment\":\"Review 3-5 S\\u00e4tze auf Deutsch\"}`}}];"
+      },
+      "id": "a2b3c4d5-e6f7-4890-8bcd-ef0123456780",
+      "name": "🔧 Build PR Review Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:1200}) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "15eafe0e-8887-4b05-8ea4-7e8bafcc8175",
+      "name": "🌐 HTTP: Claude Code (PR Review)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        640
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build PR Review Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}const cc=(a.concerns||[]).map(x=>`- ${x}`).join('\\n');const sg=(a.suggestions||[]).map(x=>`- ${x}`).join('\\n');const txt=`\\ud83e\\udd16 **Code-Review (Claude Code CLI)**\\n\\nQualit\\u00e4t: \\`${a.quality||'?'}\\`\\n\\n${a.comment||''}\\n${cc?'\\n**Bedenken:**\\n'+cc:''}${sg?'\\n**Vorschl\\u00e4ge:**\\n'+sg:''}\\n\\n${a.ready_to_merge!==false?'\\u2705 Bereit zum Merge':'\\u26a0\\ufe0f Bitte Bedenken beachten'}`;return[{json:{...c,comment_text:txt}}];"
+      },
+      "id": "0b2a0fc8-33f9-4927-97dd-334ed7f7d230",
+      "name": "🔧 Parse PR Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.comment_ep }}",
+            "body": "={{ JSON.stringify({body:$json.comment_text}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "494f5b4e-c7c9-40bc-8df3-4dec10f49f77",
+      "name": "💬 SUB: Post PR Comment",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2220,
+        640
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,is=c.raw.issue||{},cm=c.raw.comment||{},[ow,rn]=c.repo.split('/');return[{json:{repo:c.repo,owner:ow,repo_name:rn,comment_ep:`/repos/${ow}/${rn}/issues/${is.number}/comments`,prompt:`Du bist GitHub-Assistent f\\u00fcr ${c.repo} (Claude Code CLI). Antworte NUR mit JSON.\\nIssue #${is.number}: ${is.title||''}\\nKommentar von @${c.sender}: ${(cm.body||'').substring(0,800)}\\nJSON-Format:\\n{\"reply\":\"Antwort 1-3 S\\u00e4tze Deutsch, hilfreich und pr\\u00e4zise\"}`}}];"
+      },
+      "id": "d93d846a-8b2f-4560-900c-a4e30e277da1",
+      "name": "🔧 Build Reply Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        980
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:400}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "93169186-4300-4966-bf53-fd979f1e450c",
+      "name": "🌐 HTTP: Claude Code (Reply)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        980
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build Reply Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}return[{json:{...c,reply_text:a.reply||'Danke f\\u00fcr deinen Kommentar!'}}];"
+      },
+      "id": "71fef3d8-81ca-4570-b694-26696dc8e840",
+      "name": "🔧 Parse Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        980
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.comment_ep }}",
+            "body": "={{ JSON.stringify({body:'\\ud83e\\udd16 '+$json.reply_text}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "663d4507-be77-4fb6-89f6-1a1df78628fe",
+      "name": "💬 SUB: Post Reply",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        980
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,raw=c.raw,[ow,rn]=c.repo.split('/');const commits=(raw.commits||[]).slice(0,10);const sha=raw.after||'';const cs=commits.map(cm=>`- ${(cm.id||'').substring(0,7)}: ${(cm.message||'').split('\\n')[0]}`).join('\\n');return[{json:{repo:c.repo,owner:ow,repo_name:rn,sha,branch:(raw.ref||'').replace('refs/heads/',''),pusher:(raw.pusher||{}).name||c.sender,commit_count:commits.length,commit_comment_ep:`/repos/${ow}/${rn}/commits/${sha}/comments`,issues_ep:`/repos/${ow}/${rn}/issues`,prompt:`Du bist Code Quality Analyst f\\u00fcr ${c.repo} (Claude Code CLI). Analysiere den Push auf den Hauptbranch und antworte NUR mit JSON.\\nBranch: ${(raw.ref||'').replace('refs/heads/','')} | Pusher: ${(raw.pusher||{}).name||c.sender} | ${commits.length} Commit(s)\\n\\nCommits:\\n${cs}\\n\\nJSON-Format:\\n{\"summary\":\"Kurze Zusammenfassung 1-2 S\\u00e4tze\",\"severity\":\"none|low|medium|high\",\"concerns\":[\"Bedenken falls vorhanden\"],\"create_issue\":false,\"issue_title\":\"optional bei medium/high\",\"issue_body\":\"optional\"}`}}];"
+      },
+      "id": "b3c4d5e6-f7a8-4901-7cde-f01234567890",
+      "name": "🔧 Build Push Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:600}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "c4d5e6f7-a8b9-4012-6def-012345678900",
+      "name": "🌐 HTTP: Claude Code (Push)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        1180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build Push Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}const sev=a.severity||'none';const cc=(a.concerns||[]).map(x=>`- ${x}`).join('\\n');return[{json:{...c,summary:a.summary||'Push analysiert',severity:sev,concerns:a.concerns||[],create_issue:a.create_issue===true&&['medium','high'].includes(sev),issue_title:a.issue_title||`Code-Problem: Push von ${c.pusher}`,issue_body:a.issue_body||a.summary||'Automatisch erkanntes Problem.',commit_comment:a.severity==='none'?null:`\\ud83e\\udd16 **Push-Analyse**\\n\\nSchwere: \\`${sev}\\`\\n${a.summary||''}${cc?'\\n\\nBedenken:\\n'+cc:''}`}}];"
+      },
+      "id": "d5e6f7a8-b9c0-4123-5ef0-123456789010",
+      "name": "🔧 Parse Push Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        1180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "sev",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "none",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "e6f7a8b9-c0d1-4234-4f01-234567890120",
+      "name": "⚠️ IF: Kommentar nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        1180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "iss",
+              "leftValue": "={{ $json.create_issue }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "b9c0d1e2-f3a4-4567-1234-567890123450",
+      "name": "⚠️ IF: Issue erstellen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        1340
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.issues_ep }}",
+            "body": "={{ JSON.stringify({title:$json.issue_title,body:$json.issue_body,labels:['automated','code-quality']}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "f7a8b9c0-d1e2-4345-3012-345678901230",
+      "name": "🐛 SUB: Create Push Issue",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        1060
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $('\\ud83d\\udd27 Parse Push Analysis').first().json.commit_comment_ep }}",
+            "body": "={{ JSON.stringify({body:$('\\ud83d\\udd27 Parse Push Analysis').first().json.commit_comment}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "a8b9c0d1-e2f3-4456-2123-456789012340",
+      "name": "💬 SUB: Post Commit Comment",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        1300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,wf=c.raw.workflow_run||{},[ow,rn]=c.repo.split('/');return[{json:{repo:c.repo,owner:ow,repo_name:rn,issues_ep:`/repos/${ow}/${rn}/issues`,workflow_name:wf.name||'Unknown',branch:wf.head_branch||'unknown',run_url:wf.html_url||'',event_trigger:wf.event||'unknown',prompt:`Du bist CI/CD Analyst f\\u00fcr ${c.repo} (Claude Code CLI). Analysiere den Workflow-Fehler und antworte NUR mit JSON.\\nWorkflow: ${wf.name||'Unknown'}\\nBranch: ${wf.head_branch||'unknown'}\\nTrigger: ${wf.event||'unknown'}\\nURL: ${wf.html_url||''}\\n\\nJSON-Format:\\n{\"issue_title\":\"Pr\\u00e4gnanter Titel\",\"issue_body\":\"Vollst\\u00e4ndige Analyse auf Deutsch mit Handlungsempfehlung\",\"labels\":[\"ci-failure\",\"automated\"]}`}}];"
+      },
+      "id": "c0d1e2f3-a4b5-4678-0345-678901234560",
+      "name": "🔧 Build WF Failed Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:800}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "d1e2f3a4-b5c6-4789-9456-789012345670",
+      "name": "🌐 HTTP: Claude Code (WF Failed)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        1420
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build WF Failed Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}return[{json:{...c,issue_title:a.issue_title||`CI/CD Fehler: ${c.workflow_name} (${c.branch})`,issue_body:a.issue_body||`Workflow **${c.workflow_name}** ist fehlgeschlagen.\\n\\nBranch: ${c.branch} | Trigger: ${c.event_trigger}\\nURL: ${c.run_url}`,labels:a.labels||['ci-failure','automated']}}];"
+      },
+      "id": "e2f3a4b5-c6d7-4890-8567-890123456780",
+      "name": "🔧 Parse WF Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        1420
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "GET",
+            "endpoint": "={{ `/repos/${$json.owner}/${$json.repo_name}/issues?state=open&labels=ci-failure&per_page=20` }}",
+            "body": ""
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "a4b5c6d7-e8f9-4012-6789-012345678900",
+      "name": "🔍 SUB: Search WF Issues",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        1420
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Parse WF Analysis').first().json;const resp=$input.first().json;const issues=Array.isArray(resp.response)?resp.response:[];const existing=issues.find(i=>(i.title||'').includes(c.workflow_name))||null;return[{json:{...c,existing_issue_number:existing?existing.number:null,existing_comment_ep:existing?`/repos/${c.owner}/${c.repo_name}/issues/${existing.number}/comments`:null,issue_exists:!!existing}}];"
+      },
+      "id": "b5c6d7e8-f9a0-4123-5890-123456789010",
+      "name": "🔧 Check Existing WF Issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        1420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "ex",
+              "leftValue": "={{ $json.issue_exists }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "c6d7e8f9-a0b1-4234-4901-234567890120",
+      "name": "⚠️ IF: WF Issue exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        1420
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.existing_comment_ep }}",
+            "body": "={{ JSON.stringify({body:'\\ud83d\\udd04 **Erneuter Fehler: '+$json.workflow_name+'**\\n\\nBranch: '+$json.branch+' | Trigger: '+$json.event_trigger+'\\nURL: '+$json.run_url+'\\n\\n'+$json.issue_body}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "d7e8f9a0-b1c2-4345-3012-345678901230",
+      "name": "💬 SUB: Comment on WF Issue",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2440,
+        1300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.issues_ep }}",
+            "body": "={{ JSON.stringify({title:$json.issue_title,body:$json.issue_body,labels:$json.labels}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "f3a4b5c6-d7e8-4901-7678-901234567890",
+      "name": "🐛 SUB: Create WF Issue",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2440,
+        1540
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json,i=c.raw.issue||{},[ow,rn]=c.repo.split('/');return[{json:{repo:c.repo,owner:ow,repo_name:rn,issue_number:i.number,comment_ep:`/repos/${ow}/${rn}/issues/${i.number}/comments`,prompt:`Du bist GitHub-Assistent f\\u00fcr ${c.repo} (Claude Code CLI). Schreibe eine kurze Abschlussnotiz und antworte NUR mit JSON.\\nIssue #${i.number}: ${i.title||''}\\nGeschlossen von: ${c.sender}\\nJSON-Format:\\n{\"comment\":\"Kurze Abschlussnachricht 1-2 S\\u00e4tze auf Deutsch, positiv und w\\u00fcrdigt den Beitrag\"}`}}];"
+      },
+      "id": "e8f9a0b1-c2d3-4456-2123-456789012340",
+      "name": "🔧 Build Issue Closed Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1620
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.1.1.105:3001/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model:'claude-sonnet-4-6',messages:[{role:'user',content:$json.prompt}],max_tokens:300}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "f9a0b1c2-d3e4-4567-1234-567890123450",
+      "name": "🌐 HTTP: Claude Code (Closed)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        1620
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('\\ud83d\\udd27 Build Issue Closed Prompt').first().json;const resp=$input.first().json;const r=(resp.choices&&resp.choices[0]&&resp.choices[0].message)?resp.choices[0].message.content:(resp.response||resp.content||'');let a={};try{const m=r.match(/\\{[\\s\\S]*\\}/);if(m)a=JSON.parse(m[0]);}catch(e){}return[{json:{...c,comment_text:'\\ud83e\\udd16 '+(a.comment||'Issue wurde geschlossen. Danke f\\u00fcr den Beitrag!')}}];"
+      },
+      "id": "a0b1c2d3-e4f5-4678-0345-678901234560",
+      "name": "🔧 Parse Issue Closed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        1620
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X21mf2hTEAz3r2XH"
+        },
+        "workflowInputs": {
+          "value": {
+            "method": "POST",
+            "endpoint": "={{ $json.comment_ep }}",
+            "body": "={{ JSON.stringify({body:$json.comment_text}) }}"
+          },
+          "schema": [
+            {
+              "id": "method",
+              "displayName": "method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "endpoint",
+              "displayName": "endpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow"
+        }
+      },
+      "id": "b1c2d3e4-f5a6-4789-9456-789012345670",
+      "name": "💬 SUB: Post Closing Comment",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        1620
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$input.first().json;return[{json:{ignored:true,event_type:c.event_type,action:c.action,repo:c.repo}}];"
+      },
+      "id": "eae1acf2-f896-4bcf-b6d0-8b756a435f46",
+      "name": "📋 Log: Ignored Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1820
+      ]
+    }
+  ],
+  "connections": {
+    "🌐 Webhook: GitHub Events": {
+      "main": [
+        [
+          {
+            "node": "📝 Respond 200 OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔧 Parse GitHub Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse GitHub Event": {
+      "main": [
+        [
+          {
+            "node": "🔀 Route: Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Route: Event Type": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Issue Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build Changelog Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Prepare PR Review Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build Reply Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build Push Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build WF Failed Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build Issue Closed Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📋 Log: Ignored Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Issue Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (Issue)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (Issue)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Issue Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Issue Analysis": {
+      "main": [
+        [
+          {
+            "node": "🏷️ SUB: Set Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏷️ SUB: Set Labels": {
+      "main": [
+        [
+          {
+            "node": "💬 SUB: Post Issue Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Changelog Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (Changelog)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (Changelog)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Changelog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Changelog": {
+      "main": [
+        [
+          {
+            "node": "📄 SUB: Get CHANGELOG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 SUB: Get CHANGELOG": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Updated CHANGELOG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Updated CHANGELOG": {
+      "main": [
+        [
+          {
+            "node": "📄 SUB: Update CHANGELOG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 SUB: Update CHANGELOG": {
+      "main": [
+        [
+          {
+            "node": "🔖 SUB: Get Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔖 SUB: Get Tags": {
+      "main": [
+        [
+          {
+            "node": "🔧 Calculate Release",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Calculate Release": {
+      "main": [
+        [
+          {
+            "node": "🚀 SUB: Create Release",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Prepare PR Review Data": {
+      "main": [
+        [
+          {
+            "node": "📄 SUB: Get PR Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 SUB: Get PR Files": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build PR Review Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build PR Review Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (PR Review)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (PR Review)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse PR Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse PR Review": {
+      "main": [
+        [
+          {
+            "node": "💬 SUB: Post PR Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Reply Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (Reply)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (Reply)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Reply": {
+      "main": [
+        [
+          {
+            "node": "💬 SUB: Post Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Push Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (Push)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (Push)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Push Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Push Analysis": {
+      "main": [
+        [
+          {
+            "node": "⚠️ IF: Kommentar nötig?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⚠️ IF: Issue erstellen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ IF: Kommentar nötig?": {
+      "main": [
+        [
+          {
+            "node": "💬 SUB: Post Commit Comment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "⚠️ IF: Issue erstellen?": {
+      "main": [
+        [
+          {
+            "node": "🐛 SUB: Create Push Issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🔧 Build WF Failed Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (WF Failed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (WF Failed)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse WF Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse WF Analysis": {
+      "main": [
+        [
+          {
+            "node": "🔍 SUB: Search WF Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 SUB: Search WF Issues": {
+      "main": [
+        [
+          {
+            "node": "🔧 Check Existing WF Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Check Existing WF Issue": {
+      "main": [
+        [
+          {
+            "node": "⚠️ IF: WF Issue exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ IF: WF Issue exists?": {
+      "main": [
+        [
+          {
+            "node": "💬 SUB: Comment on WF Issue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🐛 SUB: Create WF Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Issue Closed Prompt": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP: Claude Code (Closed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP: Claude Code (Closed)": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Issue Closed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Issue Closed": {
+      "main": [
+        [
+          {
+            "node": "💬 SUB: Post Closing Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 300
+  },
+  "staticData": null
+}

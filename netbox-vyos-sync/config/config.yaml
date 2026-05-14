@@ -1,0 +1,40 @@
+# NetBox API Configuration
+netbox:
+  url: "http://10.1.1.104"  # Ihre NetBox-Instanz
+  token: "YOUR_NETBOX_API_TOKEN_HERE"  # Ersetzen Sie dies mit Ihrem API-Token
+  verify_ssl: false
+
+  # Filter für IPv6-Präfixe
+  filters:
+    family: 6  # IPv6
+    status: ["active", "reserved"]  # Nur aktive/reservierte Präfixe
+    # Optional: Weitere Filter
+    # tags: ["vyos-route"]
+    # site: ["datacenter1"]
+
+# vyOS Router Configuration
+vyos:
+  routers:
+    - name: "vyos-router-1"
+      host: "10.2.1.1"  # Ersetzen Sie mit Ihrer vyOS-IP
+      port: 22
+      username: "vyos"
+      password: "YOUR_VYOS_PASSWORD"  # Oder verwenden Sie SSH-Keys
+      # key_file: "/home/mdoehler/.ssh/vyos_rsa"
+
+  # vyOS-spezifische Einstellungen
+  config:
+    commit_timeout: 60
+    save_config: true  # Speichert Config nach Änderungen
+
+# Export-Einstellungen
+export:
+  config_dir: "/home/mdoehler/netbox-vyos-sync/generated_configs"
+  keep_history: 10  # Anzahl alter Configs zum Behalten
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "/home/mdoehler/netbox-vyos-sync/logs/sync.log"
+  max_size_mb: 10
+  backup_count: 5

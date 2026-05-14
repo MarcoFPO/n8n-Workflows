@@ -1,0 +1,1068 @@
+{
+  "updatedAt": "2026-03-28T00:00:00.000Z",
+  "createdAt": "2026-03-22T11:29:25.246Z",
+  "id": "G0ZjR26Ow8FQ9p6D",
+  "name": "MASTER: Update Management",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "upd-sched1",
+      "name": "⏰ Schedule: Freitag 02:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * 5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "upd-manul1",
+      "name": "▶️ Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        460
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "upd-cfg001",
+      "name": "📋 Set Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        380
+      ],
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\n// W4: eigener Bucket pro run_id – Race-Condition-sicher bei parallelen Executions\nstaticData[run_id] = { results: [], run_date: new Date().toISOString() };\n\nreturn [{ json: {\n  run_id:          'update_' + new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14),\n  run_date:        new Date().toISOString(),\n  // Striktes Verbot – diese Systeme werden NIEMALS angefasst\n  exclude_ips:     ['10.1.1.100', '10.1.1.105', '10.1.1.180'],\n  exclude_names:   ['n8n', 'claude'],\n  // 'auto' = Reboot sofort | 'skip' = nur melden\n  reboot_handling: 'auto',\n  reboot_wait_sec: 90,\n  proxmox_host:    '10.1.1.100',\n} }];"
+      }
+    },
+    {
+      "id": "upd-netbx1",
+      "name": "🔗 SUB: NetBox Loader",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        380
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sp6DiNXwi5pfRjA7"
+        },
+        "workflowInputs": {
+          "value": {
+            "filter_by_type": "",
+            "filter_by_ids": "",
+            "hostname": ""
+          },
+          "schema": [
+            {
+              "id": "filter_by_type",
+              "displayName": "filter_by_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "filter_by_ids",
+              "displayName": "filter_by_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hostname",
+              "displayName": "hostname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-filtr1",
+      "name": "🔧 Filter & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        380
+      ],
+      "parameters": {
+        "jsCode": "const data         = $input.first().json;\nconst config       = $('📋 Set Config').first().json;\nconst systems      = data.systems || [];\nconst excl_ips    = config.exclude_ips   || [];\nconst excl_names  = config.exclude_names || [];\n\nconst active = systems.filter(s => {\n  if (!s.ip) return false;\n  const ip = (s.ip || '').split('/')[0].trim();\n  if (excl_ips.includes(ip)) return false;\n  if (excl_names.includes((s.name || '').toLowerCase())) return false;\n  return true;\n});\n\nif (active.length === 0) {\n  return [{ json: { _skip: true, name: '__no_systems__', ip: null, type: 'unknown',\n    os_family: 'unknown', platform: null, run_id: config.run_id } }];\n}\nreturn active.map(s => ({ json: { ...s, run_id: config.run_id } }));"
+      }
+    },
+    {
+      "id": "upd-loop01",
+      "name": "🔄 Loop Over Systems",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        380
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-skipc1",
+      "name": "🔀 Skip Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ !!$json._skip || !$json.ip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-strsk1",
+      "name": "🔧 Store Skip Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        440
+      ],
+      "parameters": {
+        "jsCode": "const sys        = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst run_id     = $('📋 Set Config').first().json.run_id;\n\n// W2: Phantom-Eintrag __no_systems__ nicht in Report aufnehmen\nif (sys.name === '__no_systems__') {\n  return [{ json: { _skip: true, _phantom: true, system_name: '__no_systems__' } }];\n}\n\nconst r = {\n  run_id,\n  system_name:      sys.name || sys.system_name || '?',\n  system_ip:        sys.ip   || sys.system_ip   || null,\n  system_type:      sys.type || 'unknown',\n  system_os_family: sys.os_family || 'unknown',\n  success:          false,\n  ssh_success:      false,\n  packages_updated: 0,\n  apps_updated:     [],\n  reboot_required:  false,\n  reboot_triggered: false,\n  errors:           ['System uebersprungen (kein IP oder in Ausschlussliste)'],\n  summary:          'Uebersprungen',\n  ticket_created:   false,\n  _skip:            true,\n};\n// W4: in run_id-Bucket schreiben\nif (!staticData[run_id]) staticData[run_id] = { results: [], run_date: new Date().toISOString() };\nstaticData[run_id].results.push(r);\nreturn [{ json: r }];"
+      }
+    },
+    {
+      "id": "upd-bpra01",
+      "name": "🔧 Build OS Update Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const sys    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst ssh_user  = sys.ssh_user     || 'root';\nconst ssh_pass  = sys.ssh_password || '';\nconst isLXC     = sys.type === 'lxc';\nconst isDevice  = sys.type === 'device';\nconst proxmox   = config.proxmox_host || '10.1.1.100';\nconst os_family = sys.os_family   || 'unknown';\nconst platform  = (sys.platform && sys.platform.name) ? sys.platform.name : os_family;\n\n// SSH-Prefix aufbauen\nlet ssh;\nif (isLXC) {\n  ssh = `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 root@${proxmox} pct exec ${sys.id} --`;\n} else if (ssh_pass) {\n  ssh = `sshpass -p '${ssh_pass}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 ${ssh_user}@${sys.ip}`;\n} else {\n  ssh = `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 ${ssh_user}@${sys.ip}`;\n}\n\n// OS-spezifische Befehle\nconst cmds = {\n  apt: [\n    `${ssh} bash -c \"DEBIAN_FRONTEND=noninteractive apt-get update -q 2>&1 | tail -5\"`,\n    `${ssh} bash -c \"DEBIAN_FRONTEND=noninteractive apt-get -y upgrade --with-new-pkgs 2>&1 | tail -30\"`,\n    `${ssh} bash -c \"apt-get -y autoremove && apt-get clean 2>&1 | tail -5\"`,\n    `${ssh} bash -c \"[ -f /var/run/reboot-required ] && echo REBOOT_NEEDED || echo NO_REBOOT\"`,\n  ],\n  apk: [\n    `${ssh} apk update 2>&1 | tail -5`,\n    `${ssh} apk upgrade 2>&1 | tail -20`,\n    `# Alpine: Reboot noetig wenn laufender Kernel != installierter Kernel (relevant bei physischen Alpine-Hosts)`,\n    `${ssh} ash -c \"KRUN=$(uname -r | cut -d- -f1); KINST=$(find /boot -name 'vmlinuz*' 2>/dev/null | grep -oP '\\\\d+\\.\\\\d+\\.\\\\d+' | head -1); [ -n \\\"$KINST\\\" ] && [ \\\"$KRUN\\\" != \\\"$KINST\\\" ] && echo REBOOT_NEEDED || echo NO_REBOOT\"`,\n  ],\n  dnf: [\n    `${ssh} bash -c \"dnf -y upgrade 2>&1 | tail -30\"`,\n    `${ssh} bash -c \"dnf -y autoremove 2>&1 | tail -5\"`,\n    `${ssh} bash -c \"needs-restarting -r 2>/dev/null; [ \\$? -eq 1 ] && echo REBOOT_NEEDED || echo NO_REBOOT\"`,\n  ],\n  pacman: [\n    `${ssh} bash -c \"pacman -Syu --noconfirm 2>&1 | tail -20\"`,\n    `${ssh} bash -c \"[ -f /var/run/reboot-required ] && echo REBOOT_NEEDED || echo NO_REBOOT\"`,\n  ],\n  zypper: [\n    `${ssh} bash -c \"zypper -n update 2>&1 | tail -20\"`,\n    `${ssh} bash -c \"zypper -n patch 2>&1 | tail -10\"`,\n    `${ssh} bash -c \"zypper ps -s 2>/dev/null | grep -q reboot && echo REBOOT_NEEDED || echo NO_REBOOT\"`,\n  ],\n  routeros: [\n    `${ssh} \"/system package update check-for-updates\"`,\n    `${ssh} \"/system package update install\"`,\n    `# HINWEIS: SSH-Verbindung trennt sich nach install – RouterOS rebootet (das ist KEIN Fehler!)`,\n    `sleep 90 && ${ssh} \"/system resource print\" 2>&1 || echo \"ROUTEROS_RECONNECT_FAILED\"`,\n    `${ssh} \"/system routerboard print\"`,\n    `${ssh} \"/system routerboard upgrade\"`,\n  ],\n  opkg: [\n    `${ssh} \"opkg update 2>&1 | tail -5\"`,\n    `${ssh} \"opkg list-upgradable 2>/dev/null | cut -f 1 -d ' ' | xargs -r opkg upgrade 2>&1 | tail -20\"`,\n  ],\n  vyos: [\n    `${ssh} bash -c \"sudo apt-get update -q 2>&1 | tail -5\"`,\n    `${ssh} bash -c \"sudo apt-get -y upgrade --with-new-pkgs 2>&1 | tail -20\"`,\n    `${ssh} bash -c \"[ -f /var/run/reboot-required ] && echo REBOOT_NEEDED || echo NO_REBOOT\"`,\n  ],\n};\n\nlet update_steps = '';\nlet reboot_hint  = 'Setze reboot_required=true wenn REBOOT_NEEDED erscheint, sonst false.';\n\nif (os_family === 'routeros') {\n  update_steps = `**Schritt 1 – Update verfügbar prüfen:**\\n${cmds.routeros[0]}\\n\\n**Schritt 2 – Update installieren (falls verfügbar):**\\n${cmds.routeros[1]}\\nACHTUNG: SSH-Verbindung trennt sich danach – RouterOS rebootet automatisch (das ist KEIN Fehler!)\\n\\n**Schritt 3 – 90s warten, dann Reconnect-Test:**\\n${cmds.routeros[3]}\\n\\n**Schritt 4 – Routerboard Firmware (nach Reconnect):**\\n${cmds.routeros[4]}\\nFalls verfügbar: ${cmds.routeros[5]}`;\n  reboot_hint = 'RouterOS rebootet automatisch nach Package-Install (SSH trennt sich – KEIN Fehler). Setze reboot_required=false, reboot_triggered=true wenn packages_updated > 0. Bei ROUTEROS_RECONNECT_FAILED: reboot_triggered=true aber Reconnect fehlgeschlagen – in errors[] melden.';\n\n} else if (os_family === 'bsd') {\n  update_steps = `**BSD-System (OPNsense/pfSense) erkannt.**\\nAutomatisches Update ist nicht sicher via CLI möglich.\\n${ssh} bash -c \"opnsense-version 2>/dev/null || uname -a\"\\nNur Version ermitteln – kein Update durchführen.`;\n  reboot_hint = 'BSD: Setze packages_updated=0, reboot_required=false. Füge in errors[] \"Manuelles Update über Web-UI erforderlich\" ein.';\n\n} else {\n  const family = cmds[os_family] ? os_family : 'apt';\n  const c = cmds[family];\n  const detect = os_family === 'unknown'\n    ? `**Schritt 0 – OS erkennen:**\\n${ssh} bash -c \"cat /etc/os-release 2>/dev/null | head -5 || uname -a\"\\nPasse die nachfolgenden Befehle an das erkannte OS an.\\n\\n`\n    : `**Erkanntes OS:** ${platform} (Paketmanager: ${family})\\n\\n`;\n  update_steps = detect + c.join('\\n');\n}\n\nconst prompt = `Du bist ein erfahrener Systemadministrator. Führe AUSSCHLIESSLICH das OS-Basis-Update durch (Phase A). Kein Reboot, kein App-Update.\n\n=== SYSTEM ===\nName: ${sys.name}\nIP: ${sys.ip}\nTyp: ${sys.type.toUpperCase()} | Klasse: ${sys.device_class || 'virtual'}\nOS: ${platform} | OS-Familie: ${os_family}\n\n=== PHASE A: OS-Update ===\n\n${update_steps}\n\n=== HINWEISE ===\n- ${reboot_hint}\n- Führe KEINEN Reboot durch – nur prüfen und melden\n- Führe KEINE App-Updates durch (docker, npm, snap etc.) – das folgt in Phase C\n\n=== ANTWORTFORMAT (NUR JSON, kein Markdown) ===\n{\"ssh_success\":true,\"packages_updated\":0,\"reboot_required\":false,\"errors\":[],\"summary\":\"Kurzbeschreibung\"}\n\nWICHTIG: Antworte NUR mit dem JSON-Objekt. Bei SSH-Fehler: ssh_success=false, errors=[\"Fehlermeldung\"]`;\n\nreturn [{ json: {\n  system_name:      sys.name,\n  system_ip:        sys.ip,\n  system_type:      sys.type,\n  system_id:        sys.id,\n  system_os_family: os_family,\n  device_class:     sys.device_class || 'virtual',\n  is_device:        isDevice,\n  is_lxc:           isLXC,\n  is_routeros:      os_family === 'routeros',\n  ssh_prefix:       ssh,\n  proxmox:          proxmox,\n  prompt\n} }];"
+      }
+    },
+    {
+      "id": "upd-clda01",
+      "name": "🤖 Claude: OS Update",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        220
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "l4ee6BahShsiEXjI"
+        },
+        "workflowInputs": {
+          "value": {
+            "prompt": "={{ $json.prompt }}"
+          },
+          "schema": [
+            {
+              "id": "prompt",
+              "displayName": "prompt",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "upd-prsa01",
+      "name": "🔧 Parse OS Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const claude     = $input.first().json;\nconst d          = $('🔧 Build OS Update Prompt').first().json;\nconst config     = $('📋 Set Config').first().json;\n\nlet step_a = {\n  ssh_success:      false,\n  packages_updated: 0,\n  reboot_required:  false,\n  errors:           ['Keine Antwort von Claude'],\n  summary:          'Parse-Fehler',\n};\n\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) step_a = { ...step_a, ...JSON.parse(match[0]) };\n} catch(e) {\n  step_a.errors.push('JSON Parse-Fehler: ' + e.message);\n}\n\n// RouterOS startet intern nach Package-Install automatisch neu\nif (d.is_routeros && step_a.packages_updated > 0) {\n  step_a.reboot_required  = false;\n  step_a.reboot_triggered = true;\n}\n\nconst should_reboot = step_a.reboot_required === true\n  && (config.reboot_handling || 'auto') === 'auto';\n\n// Fix 6: SSH-Fehler → Phase C überspringen\nconst skip_phase_c = step_a.ssh_success === false;\n\nreturn [{ json: {\n  skip_phase_c,\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  config.reboot_handling || 'auto',\n  should_reboot,\n  step_a,\n} }];"
+      }
+    },
+    {
+      "id": "upd-rebtq1",
+      "name": "✅ Reboot nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "reboot-check",
+              "leftValue": "={{ $json.should_reboot }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-bprb01",
+      "name": "🔧 Build Reboot Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2440,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const d      = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst wait   = config.reboot_wait_sec || 90;\nconst prox   = d.proxmox || config.proxmox_host;\n\nlet reboot_cmd, verify_cmd;\n\nif (d.is_lxc) {\n  reboot_cmd = `ssh -o StrictHostKeyChecking=no root@${prox} \"pct reboot ${d.system_id}\"`;\n  verify_cmd = `ssh -o StrictHostKeyChecking=no root@${prox} \"pct status ${d.system_id}\"`;\n} else {\n  const ssh = d.ssh_prefix;\n  reboot_cmd = `${ssh} bash -c \"shutdown -r now 'Update-Reboot' 2>&1 || true\"`;\n  // Für Verify: nur SSH-Verbindbarkeit testen (kein Befehl)\n  const base = ssh.replace(/--$/, '').trim();\n  verify_cmd = `${base} -o ConnectTimeout=10 true 2>&1 && echo SSH_OK || echo SSH_TIMEOUT`;\n}\n\nconst prompt = `Du bist ein Systemadministrator. Führe den Reboot durch und stelle sicher, dass das System danach wieder erreichbar ist.\n\n=== SYSTEM ===\nName: ${d.system_name}\nIP: ${d.system_ip}\nTyp: ${d.system_type.toUpperCase()} (${d.is_lxc ? 'LXC Container' : 'Physical/VM'})\n\n=== PHASE B: Reboot ===\n\n**Schritt 1 – Reboot auslösen:**\n${reboot_cmd}\n\n**Schritt 2 – ${wait} Sekunden warten:**\nsleep ${wait}\n\n**Schritt 3 – Erreichbarkeit prüfen (bis zu 3 Versuche, Pause je 30s):**\nVersuch 1: ${verify_cmd}\nBei Timeout: sleep 30, dann Versuch 2; bei erneutem Timeout: sleep 30, Versuch 3.\nFür LXC: warte bis 'pct status ${d.system_id || ''}' → 'running'.\n\n=== ANTWORTFORMAT (NUR JSON) ===\n{\"reboot_triggered\":true,\"reboot_success\":true,\"wait_seconds\":${wait},\"errors\":[],\"summary\":\"Reboot OK, System nach Xs wieder erreichbar\"}\n\nWICHTIG: Antworte NUR mit dem JSON-Objekt.`;\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  d.reboot_handling,\n  skip_phase_c:     d.skip_phase_c || false,\n  step_a:           d.step_a,\n  prompt\n} }];"
+      }
+    },
+    {
+      "id": "upd-cldb01",
+      "name": "🤖 Claude: Reboot",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2660,
+        80
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "l4ee6BahShsiEXjI"
+        },
+        "workflowInputs": {
+          "value": {
+            "prompt": "={{ $json.prompt }}"
+          },
+          "schema": [
+            {
+              "id": "prompt",
+              "displayName": "prompt",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "upd-prsb01",
+      "name": "🔧 Parse Reboot Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const claude = $input.first().json;\nconst d      = $('🔧 Build Reboot Prompt').first().json;\n\nlet step_b = {\n  reboot_triggered: false,\n  reboot_success:   false,\n  wait_seconds:     0,\n  errors:           ['Keine Antwort von Claude'],\n  summary:          'Parse-Fehler',\n};\n\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) step_b = { ...step_b, ...JSON.parse(match[0]) };\n} catch(e) {\n  step_b.errors.push('JSON Parse-Fehler: ' + e.message);\n}\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  is_device:        d.is_device,\n  is_lxc:           d.is_lxc,\n  is_routeros:      d.is_routeros,\n  ssh_prefix:       d.ssh_prefix,\n  proxmox:          d.proxmox,\n  reboot_handling:  d.reboot_handling,\n  skip_phase_c:     d.skip_phase_c || false,\n  step_a:           d.step_a,\n  step_b,\n} }];"
+      }
+    },
+    {
+      "id": "upd-bprc01",
+      "name": "🔧 Build App Update Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3100,
+        220
+      ],
+      "parameters": {
+        "jsCode": "// Eingang: entweder Parse Reboot Result (hat step_b) ODER Reboot nötig? false-Branch (kein step_b)\nconst d      = $input.first().json;\nconst step_b = d.step_b || null;\nconst ssh    = d.ssh_prefix;\nconst os_fam = d.system_os_family || 'apt';\n\n// Fix 6: SSH-Fehler in Phase A → Phase C überspringen\nif (d.skip_phase_c === true || d.step_a?.ssh_success === false) {\n  const prompt = `Antworte NUR mit exakt diesem JSON-Objekt:\\n{\"apps_discovered\":[],\"apps_updated\":[],\"docker_updated\":false,\"pip_updated\":false,\"npm_updated\":false,\"snap_updated\":false,\"errors\":[\"Phase C uebersprungen - SSH-Fehler in Phase A\"],\"summary\":\"Phase C uebersprungen wegen SSH-Fehler\"}`;\n  return [{ json: { ...d, step_b, prompt } }];\n}\n\n// RouterOS und BSD: kein sinnvolles App-Update via CLI möglich\nif (d.is_routeros || os_fam === 'bsd') {\n  const prompt = `Antworte NUR mit exakt diesem JSON-Objekt ohne weiteren Text:\\n{\"apps_discovered\":[],\"apps_updated\":[],\"docker_updated\":false,\"pip_updated\":false,\"npm_updated\":false,\"snap_updated\":false,\"errors\":[],\"summary\":\"Kein App-Update fuer ${os_fam} erforderlich\"}`;\n  return [{ json: { ...d, step_b, prompt } }];\n}\n\nconst phase_b_note = step_b\n  ? `Phase B (Reboot) wurde durchgefuehrt - System ist wieder online.`\n  : `Phase B wurde uebersprungen (kein Reboot erforderlich).`;\n\n// OS-spezifische Discovery-Befehle: manuell installierte Pakete vs. OS-Basis\nlet disc_a = '', disc_b = '';\n\nif (['apt', 'vyos', 'unknown'].includes(os_fam)) {\n  disc_a = `${ssh} bash -c \"apt-mark showmanual 2>/dev/null | sort\"`;\n  disc_b = `${ssh} bash -c \"systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null | awk '{print \\\\$1}' | grep -vE '^(ssh|sshd|cron|atd|rsyslog|systemd-|dbus\\\\.service|network|udev|getty|console|keyboard|swap|tmp\\\\.mount|syslog|ntp|chrony|apparmor|snapd\\\\.seeded|polkit|accounts-daemon|colord|avahi|bluetooth|ModemManager|packagekit|dm-event|lvm2|multipathd|fstrim)'\"`;\n} else if (os_fam === 'apk') {\n  disc_a = `${ssh} ash -c \"apk info 2>/dev/null | sort\"`;\n  disc_b = `${ssh} ash -c \"rc-status --nocolor 2>/dev/null | grep started | awk '{print \\\\$1}'\"`;\n} else if (os_fam === 'dnf') {\n  disc_a = `${ssh} bash -c \"dnf history userinstalled 2>/dev/null | tail -60\"`;\n  disc_b = `${ssh} bash -c \"systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null | awk '{print \\\\$1}' | grep -vE '^(ssh|cron|rsyslog|systemd-|dbus|network|udev|getty|swap|syslog|firewalld|chronyd|auditd|tuned|polkit|accounts|irqbalance|kdump|postfix\\\\.service)'\"`;\n} else if (os_fam === 'pacman') {\n  disc_a = `${ssh} bash -c \"pacman -Qe 2>/dev/null | awk '{print \\\\$1}' | sort\"`;\n  disc_b = `${ssh} bash -c \"systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null | awk '{print \\\\$1}' | grep -vE '^(ssh|cron|systemd-|dbus|network|udev|getty|syslog)'\"`;\n} else if (os_fam === 'zypper') {\n  disc_a = `${ssh} bash -c \"zypper se -i --type package 2>/dev/null | awk '/^i/{print \\\\$3}' | sort\"`;\n  disc_b = `${ssh} bash -c \"systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null | awk '{print \\\\$1}' | grep -vE '^(ssh|cron|systemd-|dbus|network|udev|getty|syslog|firewalld|chronyd)'\"`;\n}\n\nconst prompt = `Du bist ein erfahrener Systemadministrator. Fuehre Phase C durch: gruendliche Applikations-Discovery, dann gezieltes Update.\nQualitaet ist wichtiger als Geschwindigkeit - untersuche sorgfaeltig, was auf dem System installiert ist.\nPhase A (OS-Update) ist abgeschlossen. ${phase_b_note}\n\n=== SYSTEM ===\nName: ${d.system_name} | IP: ${d.system_ip} | OS-Familie: ${os_fam}\n\n=== PHASE C - Schritt 1: Applikations-Discovery ===\n\n**Discovery A - Manuell installierte Pakete (Diff gegen OS-Basis):**\n${disc_a}\nFiltere aus dem Ergebnis alle reinen OS-Basispakete heraus:\nIgnoriere: init, coreutils, libc*, bash, dash, grep, sed, awk, tar, gzip, bzip2, xz, file, findutils, util-linux, procps, systemd*, dbus, udev, apt*, dpkg*, debconf, debianutils, login, passwd, shadow*, adduser, sudo (wenn nur sudo selbst), sysvinit*, insserv, base-files, base-passwd, hostname, ifupdown, isc-dhcp-client, netbase, iproute2, iptables, nftables, iputils*, net-tools, curl, wget, ca-certificates, openssl, libssl*, gnupg, gpg, python3-minimal, perl-base, sensible-utils, mime-support, tzdata, locales, man-db, manpages, less, nano, vim-tiny, rsyslog, logrotate, cron, at, acl, acpid, lsb-release, os-release, keyboard-configuration, console-setup, zlib1g, libz*, libgcc*, libc6, libstdc++\nAlles was NICHT in dieser Liste ist = potenzielle Applikation.\n\n**Discovery B - Laufende Nicht-System-Services:**\n${disc_b}\n\n**Discovery C - Python Virtual Environments:**\n${ssh} bash -c \"find /opt /srv /home /var/www /app /root -name pyvenv.cfg -maxdepth 7 2>/dev/null | head -20\"\nFuer jede gefundene venv: ermittle Hauptpaket via <venv>/bin/pip list 2>/dev/null | head -10\n\n**Discovery D - Docker Container:**\n${ssh} bash -c \"docker ps --format '{{.Names}}|{{.Image}}|{{.Status}}' 2>/dev/null || echo 'docker nicht verfuegbar'\"\n\n**Discovery E - npm global:**\n${ssh} bash -c \"npm list -g --depth=0 2>/dev/null || echo 'npm nicht verfuegbar'\"\n\n**Discovery F - snap:**\n${ssh} bash -c \"snap list 2>/dev/null || echo 'snap nicht verfuegbar'\"\n\n**Discovery G - Git-basierte Deployments:**\n${ssh} bash -c \"find /opt /srv /var/www -name .git -maxdepth 5 -type d 2>/dev/null | sed 's/\\\\/.git//' | head -15\"\n\n=== PHASE C - Schritt 2: Analyse ===\n\nIdentifiziere aus den Discovery-Ergebnissen ALLE installierten Nicht-Standard-Applikationen.\nEine Applikation liegt vor wenn mindestens eines zutrifft:\n- In Discovery A: Paket das NICHT in der OS-Basisliste steht UND einen laufenden Service hat (Discovery B)\n- In Discovery C: Python venv gefunden\n- In Discovery D: Docker Container aktiv\n- In Discovery E/F: npm global oder snap installiert\n- In Discovery G: Git-Deployment vorhanden\n\n=== PHASE C - Schritt 3: Update (Reihenfolge einhalten) ===\n\n**a) Paketbasierte Apps (gezieltes Package-Upgrade, kein erneutes dist-upgrade):**\n   apt:    ${ssh} bash -c \"DEBIAN_FRONTEND=noninteractive apt-get install --only-upgrade -y <paket1> <paket2> 2>&1 | tail -15\"\n   dnf:    ${ssh} bash -c \"dnf update -y <paket1> <paket2> 2>&1 | tail -15\"\n   apk:    ${ssh} apk upgrade <paket1> <paket2> 2>&1 | tail -10\n   pacman: ${ssh} bash -c \"pacman -S --noconfirm <paket1> 2>&1 | tail -10\"\n   zypper: ${ssh} bash -c \"zypper -n update <paket1> 2>&1 | tail -10\"\n\n**b) Docker Container (Image-Update + Restart + Status-Check):**\n   ${ssh} bash -c \"docker pull <image> 2>&1 | tail -5 && docker restart <container> && sleep 5 && docker inspect --format '{{.State.Status}}' <container>\"\n\n**c) Python venvs (NUR Hauptpaket, keine vollstaendige Dependency-Aktualisierung):**\n   ${ssh} bash -c \"<venv>/bin/pip install --upgrade <hauptpaket> 2>&1 | tail -8\"\n   Danach: ${ssh} systemctl restart <service> && sleep 3 && systemctl is-active <service>\n\n**d) npm global:**\n   ${ssh} bash -c \"npm update -g <paket> 2>&1 | tail -5\"\n\n**e) snap:**\n   ${ssh} bash -c \"snap refresh <paket> 2>&1 | tail -5\"\n\n**f) Git-Deployments:**\n   ${ssh} bash -c \"cd <pfad> && git pull 2>&1 | tail -5\"\n   Danach passenden Service neu starten und Status pruefen.\n\n**Nach JEDEM Update:**\n${ssh} bash -c \"systemctl is-active <service> 2>/dev/null && echo 'SERVICE OK' || echo 'WARNUNG: Service nicht aktiv'\"\n\n**f2) Binaries ohne Paketmanager:**\nWenn du via systemctl einen Service erkennst der NICHT per apt/pip/npm/snap/docker verwaltet wird:\n- Prüfe Version: ${ssh} bash -c \"<binary> --version 2>/dev/null || systemctl cat <service> | grep ExecStart\"\n- Füge in errors[] ein: \"Binary-Service <name> v<version>: Manuelles Update erforderlich\"\n\n**Regeln:**\n- Bei Fehler: dokumentieren, weiter mit naechster App (kein Abbruch)\n- Pip: NIEMALS pip install -U ohne Paketangabe (bricht Abhaengigkeiten)\n- Service-Status nach jedem Update zwingend verifizieren\n- Qualitaet: lieber langsam und gruendlich als schnell und fehlerhaft\n\n=== ANTWORTFORMAT (NUR JSON, kein Markdown, kein Text davor/danach) ===\n{\n  \"apps_discovered\": [\"netbox\", \"zabbix-server\", \"docker:gitea\"],\n  \"apps_updated\": [\"apt:zabbix-server=7.2.1\", \"docker:gitea\", \"pip:netbox==4.1.0\"],\n  \"docker_updated\": false,\n  \"pip_updated\": false,\n  \"npm_updated\": false,\n  \"snap_updated\": false,\n  \"errors\": [],\n  \"summary\": \"X Apps gefunden (A, B, C), Y aktualisiert\"\n}\n\nWICHTIG: Antworte NUR mit dem JSON-Objekt.`;\n\nreturn [{ json: { ...d, step_b, prompt } }];"
+      }
+    },
+    {
+      "id": "upd-cldc01",
+      "name": "🤖 Claude: App Update",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        3320,
+        220
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "l4ee6BahShsiEXjI"
+        },
+        "workflowInputs": {
+          "value": {
+            "prompt": "={{ $json.prompt }}"
+          },
+          "schema": [
+            {
+              "id": "prompt",
+              "displayName": "prompt",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "upd-prsc01",
+      "name": "🔧 Parse App Update + Final Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3540,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const claude = $input.first().json;\nconst d      = $('🔧 Build App Update Prompt').first().json;\n\nlet step_c = {\n  apps_discovered: [],\n  apps_updated:    [],\n  docker_updated:  false,\n  pip_updated:     false,\n  npm_updated:     false,\n  snap_updated:    false,\n  errors:          [],\n  summary:         '',\n};\n\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) step_c = { ...step_c, ...JSON.parse(match[0]) };\n} catch(e) {\n  step_c.errors.push('JSON Parse-Fehler Step C: ' + e.message);\n}\n\nconst step_a = d.step_a || {};\nconst step_b = d.step_b || null;\n\nconst all_errors = [\n  ...(step_a.errors || []),\n  ...(step_b ? (step_b.errors || []) : []),\n  ...(step_c.errors || []),\n];\n\nconst success = step_a.ssh_success === true && all_errors.length === 0;\n\nreturn [{ json: {\n  system_name:      d.system_name,\n  system_ip:        d.system_ip,\n  system_type:      d.system_type,\n  system_id:        d.system_id,\n  system_os_family: d.system_os_family,\n  device_class:     d.device_class,\n  // Aggregate\n  success,\n  ssh_success:      step_a.ssh_success      || false,\n  packages_updated: step_a.packages_updated  || 0,\n  apps_discovered:  step_c.apps_discovered   || [],\n  apps_updated:     step_c.apps_updated      || [],\n  reboot_required:  step_a.reboot_required   || false,\n  reboot_triggered: step_b ? (step_b.reboot_triggered || false) : (step_a.reboot_triggered || false),\n  errors:           all_errors,\n  summary:          [step_a.summary, step_b ? step_b.summary : null, step_c.summary].filter(Boolean).join(' | '),\n  ticket_created:   false,\n  // Detailschritte\n  step_a,\n  step_b,\n  step_c,\n} }];"
+      }
+    },
+    {
+      "id": "upd-iferr1",
+      "name": "❌ Fehler vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-btkts1",
+      "name": "🎫 Build Failure Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3980,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// FIX: Systemdaten immer aus Final Merge lesen, unabhängig vom Eingangsknoten\nconst d      = $('🔧 Parse App Update + Final Merge').item.json;\nconst config = $('📋 Set Config').first().json;\n\nconst errors_text = (d.errors || []).map((e, i) => `${i+1}. ${e}`).join('\\n') || 'Keine Details';\n\nconst step_b_md = d.step_b\n  ? `### Phase B – Reboot\\n- Durchgeführt: ${d.step_b.reboot_triggered ? 'Ja' : 'Nein'} | Erfolgreich: ${d.step_b.reboot_success ? 'Ja' : 'Nein'}\\n- ${d.step_b.summary || ''}\\n`\n  : '';\n\nconst body = `## Update-Fehler: ${d.system_name}\\n\\n**System:** ${d.system_name} (${d.system_ip || 'N/A'})\\n**Typ:** ${d.system_type} | **Klasse:** ${d.device_class || '?'} | **OS:** ${d.system_os_family}\\n**Run-ID:** ${config.run_id}\\n**Zeitpunkt:** ${new Date().toISOString().slice(0,19).replace('T',' ')} UTC\\n\\n---\\n\\n## Fehler\\n\\n${errors_text}\\n\\n---\\n\\n## Update-Schritte\\n\\n### Phase A – OS-Update\\n- SSH-Erfolg: ${(d.step_a || {}).ssh_success ? 'Ja' : 'Nein'} | Pakete: ${(d.step_a || {}).packages_updated || 0} | Reboot erforderlich: ${(d.step_a || {}).reboot_required ? 'Ja' : 'Nein'}\\n- ${(d.step_a || {}).summary || ''}\\n\\n${step_b_md}### Phase C – App-Update\\n- Apps aktualisiert: ${((d.step_c || {}).apps_updated || []).join(', ') || 'keine'}\\n- ${(d.step_c || {}).summary || ''}\\n\\n---\\n*Automatisch erstellt durch MASTER: Update Management*`;\n\nreturn [{ json: {\n  title:         `[Update-Fehler] ${d.system_name} (${d.system_ip || 'N/A'})`,\n  body,\n  system_result: d,\n  queue:         'Raw',\n  state:         'neu',\n  priority:      '2 high',\n} }];"
+      }
+    },
+    {
+      "id": "upd-ctkts1",
+      "name": "🎫 SUB: Create Ticket",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        4200,
+        80
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NMxFaLwPpq39MSCF"
+        },
+        "workflowInputs": {
+          "value": {
+            "title": "={{ $json.title }}",
+            "body": "={{ $json.body }}",
+            "queue": "={{ $json.queue }}",
+            "state": "={{ $json.state }}",
+            "priority": "={{ $json.priority }}"
+          },
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "queue",
+              "displayName": "queue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-mrgtk1",
+      "name": "🔧 Merge Ticket Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4420,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// FIX: System-Ergebnis aus Build Failure Ticket holen, ticket_id aus Create Ticket\nconst ticket       = $input.first().json;\nconst build_data   = $('🎫 Build Failure Ticket').first().json;\n\nreturn [{ json: {\n  ...build_data.system_result,\n  ticket_created: true,\n  ticket_id:      ticket.ticket_id     || null,\n  ticket_number:  ticket.ticket_number || null,\n} }];"
+      }
+    },
+    {
+      "id": "upd-store1",
+      "name": "🔧 Store Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4640,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const d          = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst run_id     = $('📋 Set Config').first().json.run_id;\n// W4: in run_id-Bucket schreiben\nif (!staticData[run_id]) staticData[run_id] = { results: [], run_date: new Date().toISOString() };\nstaticData[run_id].results.push({ ...d, run_id });\nreturn [{ json: d }];"
+      }
+    },
+    {
+      "id": "upd-aggr01",
+      "name": "🔧 Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        560
+      ],
+      "parameters": {
+        "jsCode": "// W5: run_id aus Loop-Input (Filter & Prepare hat run_id mitgeliefert – kein Cross-Branch-Zugriff nötig)\nconst run_id     = $input.first().json.run_id;\nconst staticData = $getWorkflowStaticData('global');\n// W4: run_id-Bucket lesen und löschen (verhindert Datenvermischung paralleler Executions)\nconst bucket  = staticData[run_id] || { results: [], run_date: new Date().toISOString() };\nconst results = bucket.results;\ndelete staticData[run_id];\n\nconst total           = results.length;\nconst success         = results.filter(r => r.success).length;\nconst failed          = results.filter(r => !r.success && !r._skip).length;\nconst skipped         = results.filter(r => r._skip).length;\nconst reboot_done     = results.filter(r => r.reboot_triggered).length;\nconst reboot_pending  = results.filter(r => r.reboot_required && !r.reboot_triggered).length;\nconst tickets_created = results.filter(r => r.ticket_created).length;\nconst packages_total  = results.reduce((s, r) => s + (r.packages_updated || 0), 0);\n\nconst summary = {\n  run_id, run_date: bucket.run_date,\n  total, success, failed, skipped,\n  reboot_done, reboot_pending, tickets_created, packages_total,\n  completed_at: new Date().toISOString(),\n};\n\nlet report_md = `# Update-Report ${run_id}\\n\\n`;\nreport_md += `| Gesamt | Erfolgreich | Fehler | Uebersprungen | Reboots | Pakete |\\n`;\nreport_md += `|--------|------------|--------|-------------|---------|--------|\\n`;\nreport_md += `| ${total} | ${success} | ${failed} | ${skipped} | ${reboot_done} | ${packages_total} |\\n\\n`;\nreport_md += `## Systeme\\n\\n`;\n\nfor (const r of results) {\n  const icon = r._skip ? '⏭️' : (r.success ? '✅' : '❌');\n  const os   = r.system_os_family || '?';\n  report_md += `### ${icon} ${r.system_name} (${r.system_ip || 'N/A'}) – ${os}\\n`;\n  if (!r._skip) {\n    report_md += `- **Phase A:** ${r.packages_updated || 0} Pakete`;\n    if (r.reboot_triggered) report_md += ` | **Reboot:** ✅ durchgefuehrt`;\n    else if (r.reboot_required) report_md += ` | **Reboot:** ⏳ ausstehend`;\n    if (r.apps_discovered && r.apps_discovered.length > 0) report_md += ` | **Discovered:** ${r.apps_discovered.length}`;\n    if (r.apps_updated && r.apps_updated.length > 0) report_md += ` | **Updated:** ${r.apps_updated.join(', ')}`;\n    report_md += '\\n';\n  }\n  if (!r.success && (r.errors || []).length > 0) {\n    report_md += `- **Fehler:** ${r.errors.slice(0,3).join('; ')}\\n`;\n  }\n  if (r.summary) report_md += `- ${r.summary}\\n`;\n  report_md += '\\n';\n}\n\nreturn [{ json: { summary, results, report_md, report_data: JSON.stringify(results) } }];"
+      }
+    },
+    {
+      "id": "upd-reprt1",
+      "name": "📊 SUB: Report Generator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        560
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NwfqZNDoN8zjEMaf"
+        },
+        "workflowInputs": {
+          "value": {
+            "report_type": "update",
+            "title": "=🔄 Update-Report – {{ $('🔧 Aggregate Results').first().json.summary.run_id }}",
+            "data": "={{ $json.report_data }}",
+            "format": "markdown"
+          },
+          "schema": [
+            {
+              "id": "report_type",
+              "displayName": "report_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "format",
+              "displayName": "format",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-bkstk1",
+      "name": "📄 SUB: BookStack Reporter",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        560
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ugPeuIa1KJXX9xqC"
+        },
+        "workflowInputs": {
+          "value": {
+            "chapter_name": "Update Management",
+            "page_title": "={{ $('🔧 Aggregate Results').first().json.summary.run_id }}",
+            "page_content": "={{ $('🔧 Aggregate Results').first().json.report_md }}"
+          },
+          "schema": [
+            {
+              "id": "chapter_name",
+              "displayName": "chapter_name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_title",
+              "displayName": "page_title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_content",
+              "displayName": "page_content",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "upd-notif1",
+      "name": "🔔 SUB: Notification",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        560
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TmyAkITcb41Ti3Ev"
+        },
+        "workflowInputs": {
+          "value": {
+            "title": "=🔄 Update-Report {{ $('🔧 Aggregate Results').first().json.summary.completed_at.slice(0,10) }}",
+            "message": "={{ $('🔧 Aggregate Results').first().json.report_md.slice(0,3800) }}",
+            "channels": "=[\"matrix\"]"
+          },
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channels",
+              "displayName": "channels",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Schedule: Freitag 02:00": {
+      "main": [
+        [
+          {
+            "node": "📋 Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "📋 Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Set Config": {
+      "main": [
+        [
+          {
+            "node": "🔗 SUB: NetBox Loader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 SUB: NetBox Loader": {
+      "main": [
+        [
+          {
+            "node": "🔧 Filter & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Filter & Prepare": {
+      "main": [
+        [
+          {
+            "node": "🔄 Loop Over Systems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Loop Over Systems": {
+      "main": [
+        [
+          {
+            "node": "🔀 Skip Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Skip Check": {
+      "main": [
+        [
+          {
+            "node": "🔧 Store Skip Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build OS Update Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build OS Update Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 Claude: OS Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Claude: OS Update": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse OS Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse OS Update": {
+      "main": [
+        [
+          {
+            "node": "✅ Reboot nötig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Reboot nötig?": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Reboot Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Build App Update Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Reboot Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 Claude: Reboot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Claude: Reboot": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse Reboot Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse Reboot Result": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build App Update Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build App Update Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 Claude: App Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Claude: App Update": {
+      "main": [
+        [
+          {
+            "node": "🔧 Parse App Update + Final Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Parse App Update + Final Merge": {
+      "main": [
+        [
+          {
+            "node": "❌ Fehler vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎫 Build Failure Ticket": {
+      "main": [
+        [
+          {
+            "node": "🎫 SUB: Create Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎫 SUB: Create Ticket": {
+      "main": [
+        [
+          {
+            "node": "🔧 Merge Ticket Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Merge Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "🔧 Store Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Store Result": {
+      "main": [
+        [
+          {
+            "node": "🔄 Loop Over Systems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Store Skip Result": {
+      "main": [
+        [
+          {
+            "node": "🔄 Loop Over Systems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "📊 SUB: Report Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 SUB: Report Generator": {
+      "main": [
+        [
+          {
+            "node": "📄 SUB: BookStack Reporter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 SUB: BookStack Reporter": {
+      "main": [
+        [
+          {
+            "node": "🔔 SUB: Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❌ Fehler vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "🎫 Build Failure Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Store Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "executionTimeout": 7200,
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "80c0038d-f1f3-42e6-bb42-aa2d66b1eb5d",
+  "activeVersionId": null,
+  "versionCounter": 4,
+  "triggerCount": 0,
+  "tags": [],
+  "activeVersion": null,
+  "_n8n_id": "G0ZjR26Ow8FQ9p6D"
+}

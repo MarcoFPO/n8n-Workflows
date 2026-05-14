@@ -1,0 +1,226 @@
+{
+  "name": "SUB: GitHub API Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "method",
+              "type": "string"
+            },
+            {
+              "name": "endpoint",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "68806866-e9c5-4087-8d40-12766724392e",
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\nif (!input.method) throw new Error('method erforderlich');\nif (!input.endpoint) throw new Error('endpoint erforderlich');\nconst token = $env.GITHUB_TOKEN;\nif (!token) throw new Error('GITHUB_TOKEN nicht gesetzt');\nlet bodyObj = null;\nif (input.body && input.body !== '' && input.body !== '{}') {\n  try { bodyObj = JSON.parse(input.body); } catch(e) {}\n}\nreturn [{ json: {\n  method: input.method.toUpperCase(),\n  url: 'https://api.github.com' + input.endpoint,\n  body: bodyObj,\n  token: token,\n  is_get: input.method.toUpperCase() === 'GET'\n}}];\n"
+      },
+      "id": "632bcc36-9651-40c5-b2b5-937e9ed0d2cd",
+      "name": "🔧 Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "m",
+              "leftValue": "={{ $json.is_get }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "2765b16d-e3d1-43e1-a64c-d81680404591",
+      "name": "✅ IF: GET?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('🔧 Validate Input').first().json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'token ' + $('🔧 Validate Input').first().json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "416a918c-edf9-41ea-b960-589fe696ef4c",
+      "name": "🌐 HTTP GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "={{ $('🔧 Validate Input').first().json.method }}",
+        "url": "={{ $('🔧 Validate Input').first().json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'token ' + $('🔧 Validate Input').first().json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('🔧 Validate Input').first().json.body || {}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "048b7115-7d77-4eae-a608-d733b84e5ecb",
+      "name": "🌐 HTTP Write",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        420
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst inp = $('🔧 Validate Input').first().json;\nconst resp = $input.first().json;\nconst hasError = resp.error !== undefined || (resp.message !== undefined && (resp.documentation_url !== undefined || (!resp.id && !resp.number && !resp.ref && !resp.sha && !resp.tag_name && !resp.name)));\nconst statusCode = (resp.error && resp.error.status) || (hasError ? 400 : 200);\nreturn [{ json: {\n  success: !hasError,\n  method: inp.method,\n  url: inp.url,\n  status_code: statusCode,\n  error: hasError ? (resp.message || resp.error || 'GitHub API Fehler') : null,\n  response: hasError ? null : resp\n}}];\n"
+      },
+      "id": "f6d2f9c6-2b59-4c11-892e-33599f5f00b4",
+      "name": "📤 Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Validate Input": {
+      "main": [
+        [
+          {
+            "node": "✅ IF: GET?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ IF: GET?": {
+      "main": [
+        [
+          {
+            "node": "🌐 HTTP GET",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🌐 HTTP Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP GET": {
+      "main": [
+        [
+          {
+            "node": "📤 Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 HTTP Write": {
+      "main": [
+        [
+          {
+            "node": "📤 Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

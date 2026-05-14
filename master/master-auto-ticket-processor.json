@@ -1,0 +1,541 @@
+{
+    "updatedAt": "2026-03-31T18:14:00.291Z",
+    "createdAt": "2026-03-30T18:30:54.857Z",
+    "id": "U9IJAwuzasHVscgY",
+    "name": "MASTER: Auto-Ticket-Processor",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "*/30 * * * *"
+                        }
+                    ]
+                }
+            },
+            "name": "\u23f0 Schedule: Alle 30 Minuten",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [200, 300],
+            "id": "954f4ced-4e77-4e92-984a-cbbe494d44a8"
+        },
+        {
+            "parameters": {},
+            "name": "\u25b6\ufe0f Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [200, 500],
+            "id": "52b6c43a-49cf-4e74-be37-08946cbb4e11"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Zeitfilter: Tickets \u00e4lter als 5 Minuten\nconst now = new Date();\nconst cutoffMs = now.getTime() - (5 * 60 * 1000);\nconst cutoff = new Date(cutoffMs);\nconst pad = n => String(n).padStart(2, '0');\nconst cutoffStr = `${cutoff.getUTCFullYear()}-${pad(cutoff.getUTCMonth()+1)}-${pad(cutoff.getUTCDate())} ${pad(cutoff.getUTCHours())}:${pad(cutoff.getUTCMinutes())}:${pad(cutoff.getUTCSeconds())}`;\n\nreturn [{ json: {\n  run_time: now.toISOString(),\n  cutoff_time: cutoffStr,\n  max_tickets: 2,\n  search_body: {\n    UserLogin: 'root@localhost',\n    Password: 'ZnunyApi2026',\n    StateIDs: [1],\n    TicketCreateTimeOlderDate: cutoffStr,\n    Limit: 20,\n    SortBy: 'Age',\n    OrderBy: 'Up'\n  }\n} }];"
+            },
+            "name": "\ud83d\udccb Set Config",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [450, 400],
+            "id": "87f96cc4-fd10-4252-a85e-cac93808efe7"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketSearch",
+                "options": {
+                    "allowUnauthorizedCerts": true,
+                    "timeout": 15000
+                },
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify($json.search_body) }}"
+            },
+            "name": "\ud83d\udd0d Znuny: TicketSearch",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [700, 400],
+            "continueOnFail": true,
+            "id": "99421cbf-a0da-4f0d-b2b8-fd8bb16155ad"
+        },
+        {
+            "parameters": {
+                "jsCode": "const config = $('\ud83d\udccb Set Config').first().json;\nconst r = $input.first().json;\n\nif (r.Error) {\n  return [{ json: {\n    ticket_ids: [],\n    count: 0,\n    total_found: 0,\n    error: `${r.Error.ErrorCode}: ${r.Error.ErrorMessage}`\n  } }];\n}\n\nconst raw = r.TicketID;\nconst all_ids = Array.isArray(raw)\n  ? raw.map(Number)\n  : (raw != null ? [Number(raw)] : []);\n\n// Auf max. 2 Tickets begrenzen\n// SortBy=Age&OrderBy=Up \u2192 \u00e4lteste Tickets zuerst\nconst ticket_ids = all_ids.slice(0, config.max_tickets);\n\nreturn [{ json: {\n  ticket_ids,\n  count: ticket_ids.length,\n  total_found: all_ids.length,\n  cutoff_time: config.cutoff_time,\n  error: null\n} }];"
+            },
+            "name": "\ud83d\udd27 Parse & Limit auf 2",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [950, 400],
+            "id": "d14c13fa-943b-47be-9df2-156ccbee4f7d"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.count }}",
+                            "rightValue": 0,
+                            "operator": {
+                                "type": "number",
+                                "operation": "gt"
+                            }
+                        }
+                    ]
+                }
+            },
+            "name": "\u2705 IF: Tickets gefunden?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [1200, 400],
+            "id": "7c198807-0576-4948-861a-b2eee8d28fe7"
+        },
+        {
+            "parameters": {
+                "jsCode": "const result = $input.first().json;\nreturn [{ json: {\n  status: 'no_new_tickets',\n  message: `Keine Tickets im Status 'new' (\u00e4lter als 5 Min) gefunden.`,\n  total_found: result.total_found || 0,\n  checked_at: new Date().toISOString()\n} }];"
+            },
+            "name": "\ud83d\udccb Log: Keine Tickets",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [1450, 600],
+            "id": "c1ab5a37-c1d6-4ec6-b285-b8a2083b4830"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Ticket-IDs in Einzel-Items aufteilen (n8n verarbeitet automatisch alle Items)\nconst { ticket_ids, cutoff_time } = $input.first().json;\nreturn ticket_ids.map(id => ({ json: { ticket_id: id, cutoff_time } }));"
+            },
+            "name": "\ud83d\udd27 Split zu Items",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [1450, 300],
+            "id": "0cd21bd8-db51-485a-a2ab-ce3dc618ec27"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ 'https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketGet/' + $json.ticket_id }}",
+                "options": {
+                    "allowUnauthorizedCerts": true,
+                    "timeout": 10000
+                },
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "{\"UserLogin\":\"root@localhost\",\"Password\":\"ZnunyApi2026\",\"DynamicFields\":1}"
+            },
+            "name": "\ud83c\udfab Znuny: TicketGet",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1700, 300],
+            "continueOnFail": true,
+            "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890"
+        },
+        {
+            "parameters": {
+                "jsCode": "const resp = $input.first().json;\n\n// Fallback: ticket_id aus dem Split-Node falls TicketGet fehlschl\u00e4gt\nconst fallback_ticket_id = $('\ud83d\udd27 Split zu Items').item.json.ticket_id;\n\nif (resp.Error || !resp.Ticket) {\n  // Fehler: kein Zabbix-Check m\u00f6glich, ticket_id weitergeben f\u00fcr normale Verarbeitung\n  return [{ json: { ticket_id: fallback_ticket_id, zabbix_referenz: null, error: resp.Error?.ErrorMessage || 'TicketGet fehlgeschlagen' } }];\n}\n\nconst ticket = Array.isArray(resp.Ticket) ? resp.Ticket[0] : resp.Ticket;\nconst ticket_id = ticket.TicketID || fallback_ticket_id;\n\n// ZabbixReferenz aus DynamicFields extrahieren\nlet zabbix_referenz = null;\nif (Array.isArray(ticket.DynamicField)) {\n  const f = ticket.DynamicField.find(f => f.Name === 'ZabbixReferenz');\n  zabbix_referenz = f && f.Value ? String(f.Value) : null;\n} else {\n  zabbix_referenz = ticket.DynamicField_ZabbixReferenz ? String(ticket.DynamicField_ZabbixReferenz) : null;\n}\n\nreturn [{ json: { ticket_id, zabbix_referenz, error: null } }];"
+            },
+            "name": "\ud83d\udccb Parse: ZabbixReferenz",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [1950, 300],
+            "id": "c2b3d4e5-f6a7-8901-bcde-f12345678901"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.zabbix_referenz }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEmpty"
+                            }
+                        }
+                    ]
+                }
+            },
+            "name": "\u2753 IF: Zabbix-Referenz vorhanden?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [2200, 300],
+            "id": "d3c4e5f6-a7b8-9012-cdef-123456789012"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://10.1.1.103/zabbix/api_jsonrpc.php",
+                "options": {
+                    "timeout": 10000
+                },
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "{\"jsonrpc\":\"2.0\",\"method\":\"user.login\",\"params\":{\"username\":\"Admin\",\"password\":\"zabbix\"},\"id\":1}"
+            },
+            "name": "\ud83d\udd10 Zabbix: Login",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [2450, 150],
+            "continueOnFail": true,
+            "id": "e4d5f6a7-b8c9-0123-defa-234567890123"
+        },
+        {
+            "parameters": {
+                "jsCode": "const loginResp = $input.first().json;\nconst parsed = $('\ud83d\udccb Parse: ZabbixReferenz').item.json;\n\nconst token = loginResp.result || null;\n\nreturn [{ json: {\n  ticket_id: parsed.ticket_id,\n  zabbix_referenz: parsed.zabbix_referenz,\n  zabbix_token: token\n} }];"
+            },
+            "name": "\ud83d\udd17 Merge: Token + Ticket",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [2700, 150],
+            "id": "f5e6a7b8-c9d0-1234-efab-345678901234"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://10.1.1.103/zabbix/api_jsonrpc.php",
+                "options": {
+                    "timeout": 10000
+                },
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'problem.get', params: { eventids: [$json.zabbix_referenz], output: 'extend', selectAcknowledges: 'extend' }, auth: $json.zabbix_token, id: 2 }) }}"
+            },
+            "name": "\ud83d\udd0e Zabbix: Problem abfragen",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [2950, 150],
+            "continueOnFail": true,
+            "id": "a6f7b8c9-d0e1-2345-fabc-456789012345"
+        },
+        {
+            "parameters": {
+                "jsCode": "const zResp = $input.first().json;\n\n// ticket_id und zabbix_referenz direkt aus dem Vorg\u00e4nger-Input (Merge-Node hat diese weitergeleitet)\n// Da 'Zabbix: Problem abfragen' den Output von 'Merge: Token + Ticket' als Input hatte,\n// ist $input.first() die HTTP-Response. ticket_id muss aus dem Merge-Output geholt werden.\nconst mergeData = $('\ud83d\udd17 Merge: Token + Ticket').item.json;\n\nconst problems = (zResp.result && Array.isArray(zResp.result)) ? zResp.result : [];\n\nlet alarm_active = false;\nlet alarm_acknowledged = false;\nlet close_reason = '';\n\nif (problems.length === 0) {\n  // Kein offenes Problem gefunden \u2192 Alarm ist gel\u00f6st\n  close_reason = 'Zabbix-Alarm ist nicht mehr aktiv (Problem gel\u00f6st)';\n} else {\n  alarm_active = true;\n  const problem = problems[0];\n  // acknowledged: '1' = ja; acknowledges-Array enth\u00e4lt Eintr\u00e4ge\n  if (problem.acknowledged === '1' || (Array.isArray(problem.acknowledges) && problem.acknowledges.length > 0)) {\n    alarm_acknowledged = true;\n    close_reason = 'Zabbix-Alarm wurde acknowledged';\n  }\n}\n\nconst should_close = !alarm_active || alarm_acknowledged;\n\nreturn [{ json: {\n  ticket_id: mergeData.ticket_id,\n  zabbix_referenz: mergeData.zabbix_referenz,\n  alarm_active,\n  alarm_acknowledged,\n  should_close,\n  close_reason\n} }];"
+            },
+            "name": "\ud83d\udcca Parse: Alarm-Status",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [3200, 150],
+            "id": "b7a8c9d0-e1f2-3456-abcd-567890123456"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ $json.should_close }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ]
+                }
+            },
+            "name": "\u2705 IF: Ticket schlie\u00dfen?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [3450, 150],
+            "id": "c8b9d0e1-f2a3-4567-bcde-678901234567"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ 'https://10.1.1.182/znuny/nph-genericinterface.pl/Webservice/GenericTicketConnectorREST/TicketUpdate/' + $json.ticket_id }}",
+                "options": {
+                    "allowUnauthorizedCerts": true,
+                    "timeout": 10000
+                },
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ UserLogin: 'root@localhost', Password: 'ZnunyApi2026', Ticket: { State: 'geschlossen' }, Article: { Subject: 'Automatisch geschlossen', Body: 'Alarm-Check: ' + $json.close_reason + '. Ticket automatisch geschlossen.', ContentType: 'text/plain; charset=utf-8', ArticleType: 'note-internal' } }) }}"
+            },
+            "name": "\ud83d\udd12 Znuny: Ticket schlie\u00dfen",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [3700, 50],
+            "continueOnFail": true,
+            "id": "d9c0e1f2-a3b4-5678-cdef-789012345678"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://10.1.1.180:80/webhook/znuny-new-ticket",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ ticket_id: $json.ticket_id }) }}",
+                "options": {
+                    "timeout": 10000
+                }
+            },
+            "name": "\ud83d\ude80 Trigger: Incident Response",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [3700, 300],
+            "continueOnFail": true,
+            "id": "3260e246-d7cc-48e2-8608-22b781487a2f"
+        }
+    ],
+    "connections": {
+        "\u23f0 Schedule: Alle 30 Minuten": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Set Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u25b6\ufe0f Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Set Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Set Config": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0d Znuny: TicketSearch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0d Znuny: TicketSearch": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Parse & Limit auf 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Parse & Limit auf 2": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 IF: Tickets gefunden?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 IF: Tickets gefunden?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd27 Split zu Items",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\udccb Log: Keine Tickets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd27 Split zu Items": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83c\udfab Znuny: TicketGet",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83c\udfab Znuny: TicketGet": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udccb Parse: ZabbixReferenz",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udccb Parse: ZabbixReferenz": {
+            "main": [
+                [
+                    {
+                        "node": "\u2753 IF: Zabbix-Referenz vorhanden?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2753 IF: Zabbix-Referenz vorhanden?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd10 Zabbix: Login",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\ude80 Trigger: Incident Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd10 Zabbix: Login": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd17 Merge: Token + Ticket",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd17 Merge: Token + Ticket": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd0e Zabbix: Problem abfragen",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udd0e Zabbix: Problem abfragen": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udcca Parse: Alarm-Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\ud83d\udcca Parse: Alarm-Status": {
+            "main": [
+                [
+                    {
+                        "node": "\u2705 IF: Ticket schlie\u00dfen?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "\u2705 IF: Ticket schlie\u00dfen?": {
+            "main": [
+                [
+                    {
+                        "node": "\ud83d\udd12 Znuny: Ticket schlie\u00dfen",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "\ud83d\ude80 Trigger: Incident Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "executionTimeout": 300,
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": {
+        "node:\u23f0 Schedule: Alle 30 Minuten": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": null,
+    "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+    "activeVersionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+    "versionCounter": 32,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-03-30T18:30:54.869Z",
+            "createdAt": "2026-03-30T18:30:54.869Z",
+            "role": "workflow:owner",
+            "workflowId": "U9IJAwuzasHVscgY",
+            "projectId": "TKpGt6PASoN8CNtU",
+            "project": {
+                "updatedAt": "2025-10-04T18:35:36.066Z",
+                "createdAt": "2025-10-04T18:27:37.663Z",
+                "id": "TKpGt6PASoN8CNtU",
+                "name": "Marco Doehler <marcofpo@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-03-31T18:14:00.292Z",
+        "createdAt": "2026-03-31T18:14:00.292Z",
+        "versionId": "667f442b-8916-43a6-b9f7-690491fae57d",
+        "workflowId": "U9IJAwuzasHVscgY",
+        "nodes": [],
+        "connections": {},
+        "authors": "Marco Doehler",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": []
+    }
+}

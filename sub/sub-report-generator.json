@@ -1,0 +1,67 @@
+{
+  "name": "SUB: Report Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "report_type",
+              "type": "string"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "string"
+            },
+            {
+              "name": "format",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate formatted report from data\nconst input = $input.first().json;\n\nconst report_type = input.report_type || 'generic';\nconst title = input.title || 'System Report';\nconst format = input.format || 'markdown';\nconst generated_at = new Date().toISOString();\nconst report_id = `rpt_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;\n\nlet data;\ntry {\n  data = typeof input.data === 'string' ? JSON.parse(input.data) : (input.data || {});\n} catch (e) {\n  data = { raw: input.data, parse_error: e.message };\n}\n\nfunction statusEmoji(status) {\n  const map = { success: '✅', ok: '✅', failed: '❌', critical: '🚨', warning: '⚠️', error: '❌', partial: '🔶', info: 'ℹ️' };\n  return map[String(status).toLowerCase()] || '❓';\n}\n\nfunction severityEmoji(severity) {\n  const map = { critical: '🚨', error: '❌', warning: '⚠️', info: 'ℹ️', ok: '✅' };\n  return map[String(severity).toLowerCase()] || '❓';\n}\n\nfunction formatBytes(mb) {\n  if (mb > 1024) return `${(mb/1024).toFixed(1)} GB`;\n  return `${mb} MB`;\n}\n\nlet report_content = '';\n\nif (format === 'markdown') {\n  const hr = '---';\n  const now = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });\n\n  report_content += `# ${title}\\n\\n`;\n  report_content += `**Erstellt:** ${now}  \\n`;\n  report_content += `**Report ID:** \\`${report_id}\\`  \\n`;\n  report_content += `**Typ:** ${report_type}  \\n\\n`;\n  report_content += `${hr}\\n\\n`;\n\n  if (report_type === 'update') {\n    // Update report format\n    const systems = Array.isArray(data) ? data : (data.results || [data]);\n    const total = systems.length;\n    const success = systems.filter(s => s.status === 'success').length;\n    const failed = systems.filter(s => s.status === 'failed').length;\n    const partial = systems.filter(s => s.status === 'partial').length;\n    const rebootNeeded = systems.filter(s => s.reboot_required).length;\n\n    report_content += `## 📊 Zusammenfassung\\n\\n`;\n    report_content += `| Metrik | Wert |\\n|--------|------|\\n`;\n    report_content += `| Systeme gesamt | ${total} |\\n`;\n    report_content += `| ✅ Erfolgreich | ${success} |\\n`;\n    report_content += `| ❌ Fehlgeschlagen | ${failed} |\\n`;\n    report_content += `| 🔶 Teilweise | ${partial} |\\n`;\n    report_content += `| 🔄 Neustart nötig | ${rebootNeeded} |\\n\\n`;\n\n    report_content += `## 📋 Details\\n\\n`;\n    report_content += `| System | Typ | Pakete | Status | Neustart |\\n|--------|-----|--------|--------|----------|\\n`;\n    for (const sys of systems) {\n      const emoji = statusEmoji(sys.status);\n      const reboot = sys.reboot_required ? '⚠️ Ja' : '✅ Nein';\n      report_content += `| ${sys.name || 'N/A'} | ${sys.type || 'N/A'} | ${sys.packages_updated || 0} | ${emoji} ${sys.status} | ${reboot} |\\n`;\n    }\n\n  } else if (report_type === 'analyse' || report_type === 'health') {\n    // Analysis / health report format\n    const systems = Array.isArray(data) ? data : (data.results || [data]);\n    const critical = systems.filter(s => s.health_status === 'critical' || (s.issues && s.issues.some(i => i.severity === 'critical'))).length;\n    const warning = systems.filter(s => s.health_status === 'warning' || s.has_issues).length;\n    const ok = systems.filter(s => s.health_status === 'ok' && !s.has_issues).length;\n\n    report_content += `## 📊 Health Overview\\n\\n`;\n    report_content += `| Status | Anzahl |\\n|--------|--------|\\n`;\n    report_content += `| 🚨 Critical | ${critical} |\\n`;\n    report_content += `| ⚠️ Warning | ${warning} |\\n`;\n    report_content += `| ✅ OK | ${ok} |\\n\\n`;\n\n    report_content += `## 🖥️ Systemdetails\\n\\n`;\n    for (const sys of systems) {\n      const hEmoji = statusEmoji(sys.health_status || 'ok');\n      report_content += `### ${hEmoji} ${sys.name || 'Unknown'} (${sys.type || 'N/A'})\\n\\n`;\n      if (sys.disk_usage_pct !== undefined) {\n        report_content += `- 💽 Disk: ${sys.disk_usage_pct}%\\n`;\n        report_content += `- 🧠 Memory: ${sys.memory_usage_pct}%\\n`;\n        report_content += `- ⚡ CPU Load: ${sys.cpu_load}\\n`;\n        report_content += `- 🔧 Services: ${sys.services_ok ? '✅ OK' : '❌ Fehler'}\\n`;\n      }\n      if (sys.issues && sys.issues.length > 0) {\n        report_content += `\\n**Issues:**\\n`;\n        for (const issue of sys.issues.slice(0, 5)) {\n          report_content += `- ${severityEmoji(issue.severity)} [${issue.severity.toUpperCase()}] ${issue.message}\\n`;\n        }\n      }\n      report_content += `\\n`;\n    }\n\n  } else if (report_type === 'incident') {\n    // Incident report format\n    report_content += `## 🚨 Incident Details\\n\\n`;\n    report_content += `| Feld | Wert |\\n|------|------|\\n`;\n    report_content += `| Host | ${data.host || 'N/A'} |\\n`;\n    report_content += `| Severity | ${severityEmoji(data.severity)} ${data.severity || 'N/A'} |\\n`;\n    report_content += `| Trigger | ${data.trigger || 'N/A'} |\\n`;\n    report_content += `| Alert Time | ${data.alert_time || 'N/A'} |\\n\\n`;\n\n    if (data.rca) {\n      report_content += `## 🔍 Root Cause Analysis\\n\\n${data.rca}\\n\\n`;\n    }\n    if (data.remediation) {\n      report_content += `## 🔧 Durchgeführte Maßnahmen\\n\\n${data.remediation}\\n\\n`;\n    }\n\n  } else {\n    // Generic format\n    report_content += `## Daten\\n\\n\\`\\`\\`json\\n${JSON.stringify(data, null, 2)}\\n\\`\\`\\`\\n`;\n  }\n\n  report_content += `\\n${hr}\\n_Generiert automatisch durch n8n Workflow-System_\\n`;\n\n} else if (format === 'html') {\n  // Basic HTML format\n  report_content = `<!DOCTYPE html><html><head><title>${title}</title></head><body>`;\n  report_content += `<h1>${title}</h1>`;\n  report_content += `<p>Generated: ${generated_at}</p>`;\n  report_content += `<pre>${JSON.stringify(data, null, 2)}</pre>`;\n  report_content += `</body></html>`;\n} else {\n  report_content = JSON.stringify({ title, generated_at, data }, null, 2);\n}\n\nreturn [{\n  json: {\n    report_id,\n    report_content,\n    format,\n    report_type,\n    title,\n    generated_at,\n    char_count: report_content.length\n  }\n}];"
+      },
+      "name": "📊 Generate Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "📊 Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "_n8n_id": "NwfqZNDoN8zjEMaf"
+}

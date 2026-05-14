@@ -1,0 +1,168 @@
+{
+  "name": "NetBox to vyOS IPv6 Route Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://10.1.1.104/api/ipam/prefixes/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "family",
+              "value": "6"
+            },
+            {
+              "name": "status",
+              "value": "active"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "netbox-api",
+      "name": "NetBox API - Get IPv6 Prefixes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "netbox-api-token",
+          "name": "NetBox API Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// NetBox Response verarbeiten und vyOS Commands generieren\nconst prefixes = $input.item.json.results;\n\n// Konfiguration (anpassen!)\nconst NEXT_HOP = '2001:db8::1';  // TODO: Anpassen!\n\n// vyOS Commands erzeugen\nlet commands = [];\ncommands.push('configure');\n\nfor (const prefix of prefixes) {\n  const prefixAddr = prefix.prefix;\n  const description = prefix.description || '';\n  \n  // Static Route Command\n  commands.push(`set protocols static route6 ${prefixAddr} next-hop ${NEXT_HOP}`);\n  \n  // Optional: Description\n  if (description) {\n    const cleanDesc = description.replace(/'/g, \"\\\\'\");\n    commands.push(`set protocols static route6 ${prefixAddr} description '${cleanDesc}'`);\n  }\n}\n\ncommands.push('commit');\ncommands.push('save');\ncommands.push('exit');\n\n// Output für nächsten Node\nreturn {\n  json: {\n    prefixCount: prefixes.length,\n    commands: commands,\n    commandString: commands.join('\\n')\n  }\n};"
+      },
+      "id": "transform-code",
+      "name": "Generate vyOS Commands",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "password",
+        "command": "={{ $json.commandString }}",
+        "options": {}
+      },
+      "id": "vyos-ssh",
+      "name": "Deploy to vyOS",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "sshPassword": {
+          "id": "vyos-ssh-creds",
+          "name": "vyOS SSH Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.prefixCount }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-prefixes",
+      "name": "Check if Prefixes Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "alwaysOutputData": false
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "NetBox API - Get IPv6 Prefixes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NetBox API - Get IPv6 Prefixes": {
+      "main": [
+        [
+          {
+            "node": "Generate vyOS Commands",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate vyOS Commands": {
+      "main": [
+        [
+          {
+            "node": "Deploy to vyOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Network Automation",
+      "id": "network-auto"
+    }
+  ],
+  "meta": {
+    "instanceId": "local"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "name": "Module: Master Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "task_type",
+              "type": "string"
+            },
+            {
+              "name": "target",
+              "type": "object"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            },
+            {
+              "name": "session_id",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { task_type, target, payload, session_id } = $('📥 Input').first().json;\nif (!task_type) throw new Error('task_type erforderlich (log_analysis|health_check|system_update|incident)');\nconst types = ['log_analysis','health_check','system_update','incident'];\nif (!types.includes(task_type)) throw new Error(`Unbekannter task_type: ${task_type}`);\nreturn { task_type, target: target || {}, payload: payload || {}, session_id: session_id || require('crypto').randomUUID(),\n  routed_to: { log_analysis: 'Functional: Unified Log Analyser', health_check: 'Functional: Unified Health Checker',\n    system_update: 'Functional: Unified System Updater', incident: 'Module: Master Incident Handler' }[task_type] };"
+      },
+      "name": "🔧 Route Task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { task_type, target, payload, session_id, routed_to } = $input.first().json;\n// Routing erfolgt im Master durch executeWorkflow-Node mit routed_to-Name\nreturn { task_type, target, payload, session_id, routed_to };"
+      },
+      "name": "🚀 Dispatch to Module",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('🔧 Route Task').first().json;\nconst result = $input.first().json;\nreturn { exit_code: result?.exit_code || 'success', session_id: input.session_id,\n  task_type: input.task_type, routed_to: input.routed_to,\n  data: result?.data || result, timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Collect Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Route Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Route Task": {
+      "main": [
+        [
+          {
+            "node": "🚀 Dispatch to Module",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚀 Dispatch to Module": {
+      "main": [
+        [
+          {
+            "node": "🔧 Collect Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

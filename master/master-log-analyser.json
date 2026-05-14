@@ -1,0 +1,1853 @@
+{
+  "updatedAt": "2026-03-29T14:06:02.196Z",
+  "createdAt": "2026-03-23T20:10:44.335Z",
+  "id": "pPJ4lVht3s3I0816",
+  "name": "MASTER: Log Analyser",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * 0"
+            }
+          ]
+        }
+      },
+      "name": "⏰ Schedule: Wöchentlich So 02:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ],
+      "id": "dda1d420-b5bd-4855-bcad-3e2217661b30"
+    },
+    {
+      "parameters": {},
+      "name": "▶️ Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        500
+      ],
+      "id": "bbf2b9df-9257-419f-b750-46b64dd2e2ac"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst now        = new Date();\nconst lastRun    = staticData.last_successful_run\n  ? new Date(staticData.last_successful_run)\n  : null;\n\n// Unix-Timestamp für journalctl --since @TS (timezone-unabhängig)\nconst last_run_ts = lastRun\n  ? Math.floor(lastRun.getTime() / 1000)\n  : Math.floor(now.getTime() / 1000) - 7 * 24 * 3600;  // Fallback: 7 Tage\n\nconst last_run_since   = '@' + last_run_ts;\nconst last_run_display = lastRun\n  ? lastRun.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'\n  : 'Erster Lauf (Fallback: 7 Tage)';\n\n// Merke aktuellen Lauf — wird am Ende bei Erfolg gespeichert\nstaticData.current_run = now.toISOString();\n\nreturn [{ json: {\n  run_id:           'log_analyse_' + now.toISOString().replace(/[^0-9]/g,'').slice(0,14),\n  run_date:         now.toISOString(),\n  last_run_since,   // '@1743296400' → für journalctl --since\n  last_run_display, // '2026-03-22 02:00 UTC' → für Prompts/Anzeige\n  last_run:         staticData.last_successful_run || null,\n  // LXC-Namen die ausgeschlossen werden (n8n selbst + Claude Code API)\n  exclude_names:    ['n8n', 'claude'],\n  tickets_created:  0\n} }];\n"
+      },
+      "name": "📋 Set Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "id": "fad70df7-b169-4088-83d2-383b722864ac"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sp6DiNXwi5pfRjA7"
+        },
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "filter_by_type",
+              "value": "device"
+            }
+          ]
+        }
+      },
+      "name": "🌐 P1: NetBox Devices laden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        300
+      ],
+      "id": "1b40b68c-5b19-4c1f-b326-766438df0bad"
+    },
+    {
+      "parameters": {
+        "jsCode": "// executeWorkflow gibt jedes System als separates Item zurück (NICHT als systems-Array).\n// Filter: nur dcim/devices (type='device'), mit IP, Status nicht 'offline'.\nconst systems = $input.all().map(i => i.json);\nconst active = systems.filter(s =>\n  s.ip &&\n  s.type === 'device' &&\n  s.status !== 'offline'\n);\nif (active.length === 0) {\n  // Kein Fehler – es sind schlicht keine Devices in NetBox gepflegt.\n  return [{ json: { _skip: true, name: '__no_devices__', ip: null } }];\n}\nreturn active.map(s => ({ json: s }));"
+      },
+      "name": "🔧 P1: Filter Devices",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "id": "3325cc8e-3341-45df-89a9-7ea8561f573a"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "🔄 P1: Loop Devices",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1100,
+        300
+      ],
+      "id": "19e675f2-5394-46dc-91b5-da3f6bc112fd"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sys    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nif (sys._skip) return [{ json: { _skip: true, system_name: sys.name } }];\n\n// RouterOS/MikroTik: Default-User ist 'admin', nicht 'root'\nconst default_ssh_user = sys.os_family === 'routeros' ? 'admin'\n                       : sys.os_family === 'opkg'     ? 'root'\n                       : sys.os_family === 'vyos'     ? 'vyos'\n                       : 'root';\nconst ssh_user   = sys.ssh_user || default_ssh_user;\nconst ssh_pass   = sys.ssh_password || '';\nconst ssh_prefix = ssh_pass\n  ? `sshpass -p '${ssh_pass}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=no ${ssh_user}@${sys.ip}`\n  : `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${ssh_user}@${sys.ip}`;\n\nconst isRouterOS = sys.os_family === 'routeros';\nconst isVyOS     = sys.os_family === 'vyos';\nconst isBSD      = sys.os_family === 'bsd';\n\n// === RouterOS / MikroTik ===\nconst routeros_cmds = [\n  `/log print where topics~\"error\" or topics~\"critical\" or topics~\"warning\"`,\n  `/log print where topics~\"error\"`,\n  `/log print where topics~\"critical\"`,\n  `/log print where topics~\"warning\"`,\n  `/system health print`,\n  `/system resource print`,\n  `/interface print stats where running=no`,\n  `/ip firewall filter print where action=drop`,\n  `/system logging print`,\n].join('\\n');\n\n// === VyOS ===\nconst vyos_cmds = [\n  `show log`,\n  `show log | grep -iE 'warn|error|crit|fail|fatal'`,\n  `show system`,\n  `show interfaces`,\n].join('\\n');\n\n// === BSD / OPNsense / pfSense ===\nconst bsd_cmds = [\n  `grep -iE 'warn|error|crit|fail|fatal|alert|emerg' /var/log/system.log 2>/dev/null | tail -500`,\n  `dmesg 2>/dev/null`,\n  `cat /var/log/filter.log 2>/dev/null | tail -200`,\n  `cat /var/log/nginx/error.log 2>/dev/null | tail -100`,\n].join('\\n');\n\n// === Linux (alle Distributions) ===\nconst linux_cmds = [\n\n  // --- System Journal: alle Warnings und höher, letzten N Tage ---\n  `echo \"=== JOURNALCTL SYSTEM (seit ${config.last_run_display}, prio>=warning) ===\"`,\n  `journalctl --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | head -2000`,\n\n  // --- aktueller Boot: alle Warnings und höher ---\n  `echo \"=== JOURNALCTL AKTUELLER BOOT (prio>=warning) ===\"`,\n  `journalctl -b --no-pager -p warning 2>/dev/null | head -1000`,\n\n  // --- vorheriger Boot (falls vorhanden) ---\n  `echo \"=== JOURNALCTL VORHERIGER BOOT (prio>=warning) ===\"`,\n  `journalctl -b -1 --no-pager -p warning 2>/dev/null | head -500`,\n\n  // --- dmesg: ALLE kritischen Level ---\n  `echo \"=== DMESG (warn/err/crit/alert/emerg) ===\"`,\n  `dmesg --level=warn,err,crit,alert,emerg 2>/dev/null || dmesg 2>/dev/null | grep -iE '\\\\[warn\\\\]|\\\\[err\\\\]|\\\\[crit\\\\]|warn:|error:|critical:'`,\n\n  // --- dmesg: OOM-Killer ---\n  `echo \"=== DMESG: OOM / Out-of-Memory ===\"`,\n  `dmesg 2>/dev/null | grep -iE 'oom|out of memory|killed process|oom_kill|memory pressure'`,\n\n  // --- dmesg: Disk / I/O Fehler ---\n  `echo \"=== DMESG: Disk / I/O Fehler ===\"`,\n  `dmesg 2>/dev/null | grep -iE 'ata[0-9]|sata|nvme|i/o error|buffer i/o|blk_update_request|medium error|read error|write error|sector'`,\n\n  // --- dmesg: Hardware-Fehler (MCE, ECC, CPU) ---\n  `echo \"=== DMESG: Hardware-Fehler ===\"`,\n  `dmesg 2>/dev/null | grep -iE 'mce|machine check|hardware error|corrected error|uncorrected|edac|pcie.*error|nmi'`,\n\n  // --- Klassische Log-Dateien (aktuell + rotiert) ---\n  `for log in /var/log/syslog /var/log/syslog.1 /var/log/messages /var/log/messages.1 /var/log/kern.log /var/log/kern.log.1 /var/log/auth.log /var/log/boot.log; do [ -f \"$log\" ] && echo \"=== $log ===\" && grep -iE 'warn|error|crit|fail|fatal|alert|emerg' \"$log\" 2>/dev/null | head -200; done`,\n\n  // --- Failed/Degraded Services ---\n  `echo \"=== FAILED / DEGRADED SERVICES ===\"`,\n  `systemctl list-units --state=failed,degraded --no-legend 2>/dev/null`,\n  `systemctl --failed --no-legend 2>/dev/null`,\n\n  // --- Service-Logs: alle aktiven Services mit Warnings ---\n  `echo \"=== SERVICE WARNINGS (seit ${config.last_run_display}) ===\"`,\n  `for svc in $(systemctl list-units --type=service --state=active --no-legend 2>/dev/null | awk '{print $1}' | grep -v '@' | head -60); do out=$(journalctl -u $svc --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | head -50); [ -n \"$out\" ] && echo \"--- SERVICE: $svc ---\" && echo \"$out\"; done`,\n\n  // --- Core Dumps ---\n  `echo \"=== CORE DUMPS ===\"`,\n  `ls -la /var/crash/ 2>/dev/null; ls -la /var/lib/systemd/coredump/ 2>/dev/null; coredumpctl list 2>/dev/null | tail -20`,\n\n  // --- App: nginx ---\n  `[ -d /var/log/nginx ] && echo \"=== APP: nginx ===\" && find /var/log/nginx -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -100' || true`,\n\n  // --- App: Apache2 ---\n  `[ -d /var/log/apache2 ] && echo \"=== APP: apache2 ===\" && find /var/log/apache2 -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -100' || true`,\n\n  // --- App: MySQL/MariaDB ---\n  `for log in /var/log/mysql/error.log /var/log/mariadb/mariadb.log /var/log/mysql.err; do [ -f \"$log\" ] && echo \"=== APP: MySQL/MariaDB ($log) ===\" && grep -iE 'warn|error|fail' \"$log\" 2>/dev/null | tail -100; done`,\n\n  // --- App: PostgreSQL ---\n  `[ -d /var/log/postgresql ] && echo \"=== APP: PostgreSQL ===\" && find /var/log/postgresql -name '*.log' 2>/dev/null | xargs -I{} sh -c 'grep -iE \"warn|error|fatal|panic\" \"{}\" 2>/dev/null | tail -100' || true`,\n\n  // --- App: Redis ---\n  `for log in /var/log/redis/redis-server.log /var/log/redis.log; do [ -f \"$log\" ] && echo \"=== APP: Redis ===\" && grep -iE 'warn|error|fail|critical' \"$log\" 2>/dev/null | tail -50; done`,\n\n  // --- Generic App Log Scan: /var/log ---\n  `echo \"=== APP LOGS SCAN (/var/log) ===\"`,\n  `find /var/log -maxdepth 3 -name '*.log' -not -empty 2>/dev/null | grep -vE '/(syslog|messages|kern\\\\.log|auth\\\\.log|dpkg\\\\.log|apt/|btmp|wtmp|lastlog|faillog|journal)' | head -50 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception|alert|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception|alert|emerg\" \"{}\" 2>/dev/null | tail -50'`,\n\n  // --- Generic App Log Scan: /opt ---\n  `echo \"=== APP LOGS SCAN (/opt) ===\"`,\n  `find /opt -maxdepth 5 -name '*.log' -not -empty 2>/dev/null | head -30 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception|traceback|alert|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception|traceback|alert|emerg\" \"{}\" 2>/dev/null | tail -50'`,\n\n].join('\\n');\n\nconst cmds = isRouterOS ? routeros_cmds\n           : isVyOS     ? vyos_cmds\n           : isBSD      ? bsd_cmds\n           : linux_cmds;\n\nconst prompt = `Du bist ein erfahrener Systemadministrator. Analysiere ALLE Logquellen des folgenden Systems vollständig.\n\n=== SYSTEM ===\nName: ${sys.name}\nIP: ${sys.ip}\nTyp: ${sys.type} (${sys.device_class || 'unbekannt'})\nOS-Familie: ${sys.os_family || 'unbekannt'}\nSSH: ${ssh_prefix}\n\n=== AUFGABE ===\n1. Verbinde dich per SSH mit dem System\n2. Führe ALLE folgenden Befehle zur Log-Sammlung aus – überspringe keinen:\n\n${cmds}\n\n3. Analysiere ALLE gesammelten Ausgaben – System-Logs, App-Logs, Service-Logs, Hardware-Fehler\n4. Erfasse JEDE Meldung der Stufe WARNING und höher (WARNING, ERROR, CRITICAL, ALERT, EMERGENCY)\n5. Gruppiere ähnliche Fehler desselben Service/Komponente\n6. KEINE Behebungsmaßnahmen – nur Analyse und Dokumentation!\n\n=== ANTWORTFORMAT (NUR JSON, kein Markdown, kein erklärender Text) ===\n{\n  \"hostname\": \"${sys.name}\",\n  \"ip\": \"${sys.ip}\",\n  \"type\": \"${sys.type}\",\n  \"ssh_success\": true,\n  \"has_findings\": false,\n  \"findings\": [\n    {\n      \"severity\": \"WARNING|ERROR|CRITICAL|ALERT|EMERGENCY\",\n      \"source\": \"system|application|service|hardware\",\n      \"component\": \"z.B. kernel, systemd, nginx, postgresql, oom-killer, disk-io\",\n      \"summary\": \"Einzeilige Beschreibung\",\n      \"details\": \"Relevante Log-Zeilen (max. 10 Zeilen)\",\n      \"count\": 1,\n      \"first_seen\": \"2026-03-01T00:00:00Z\"\n    }\n  ],\n  \"error\": null\n}\n\nWICHTIG:\n- Antworte NUR mit dem JSON-Objekt\n- SSH-Fehler: ssh_success=false, has_findings=false, error=<Fehlermeldung>\n- Ignoriere INFO/DEBUG/NOTICE\n- source=\"hardware\" für OOM-Killer, Disk-I/O-Fehler, MCE\n- Alle Levels >= WARNING erfassen`;\n\nreturn [{ json: {\n  system_name:  sys.name,\n  system_ip:    sys.ip,\n  system_type:  sys.type,\n  device_class: sys.device_class || 'unknown',\n  prompt\n} }];"
+      },
+      "name": "🔧 P1: Build Device Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ],
+      "id": "eade95e0-abc5-453a-8606-23040fc30fc2"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "l4ee6BahShsiEXjI"
+        }
+      },
+      "name": "🤖 P1: Claude Log Analysis",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        300
+      ],
+      "id": "b3e9bd66-ccf2-47cc-8a8e-32268746306a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp    = $('🔧 P1: Build Device Prompt').first().json;\nconst claude = $input.first().json;\n\n// Skip-Dummy durchreichen\nif (inp._skip) return [{ json: { _skip: true, has_findings: false } }];\n\nlet data = { ssh_success: false, has_findings: false, findings: [], error: 'Keine Antwort' };\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) data = { ...data, ...JSON.parse(match[0]) };\n} catch(e) {\n  data.error = 'JSON Parse-Fehler: ' + e.message;\n}\n\nconst findings = (data.findings || []).filter(f =>\n  ['WARNING','ERROR','CRITICAL'].includes((f.severity||'').toUpperCase())\n);\n\nreturn [{ json: {\n  system_name:    inp.system_name,\n  system_ip:      inp.system_ip,\n  system_type:    inp.system_type,\n  ssh_success:    data.ssh_success,\n  has_findings:   data.ssh_success && findings.length > 0,\n  findings_count: findings.length,\n  findings,\n  error:          data.error\n} }];"
+      },
+      "name": "🔧 P1: Parse Findings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ],
+      "id": "10d42838-39b9-49cc-88e1-3bd4e9abb732"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "p1-has-findings",
+              "leftValue": "={{ $json.has_findings }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "✅ P1: Findings vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        300
+      ],
+      "id": "3b241d74-a575-4ab0-94a4-e28b60846028"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst sev_icon = { CRITICAL: '🚨', ERROR: '🔴', WARNING: '⚠️' };\nconst src_icon = { system: '🖥️', application: '📦', service: '⚙️', hardware: '🔩' };\n\n// Ein Ticket pro Befund — N findings → N Items\nreturn inp.findings.map(f => {\n  const icon    = sev_icon[f.severity]             || '⚠️';\n  const srcIcon = src_icon[f.source || 'system']   || '📋';\n  const sevUC   = (f.severity || 'WARNING').toUpperCase();\n\n  const title = `[Log] ${inp.system_name} – ${sevUC}: ${f.summary}`;\n\n  let body = `## ${icon} ${sevUC}: ${f.summary}\\n\\n`;\n  body += `**System:** ${inp.system_name} (${inp.system_ip})\\n`;\n  body += `**Typ:** ${inp.system_type}\\n`;\n  body += `**Komponente:** ${f.component || '–'}\\n`;\n  body += `**Quelle:** ${srcIcon} ${f.source || 'system'}\\n`;\n  body += `**Anzahl:** ${f.count || 1}\\n`;\n  if (f.first_seen) body += `**Erstes Auftreten:** ${f.first_seen}\\n`;\n  body += `**Analyse:** ${new Date().toISOString().slice(0,19).replace('T',' ')} UTC\\n`;\n  body += `**Run-ID:** ${config.run_id}\\n`;\n  body += `\\n---\\n\\n`;\n  body += `**Log-Auszug:**\\n\\`\\`\\`\\n${f.details || '(keine Details)'}\\n\\`\\`\\`\\n\\n`;\n  body += `---\\n*Automatisch erstellt – Log-Analyse ohne Behebungsmaßnahmen.*`;\n\n  const priority = sevUC === 'CRITICAL' ? '5 very high'\n                 : sevUC === 'ERROR'    ? '4 high'\n                 :                        '3 normal';\n\n  return { json: { title, body, queue: 'Raw', state: 'new', priority } };\n});\n"
+      },
+      "name": "🔧 P1: Build Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        180
+      ],
+      "id": "ecbf8be1-338c-43c3-bc96-f6d3873990e6"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NMxFaLwPpq39MSCF"
+        }
+      },
+      "name": "🎫 P1: Create Ticket",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        180
+      ],
+      "id": "c04e3e9a-c070-45f7-8506-a49104716935"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Kein Befund – einfach weiterleiten\nconst inp = $input.first().json;\nreturn [{ json: { system_name: inp.system_name, action: 'no_findings', has_findings: false } }];"
+      },
+      "name": "📝 P1: Kein Befund",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        420
+      ],
+      "id": "6cada372-ac90-4005-aeb4-96a2468e1cd4"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Sp6DiNXwi5pfRjA7"
+        },
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "filter_by_type",
+              "value": ""
+            }
+          ]
+        }
+      },
+      "name": "🌐 P2: NetBox LXC+VM laden",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        720
+      ],
+      "id": "a5d78390-f33a-4072-9246-0e5984084ef8"
+    },
+    {
+      "parameters": {
+        "jsCode": "// executeWorkflow gibt jedes System als separates Item zurück (NICHT als systems-Array).\n// Filter: VMs und LXCs, mit IP, Status aktiv, exclude_names beachten.\nconst systems = $input.all().map(i => i.json);\nconst config  = $('📋 Set Config').first().json;\nconst exclude_names = (config.exclude_names || []).map(n => n.toLowerCase());\n\nconst filtered = systems.filter(s =>\n  s.ip &&\n  (s.type === 'lxc' || s.type === 'vm') &&\n  s.status !== 'offline' &&\n  !exclude_names.includes((s.name || '').toLowerCase())\n);\n\nif (filtered.length === 0) {\n  return [{ json: { _skip: true, name: '__no_lxcvm__', ip: null } }];\n}\nreturn filtered.map(s => ({ json: s }));"
+      },
+      "name": "🔧 P2: Filter LXC+VM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        720
+      ],
+      "id": "4be55101-702d-477d-bef8-721c9509a203"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "🔄 P2: Loop LXC+VM",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1100,
+        720
+      ],
+      "id": "2a4463ad-9548-4a55-a758-8084eaaaad53"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sys    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nif (sys._skip) return [{ json: { _skip: true, system_name: sys.name } }];\n\nconst ssh_user   = sys.ssh_user   || 'root';\nconst ssh_pass   = sys.ssh_password || '';\nconst ssh_prefix = ssh_pass\n  ? `sshpass -p '${ssh_pass}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=no ${ssh_user}@${sys.ip}`\n  : `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${ssh_user}@${sys.ip}`;\n\nconst sysLabel = sys.type === 'lxc' ? 'Linux Container auf Proxmox' : 'Virtuelle Maschine';\n\nconst cmds = [\n  // --- System Logs ---\n  `echo \"=== JOURNALCTL SYSTEM (seit ${config.last_run_display}, prio>=warning) ===\"`,\n  `journalctl --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | tail -500`,\n  `echo \"=== JOURNALCTL BOOT (prio>=warning) ===\"`,\n  `journalctl -b --no-pager -p warning 2>/dev/null | tail -300`,\n  `echo \"=== DMESG (warn/err/crit) ===\"`,\n  `dmesg --level=warn,err,crit 2>/dev/null | tail -200`,\n  `for log in /var/log/syslog /var/log/messages /var/log/kern.log /var/log/auth.log; do [ -f \"$log\" ] && echo \"=== $log ===\" && grep -iE 'warn|error|crit|fail|fatal' \"$log\" 2>/dev/null | tail -100; done`,\n  // --- Failed/Degraded Services ---\n  `echo \"=== FAILED/DEGRADED SERVICES ===\"`,\n  `systemctl list-units --state=failed,degraded --no-legend 2>/dev/null`,\n  // --- Per-Service Logs (alle aktiven Services mit Warnings) ---\n  `echo \"=== SERVICE WARNINGS (seit ${config.last_run_display}) ===\"`,\n  `for svc in $(systemctl list-units --type=service --state=active --no-legend 2>/dev/null | awk '{print $1}' | grep -v '@' | head -50); do out=$(journalctl -u $svc --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | tail -15); [ -n \"$out\" ] && echo \"--- SERVICE: $svc ---\" && echo \"$out\"; done`,\n  // --- Application Logs: nginx ---\n  `[ -d /var/log/nginx ] && echo \"=== APP: nginx ===\" && find /var/log/nginx -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -50' || true`,\n  // --- Application Logs: Apache2 ---\n  `[ -d /var/log/apache2 ] && echo \"=== APP: apache2 ===\" && find /var/log/apache2 -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -50' || true`,\n  // --- Application Logs: MySQL/MariaDB ---\n  `for log in /var/log/mysql/error.log /var/log/mariadb/mariadb.log /var/log/mysql.err; do [ -f \"$log\" ] && echo \"=== APP: MySQL/MariaDB ($log) ===\" && grep -iE 'warn|error|fail' \"$log\" 2>/dev/null | tail -50; done`,\n  // --- Application Logs: PostgreSQL ---\n  `[ -d /var/log/postgresql ] && echo \"=== APP: PostgreSQL ===\" && find /var/log/postgresql -name '*.log' 2>/dev/null | xargs -I{} sh -c 'grep -iE \"warn|error|fatal|panic\" \"{}\" 2>/dev/null | tail -50' || true`,\n  // --- Application Logs: Redis ---\n  `for log in /var/log/redis/redis-server.log /var/log/redis.log; do [ -f \"$log\" ] && echo \"=== APP: Redis ===\" && grep -iE 'warn|error|fail|critical' \"$log\" 2>/dev/null | tail -30; done`,\n  // --- Application Logs: PHP/FPM ---\n  `find /var/log -maxdepth 2 -name 'php*.log' -o -name 'fpm*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|fatal|exception\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"=== APP: PHP ({}) ===\" && grep -iE \"warn|error|fatal|exception\" \"{}\" 2>/dev/null | tail -30' 2>/dev/null || true`,\n  // --- Generic App Log Scan: /var/log (alle .log außer Standardlogs) ---\n  `echo \"=== APP LOGS SCAN (/var/log) ===\"`,\n  `find /var/log -maxdepth 3 -name '*.log' -not -empty 2>/dev/null | grep -vE '/(syslog|messages|kern\\\\.log|auth\\\\.log|dpkg\\\\.log|apt/|btmp|wtmp|lastlog|faillog|journal)' | head -30 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception\" \"{}\" 2>/dev/null | tail -30'`,\n  // --- Generic App Log Scan: /opt ---\n  `echo \"=== APP LOGS SCAN (/opt) ===\"`,\n  `find /opt -maxdepth 4 -name '*.log' -not -empty 2>/dev/null | head -20 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception|traceback\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception|traceback\" \"{}\" 2>/dev/null | tail -30'`,\n].join('\\n');\n\nconst prompt = `Du bist ein erfahrener Systemadministrator. Analysiere ALLE Logquellen des folgenden Systems vollständig.\n\n=== SYSTEM ===\nName: ${sys.name}\nIP: ${sys.ip}\nTyp: ${sys.type.toUpperCase()} (${sysLabel})\nSSH: ${ssh_prefix}\n\n=== AUFGABE ===\n1. Verbinde dich per SSH mit dem System\n2. Führe folgende Befehle zur Log-Sammlung aus:\n\n${cmds}\n\n3. Analysiere ALLE gesammelten Ausgaben auf Probleme – egal ob System-Logs, Application-Logs oder Service-Logs\n4. Berücksichtige JEDE Warnung und jeden Fehler, unabhängig von der Quelle\n5. Gruppiere ähnliche Fehler desselben Service/Komponente (Deduplizierung)\n6. KEINE Behebungsmaßnahmen – nur Analyse und Dokumentation!\n\n=== ANTWORTFORMAT (NUR JSON, kein Markdown, kein erklärender Text) ===\n{\n  \"hostname\": \"${sys.name}\",\n  \"ip\": \"${sys.ip}\",\n  \"type\": \"${sys.type}\",\n  \"ssh_success\": true,\n  \"has_findings\": false,\n  \"findings\": [\n    {\n      \"severity\": \"WARNING|ERROR|CRITICAL\",\n      \"source\": \"system|application|service\",\n      \"component\": \"z.B. kernel, systemd, nginx, postgresql, sshd\",\n      \"summary\": \"Einzeilige Beschreibung des Problems\",\n      \"details\": \"Relevante Log-Zeilen (max. 5 Zeilen)\",\n      \"count\": 1,\n      \"first_seen\": \"2026-03-23T01:00:00Z\"\n    }\n  ],\n  \"error\": null\n}\n\nWICHTIG:\n- Antworte NUR mit dem JSON-Objekt\n- Wenn SSH fehlschlägt: ssh_success=false, has_findings=false, error=<Fehlermeldung>\n- Ignoriere rein informative Meldungen (INFO/DEBUG/NOTICE)\n- source=\"system\" für Kernel/dmesg/journalctl-System-Einträge\n- source=\"application\" für App-spezifische Logfiles (nginx, postgresql, mysql, php etc.)\n- source=\"service\" für systemd-Unit-Logs (journalctl -u <service>)\n- Alle Schweregrade WARNING und höher erfassen – egal welche Quelle`;\n\nreturn [{ json: {\n  system_name: sys.name,\n  system_ip:   sys.ip,\n  system_type: sys.type,\n  prompt\n} }];"
+      },
+      "name": "🔧 P2: Build LXC/VM Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        720
+      ],
+      "id": "cadf689d-2e6b-4795-8a99-52216adee615"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "l4ee6BahShsiEXjI"
+        }
+      },
+      "name": "🤖 P2: Claude Log Analysis",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        720
+      ],
+      "id": "13f8579f-0817-45be-8380-48da773c7243"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp    = $('🔧 P2: Build LXC/VM Prompt').first().json;\nconst claude = $input.first().json;\n\nif (inp._skip) return [{ json: { _skip: true, has_findings: false } }];\n\nlet data = { ssh_success: false, has_findings: false, findings: [], error: 'Keine Antwort' };\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) data = { ...data, ...JSON.parse(match[0]) };\n} catch(e) {\n  data.error = 'JSON Parse-Fehler: ' + e.message;\n}\n\nconst findings = (data.findings || []).filter(f =>\n  ['WARNING','ERROR','CRITICAL'].includes((f.severity||'').toUpperCase())\n);\n\nreturn [{ json: {\n  system_name:    inp.system_name,\n  system_ip:      inp.system_ip,\n  system_type:    inp.system_type,\n  ssh_success:    data.ssh_success,\n  has_findings:   data.ssh_success && findings.length > 0,\n  findings_count: findings.length,\n  findings,\n  error:          data.error\n} }];"
+      },
+      "name": "🔧 P2: Parse Findings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        720
+      ],
+      "id": "df312c9b-7c13-4e61-8200-549282ec1ea7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "p2-has-findings",
+              "leftValue": "={{ $json.has_findings }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "✅ P2: Findings vorhanden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        720
+      ],
+      "id": "5a1f0d6c-e6e2-475f-8a07-ddfd583664d8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst sev_icon = { CRITICAL: '🚨', ERROR: '🔴', WARNING: '⚠️' };\nconst src_icon = { system: '🖥️', application: '📦', service: '⚙️', hardware: '🔩' };\n\n// Ein Ticket pro Befund — N findings → N Items\nreturn inp.findings.map(f => {\n  const icon    = sev_icon[f.severity]             || '⚠️';\n  const srcIcon = src_icon[f.source || 'system']   || '📋';\n  const sevUC   = (f.severity || 'WARNING').toUpperCase();\n\n  const title = `[Log] ${inp.system_name} – ${sevUC}: ${f.summary}`;\n\n  let body = `## ${icon} ${sevUC}: ${f.summary}\\n\\n`;\n  body += `**System:** ${inp.system_name} (${inp.system_ip})\\n`;\n  body += `**Typ:** ${inp.system_type}\\n`;\n  body += `**Komponente:** ${f.component || '–'}\\n`;\n  body += `**Quelle:** ${srcIcon} ${f.source || 'system'}\\n`;\n  body += `**Anzahl:** ${f.count || 1}\\n`;\n  if (f.first_seen) body += `**Erstes Auftreten:** ${f.first_seen}\\n`;\n  body += `**Analyse:** ${new Date().toISOString().slice(0,19).replace('T',' ')} UTC\\n`;\n  body += `**Run-ID:** ${config.run_id}\\n`;\n  body += `\\n---\\n\\n`;\n  body += `**Log-Auszug:**\\n\\`\\`\\`\\n${f.details || '(keine Details)'}\\n\\`\\`\\`\\n\\n`;\n  body += `---\\n*Automatisch erstellt – Log-Analyse ohne Behebungsmaßnahmen.*`;\n\n  const priority = sevUC === 'CRITICAL' ? '5 very high'\n                 : sevUC === 'ERROR'    ? '4 high'\n                 :                        '3 normal';\n\n  return { json: { title, body, queue: 'Raw', state: 'new', priority } };\n});\n"
+      },
+      "name": "🔧 P2: Build Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        600
+      ],
+      "id": "3f9cef6d-4c1d-4212-8217-074f79affefe"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "NMxFaLwPpq39MSCF"
+        }
+      },
+      "name": "🎫 P2: Create Ticket",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        600
+      ],
+      "id": "267da276-b4b3-46c0-b319-59ba7b8044f0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nreturn [{ json: { system_name: inp.system_name, action: 'no_findings', has_findings: false } }];"
+      },
+      "name": "📝 P2: Kein Befund",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        840
+      ],
+      "id": "6ceb4e7e-6be4-41fc-9475-b04ed2c4079c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('📋 Set Config').first().json;\nconst items  = $input.all();\n\n// Kein Output wenn keine Items (z.B. Done-Port feuert leer am Anfang)\nif (items.length === 0) return [];\n\nconst tickets_created = items.filter(i => i.json.ticket_id || i.json.ticket_number).length;\nconst no_findings     = items.filter(i => i.json.action === 'no_findings').length;\n\nreturn [{ json: {\n  run_id:          config.run_id,\n  run_date:        config.run_date,\n  tickets_created,\n  no_findings,\n  summary: `Log-Analyse abgeschlossen. ${tickets_created} Ticket(s) erstellt, ${no_findings} System(e) ohne Befund.`\n} }];"
+      },
+      "name": "🔧 Aggregate Ergebnisse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        720
+      ],
+      "id": "fa6fe623-6b23-4c0f-bc57-486e3295001b"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TmyAkITcb41Ti3Ev"
+        },
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "message",
+              "value": "={{ $json.summary }}"
+            },
+            {
+              "name": "channels",
+              "value": "[\"matrix\"]"
+            },
+            {
+              "name": "level",
+              "value": "info"
+            }
+          ]
+        }
+      },
+      "name": "🔔 SUB: Notification",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2860,
+        720
+      ],
+      "id": "5872ac44-3881-4de4-b7d9-753610e0afc7"
+    },
+    {
+      "id": "p1-skip-if",
+      "name": "✅ P1: Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1430,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "p1-skip-if-cond",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "p2-skip-if",
+      "name": "✅ P2: Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1430,
+        720
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "p2-skip-if-cond",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "p1-collapse-001",
+      "name": "🔧 P1: Collapse Tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        180
+      ],
+      "parameters": {
+        "jsCode": "// N Ticket-Ergebnisse → 1 Item (Loop-Stabilität)\nconst items   = $input.all();\nconst created = items.filter(i => i.json.ticket_id || i.json.ticket_number).length;\nreturn [{ json: { tickets_done: created } }];\n"
+      }
+    },
+    {
+      "id": "p2-collapse-001",
+      "name": "🔧 P2: Collapse Tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        600
+      ],
+      "parameters": {
+        "jsCode": "// N Ticket-Ergebnisse → 1 Item (Loop-Stabilität)\nconst items   = $input.all();\nconst created = items.filter(i => i.json.ticket_id || i.json.ticket_number).length;\nreturn [{ json: { tickets_done: created } }];\n"
+      }
+    },
+    {
+      "id": "save-last-run-001",
+      "name": "💾 Save Last Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        720
+      ],
+      "parameters": {
+        "jsCode": "// Speichere Zeitstempel des erfolgreichen Laufs für nächste Ausführung\nconst staticData = $getWorkflowStaticData('global');\nstaticData.last_successful_run = staticData.current_run || new Date().toISOString();\nreturn $input.all();\n"
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Schedule: Wöchentlich So 02:00": {
+      "main": [
+        [
+          {
+            "node": "📋 Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "📋 Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Set Config": {
+      "main": [
+        [
+          {
+            "node": "🌐 P1: NetBox Devices laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 P1: NetBox Devices laden": {
+      "main": [
+        [
+          {
+            "node": "🔧 P1: Filter Devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P1: Filter Devices": {
+      "main": [
+        [
+          {
+            "node": "🔄 P1: Loop Devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 P1: Loop Devices": {
+      "main": [
+        [
+          {
+            "node": "🌐 P2: NetBox LXC+VM laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 P1: Build Device Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P1: Build Device Prompt": {
+      "main": [
+        [
+          {
+            "node": "✅ P1: Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 P1: Claude Log Analysis": {
+      "main": [
+        [
+          {
+            "node": "🔧 P1: Parse Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P1: Parse Findings": {
+      "main": [
+        [
+          {
+            "node": "✅ P1: Findings vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ P1: Findings vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "🔧 P1: Build Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📝 P1: Kein Befund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P1: Build Ticket": {
+      "main": [
+        [
+          {
+            "node": "🎫 P1: Create Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎫 P1: Create Ticket": {
+      "main": [
+        [
+          {
+            "node": "🔧 P1: Collapse Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 P1: Kein Befund": {
+      "main": [
+        [
+          {
+            "node": "🔄 P1: Loop Devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 P2: NetBox LXC+VM laden": {
+      "main": [
+        [
+          {
+            "node": "🔧 P2: Filter LXC+VM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P2: Filter LXC+VM": {
+      "main": [
+        [
+          {
+            "node": "🔄 P2: Loop LXC+VM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 P2: Loop LXC+VM": {
+      "main": [
+        [
+          {
+            "node": "🔧 Aggregate Ergebnisse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 P2: Build LXC/VM Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P2: Build LXC/VM Prompt": {
+      "main": [
+        [
+          {
+            "node": "✅ P2: Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 P2: Claude Log Analysis": {
+      "main": [
+        [
+          {
+            "node": "🔧 P2: Parse Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P2: Parse Findings": {
+      "main": [
+        [
+          {
+            "node": "✅ P2: Findings vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ P2: Findings vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "🔧 P2: Build Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📝 P2: Kein Befund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P2: Build Ticket": {
+      "main": [
+        [
+          {
+            "node": "🎫 P2: Create Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎫 P2: Create Ticket": {
+      "main": [
+        [
+          {
+            "node": "🔧 P2: Collapse Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 P2: Kein Befund": {
+      "main": [
+        [
+          {
+            "node": "🔄 P2: Loop LXC+VM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Aggregate Ergebnisse": {
+      "main": [
+        [
+          {
+            "node": "🔔 SUB: Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ P1: Skip?": {
+      "main": [
+        [
+          {
+            "node": "📝 P1: Kein Befund",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 P1: Claude Log Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ P2: Skip?": {
+      "main": [
+        [
+          {
+            "node": "📝 P2: Kein Befund",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🤖 P2: Claude Log Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P1: Collapse Tickets": {
+      "main": [
+        [
+          {
+            "node": "🔄 P1: Loop Devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 P2: Collapse Tickets": {
+      "main": [
+        [
+          {
+            "node": "🔄 P2: Loop LXC+VM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 SUB: Notification": {
+      "main": [
+        [
+          {
+            "node": "💾 Save Last Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:⏰ Schedule: Wöchentlich So 02:00": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": null,
+  "versionId": "66ca2603-b0c5-4aa1-b399-fd511af4ec2a",
+  "activeVersionId": "66ca2603-b0c5-4aa1-b399-fd511af4ec2a",
+  "versionCounter": 178,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-23T20:10:44.339Z",
+      "createdAt": "2026-03-23T20:10:44.339Z",
+      "role": "workflow:owner",
+      "workflowId": "pPJ4lVht3s3I0816",
+      "projectId": "TKpGt6PASoN8CNtU",
+      "project": {
+        "updatedAt": "2025-10-04T18:35:36.086Z",
+        "createdAt": "2025-10-04T18:27:37.663Z",
+        "id": "TKpGt6PASoN8CNtU",
+        "name": "Marco Doehler <marcofpo@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-03-29T14:06:02.202Z",
+    "createdAt": "2026-03-29T14:06:02.202Z",
+    "versionId": "66ca2603-b0c5-4aa1-b399-fd511af4ec2a",
+    "workflowId": "pPJ4lVht3s3I0816",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 2 * * 0"
+              }
+            ]
+          }
+        },
+        "name": "⏰ Schedule: Wöchentlich So 02:00",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          300
+        ],
+        "id": "dda1d420-b5bd-4855-bcad-3e2217661b30"
+      },
+      {
+        "parameters": {},
+        "name": "▶️ Manual Trigger",
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          200,
+          500
+        ],
+        "id": "bbf2b9df-9257-419f-b750-46b64dd2e2ac"
+      },
+      {
+        "parameters": {
+          "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst now        = new Date();\nconst lastRun    = staticData.last_successful_run\n  ? new Date(staticData.last_successful_run)\n  : null;\n\n// Unix-Timestamp für journalctl --since @TS (timezone-unabhängig)\nconst last_run_ts = lastRun\n  ? Math.floor(lastRun.getTime() / 1000)\n  : Math.floor(now.getTime() / 1000) - 7 * 24 * 3600;  // Fallback: 7 Tage\n\nconst last_run_since   = '@' + last_run_ts;\nconst last_run_display = lastRun\n  ? lastRun.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'\n  : 'Erster Lauf (Fallback: 7 Tage)';\n\n// Merke aktuellen Lauf — wird am Ende bei Erfolg gespeichert\nstaticData.current_run = now.toISOString();\n\nreturn [{ json: {\n  run_id:           'log_analyse_' + now.toISOString().replace(/[^0-9]/g,'').slice(0,14),\n  run_date:         now.toISOString(),\n  last_run_since,   // '@1743296400' → für journalctl --since\n  last_run_display, // '2026-03-22 02:00 UTC' → für Prompts/Anzeige\n  last_run:         staticData.last_successful_run || null,\n  // LXC-Namen die ausgeschlossen werden (n8n selbst + Claude Code API)\n  exclude_names:    ['n8n', 'claude'],\n  tickets_created:  0\n} }];\n"
+        },
+        "name": "📋 Set Config",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          300
+        ],
+        "id": "fad70df7-b169-4088-83d2-383b722864ac"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "Sp6DiNXwi5pfRjA7"
+          },
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "filter_by_type",
+                "value": "device"
+              }
+            ]
+          }
+        },
+        "name": "🌐 P1: NetBox Devices laden",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          660,
+          300
+        ],
+        "id": "1b40b68c-5b19-4c1f-b326-766438df0bad"
+      },
+      {
+        "parameters": {
+          "jsCode": "// executeWorkflow gibt jedes System als separates Item zurück (NICHT als systems-Array).\n// Filter: nur dcim/devices (type='device'), mit IP, Status nicht 'offline'.\nconst systems = $input.all().map(i => i.json);\nconst active = systems.filter(s =>\n  s.ip &&\n  s.type === 'device' &&\n  s.status !== 'offline'\n);\nif (active.length === 0) {\n  // Kein Fehler – es sind schlicht keine Devices in NetBox gepflegt.\n  return [{ json: { _skip: true, name: '__no_devices__', ip: null } }];\n}\nreturn active.map(s => ({ json: s }));"
+        },
+        "name": "🔧 P1: Filter Devices",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          880,
+          300
+        ],
+        "id": "3325cc8e-3341-45df-89a9-7ea8561f573a"
+      },
+      {
+        "parameters": {
+          "batchSize": 1,
+          "options": {}
+        },
+        "name": "🔄 P1: Loop Devices",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          1100,
+          300
+        ],
+        "id": "19e675f2-5394-46dc-91b5-da3f6bc112fd"
+      },
+      {
+        "parameters": {
+          "jsCode": "const sys    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nif (sys._skip) return [{ json: { _skip: true, system_name: sys.name } }];\n\n// RouterOS/MikroTik: Default-User ist 'admin', nicht 'root'\nconst default_ssh_user = sys.os_family === 'routeros' ? 'admin'\n                       : sys.os_family === 'opkg'     ? 'root'\n                       : sys.os_family === 'vyos'     ? 'vyos'\n                       : 'root';\nconst ssh_user   = sys.ssh_user || default_ssh_user;\nconst ssh_pass   = sys.ssh_password || '';\nconst ssh_prefix = ssh_pass\n  ? `sshpass -p '${ssh_pass}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=no ${ssh_user}@${sys.ip}`\n  : `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${ssh_user}@${sys.ip}`;\n\nconst isRouterOS = sys.os_family === 'routeros';\nconst isVyOS     = sys.os_family === 'vyos';\nconst isBSD      = sys.os_family === 'bsd';\n\n// === RouterOS / MikroTik ===\nconst routeros_cmds = [\n  `/log print where topics~\"error\" or topics~\"critical\" or topics~\"warning\"`,\n  `/log print where topics~\"error\"`,\n  `/log print where topics~\"critical\"`,\n  `/log print where topics~\"warning\"`,\n  `/system health print`,\n  `/system resource print`,\n  `/interface print stats where running=no`,\n  `/ip firewall filter print where action=drop`,\n  `/system logging print`,\n].join('\\n');\n\n// === VyOS ===\nconst vyos_cmds = [\n  `show log`,\n  `show log | grep -iE 'warn|error|crit|fail|fatal'`,\n  `show system`,\n  `show interfaces`,\n].join('\\n');\n\n// === BSD / OPNsense / pfSense ===\nconst bsd_cmds = [\n  `grep -iE 'warn|error|crit|fail|fatal|alert|emerg' /var/log/system.log 2>/dev/null | tail -500`,\n  `dmesg 2>/dev/null`,\n  `cat /var/log/filter.log 2>/dev/null | tail -200`,\n  `cat /var/log/nginx/error.log 2>/dev/null | tail -100`,\n].join('\\n');\n\n// === Linux (alle Distributions) ===\nconst linux_cmds = [\n\n  // --- System Journal: alle Warnings und höher, letzten N Tage ---\n  `echo \"=== JOURNALCTL SYSTEM (seit ${config.last_run_display}, prio>=warning) ===\"`,\n  `journalctl --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | head -2000`,\n\n  // --- aktueller Boot: alle Warnings und höher ---\n  `echo \"=== JOURNALCTL AKTUELLER BOOT (prio>=warning) ===\"`,\n  `journalctl -b --no-pager -p warning 2>/dev/null | head -1000`,\n\n  // --- vorheriger Boot (falls vorhanden) ---\n  `echo \"=== JOURNALCTL VORHERIGER BOOT (prio>=warning) ===\"`,\n  `journalctl -b -1 --no-pager -p warning 2>/dev/null | head -500`,\n\n  // --- dmesg: ALLE kritischen Level ---\n  `echo \"=== DMESG (warn/err/crit/alert/emerg) ===\"`,\n  `dmesg --level=warn,err,crit,alert,emerg 2>/dev/null || dmesg 2>/dev/null | grep -iE '\\\\[warn\\\\]|\\\\[err\\\\]|\\\\[crit\\\\]|warn:|error:|critical:'`,\n\n  // --- dmesg: OOM-Killer ---\n  `echo \"=== DMESG: OOM / Out-of-Memory ===\"`,\n  `dmesg 2>/dev/null | grep -iE 'oom|out of memory|killed process|oom_kill|memory pressure'`,\n\n  // --- dmesg: Disk / I/O Fehler ---\n  `echo \"=== DMESG: Disk / I/O Fehler ===\"`,\n  `dmesg 2>/dev/null | grep -iE 'ata[0-9]|sata|nvme|i/o error|buffer i/o|blk_update_request|medium error|read error|write error|sector'`,\n\n  // --- dmesg: Hardware-Fehler (MCE, ECC, CPU) ---\n  `echo \"=== DMESG: Hardware-Fehler ===\"`,\n  `dmesg 2>/dev/null | grep -iE 'mce|machine check|hardware error|corrected error|uncorrected|edac|pcie.*error|nmi'`,\n\n  // --- Klassische Log-Dateien (aktuell + rotiert) ---\n  `for log in /var/log/syslog /var/log/syslog.1 /var/log/messages /var/log/messages.1 /var/log/kern.log /var/log/kern.log.1 /var/log/auth.log /var/log/boot.log; do [ -f \"$log\" ] && echo \"=== $log ===\" && grep -iE 'warn|error|crit|fail|fatal|alert|emerg' \"$log\" 2>/dev/null | head -200; done`,\n\n  // --- Failed/Degraded Services ---\n  `echo \"=== FAILED / DEGRADED SERVICES ===\"`,\n  `systemctl list-units --state=failed,degraded --no-legend 2>/dev/null`,\n  `systemctl --failed --no-legend 2>/dev/null`,\n\n  // --- Service-Logs: alle aktiven Services mit Warnings ---\n  `echo \"=== SERVICE WARNINGS (seit ${config.last_run_display}) ===\"`,\n  `for svc in $(systemctl list-units --type=service --state=active --no-legend 2>/dev/null | awk '{print $1}' | grep -v '@' | head -60); do out=$(journalctl -u $svc --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | head -50); [ -n \"$out\" ] && echo \"--- SERVICE: $svc ---\" && echo \"$out\"; done`,\n\n  // --- Core Dumps ---\n  `echo \"=== CORE DUMPS ===\"`,\n  `ls -la /var/crash/ 2>/dev/null; ls -la /var/lib/systemd/coredump/ 2>/dev/null; coredumpctl list 2>/dev/null | tail -20`,\n\n  // --- App: nginx ---\n  `[ -d /var/log/nginx ] && echo \"=== APP: nginx ===\" && find /var/log/nginx -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -100' || true`,\n\n  // --- App: Apache2 ---\n  `[ -d /var/log/apache2 ] && echo \"=== APP: apache2 ===\" && find /var/log/apache2 -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -100' || true`,\n\n  // --- App: MySQL/MariaDB ---\n  `for log in /var/log/mysql/error.log /var/log/mariadb/mariadb.log /var/log/mysql.err; do [ -f \"$log\" ] && echo \"=== APP: MySQL/MariaDB ($log) ===\" && grep -iE 'warn|error|fail' \"$log\" 2>/dev/null | tail -100; done`,\n\n  // --- App: PostgreSQL ---\n  `[ -d /var/log/postgresql ] && echo \"=== APP: PostgreSQL ===\" && find /var/log/postgresql -name '*.log' 2>/dev/null | xargs -I{} sh -c 'grep -iE \"warn|error|fatal|panic\" \"{}\" 2>/dev/null | tail -100' || true`,\n\n  // --- App: Redis ---\n  `for log in /var/log/redis/redis-server.log /var/log/redis.log; do [ -f \"$log\" ] && echo \"=== APP: Redis ===\" && grep -iE 'warn|error|fail|critical' \"$log\" 2>/dev/null | tail -50; done`,\n\n  // --- Generic App Log Scan: /var/log ---\n  `echo \"=== APP LOGS SCAN (/var/log) ===\"`,\n  `find /var/log -maxdepth 3 -name '*.log' -not -empty 2>/dev/null | grep -vE '/(syslog|messages|kern\\\\.log|auth\\\\.log|dpkg\\\\.log|apt/|btmp|wtmp|lastlog|faillog|journal)' | head -50 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception|alert|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception|alert|emerg\" \"{}\" 2>/dev/null | tail -50'`,\n\n  // --- Generic App Log Scan: /opt ---\n  `echo \"=== APP LOGS SCAN (/opt) ===\"`,\n  `find /opt -maxdepth 5 -name '*.log' -not -empty 2>/dev/null | head -30 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception|traceback|alert|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception|traceback|alert|emerg\" \"{}\" 2>/dev/null | tail -50'`,\n\n].join('\\n');\n\nconst cmds = isRouterOS ? routeros_cmds\n           : isVyOS     ? vyos_cmds\n           : isBSD      ? bsd_cmds\n           : linux_cmds;\n\nconst prompt = `Du bist ein erfahrener Systemadministrator. Analysiere ALLE Logquellen des folgenden Systems vollständig.\n\n=== SYSTEM ===\nName: ${sys.name}\nIP: ${sys.ip}\nTyp: ${sys.type} (${sys.device_class || 'unbekannt'})\nOS-Familie: ${sys.os_family || 'unbekannt'}\nSSH: ${ssh_prefix}\n\n=== AUFGABE ===\n1. Verbinde dich per SSH mit dem System\n2. Führe ALLE folgenden Befehle zur Log-Sammlung aus – überspringe keinen:\n\n${cmds}\n\n3. Analysiere ALLE gesammelten Ausgaben – System-Logs, App-Logs, Service-Logs, Hardware-Fehler\n4. Erfasse JEDE Meldung der Stufe WARNING und höher (WARNING, ERROR, CRITICAL, ALERT, EMERGENCY)\n5. Gruppiere ähnliche Fehler desselben Service/Komponente\n6. KEINE Behebungsmaßnahmen – nur Analyse und Dokumentation!\n\n=== ANTWORTFORMAT (NUR JSON, kein Markdown, kein erklärender Text) ===\n{\n  \"hostname\": \"${sys.name}\",\n  \"ip\": \"${sys.ip}\",\n  \"type\": \"${sys.type}\",\n  \"ssh_success\": true,\n  \"has_findings\": false,\n  \"findings\": [\n    {\n      \"severity\": \"WARNING|ERROR|CRITICAL|ALERT|EMERGENCY\",\n      \"source\": \"system|application|service|hardware\",\n      \"component\": \"z.B. kernel, systemd, nginx, postgresql, oom-killer, disk-io\",\n      \"summary\": \"Einzeilige Beschreibung\",\n      \"details\": \"Relevante Log-Zeilen (max. 10 Zeilen)\",\n      \"count\": 1,\n      \"first_seen\": \"2026-03-01T00:00:00Z\"\n    }\n  ],\n  \"error\": null\n}\n\nWICHTIG:\n- Antworte NUR mit dem JSON-Objekt\n- SSH-Fehler: ssh_success=false, has_findings=false, error=<Fehlermeldung>\n- Ignoriere INFO/DEBUG/NOTICE\n- source=\"hardware\" für OOM-Killer, Disk-I/O-Fehler, MCE\n- Alle Levels >= WARNING erfassen`;\n\nreturn [{ json: {\n  system_name:  sys.name,\n  system_ip:    sys.ip,\n  system_type:  sys.type,\n  device_class: sys.device_class || 'unknown',\n  prompt\n} }];"
+        },
+        "name": "🔧 P1: Build Device Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1320,
+          300
+        ],
+        "id": "eade95e0-abc5-453a-8606-23040fc30fc2"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "l4ee6BahShsiEXjI"
+          }
+        },
+        "name": "🤖 P1: Claude Log Analysis",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          1540,
+          300
+        ],
+        "id": "b3e9bd66-ccf2-47cc-8a8e-32268746306a"
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp    = $('🔧 P1: Build Device Prompt').first().json;\nconst claude = $input.first().json;\n\n// Skip-Dummy durchreichen\nif (inp._skip) return [{ json: { _skip: true, has_findings: false } }];\n\nlet data = { ssh_success: false, has_findings: false, findings: [], error: 'Keine Antwort' };\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) data = { ...data, ...JSON.parse(match[0]) };\n} catch(e) {\n  data.error = 'JSON Parse-Fehler: ' + e.message;\n}\n\nconst findings = (data.findings || []).filter(f =>\n  ['WARNING','ERROR','CRITICAL'].includes((f.severity||'').toUpperCase())\n);\n\nreturn [{ json: {\n  system_name:    inp.system_name,\n  system_ip:      inp.system_ip,\n  system_type:    inp.system_type,\n  ssh_success:    data.ssh_success,\n  has_findings:   data.ssh_success && findings.length > 0,\n  findings_count: findings.length,\n  findings,\n  error:          data.error\n} }];"
+        },
+        "name": "🔧 P1: Parse Findings",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          300
+        ],
+        "id": "10d42838-39b9-49cc-88e1-3bd4e9abb732"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "p1-has-findings",
+                "leftValue": "={{ $json.has_findings }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "✅ P1: Findings vorhanden?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1980,
+          300
+        ],
+        "id": "3b241d74-a575-4ab0-94a4-e28b60846028"
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst sev_icon = { CRITICAL: '🚨', ERROR: '🔴', WARNING: '⚠️' };\nconst src_icon = { system: '🖥️', application: '📦', service: '⚙️', hardware: '🔩' };\n\n// Ein Ticket pro Befund — N findings → N Items\nreturn inp.findings.map(f => {\n  const icon    = sev_icon[f.severity]             || '⚠️';\n  const srcIcon = src_icon[f.source || 'system']   || '📋';\n  const sevUC   = (f.severity || 'WARNING').toUpperCase();\n\n  const title = `[Log] ${inp.system_name} – ${sevUC}: ${f.summary}`;\n\n  let body = `## ${icon} ${sevUC}: ${f.summary}\\n\\n`;\n  body += `**System:** ${inp.system_name} (${inp.system_ip})\\n`;\n  body += `**Typ:** ${inp.system_type}\\n`;\n  body += `**Komponente:** ${f.component || '–'}\\n`;\n  body += `**Quelle:** ${srcIcon} ${f.source || 'system'}\\n`;\n  body += `**Anzahl:** ${f.count || 1}\\n`;\n  if (f.first_seen) body += `**Erstes Auftreten:** ${f.first_seen}\\n`;\n  body += `**Analyse:** ${new Date().toISOString().slice(0,19).replace('T',' ')} UTC\\n`;\n  body += `**Run-ID:** ${config.run_id}\\n`;\n  body += `\\n---\\n\\n`;\n  body += `**Log-Auszug:**\\n\\`\\`\\`\\n${f.details || '(keine Details)'}\\n\\`\\`\\`\\n\\n`;\n  body += `---\\n*Automatisch erstellt – Log-Analyse ohne Behebungsmaßnahmen.*`;\n\n  const priority = sevUC === 'CRITICAL' ? '5 very high'\n                 : sevUC === 'ERROR'    ? '4 high'\n                 :                        '3 normal';\n\n  return { json: { title, body, queue: 'Raw', state: 'new', priority } };\n});\n"
+        },
+        "name": "🔧 P1: Build Ticket",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2200,
+          180
+        ],
+        "id": "ecbf8be1-338c-43c3-bc96-f6d3873990e6"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "NMxFaLwPpq39MSCF"
+          }
+        },
+        "name": "🎫 P1: Create Ticket",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          2420,
+          180
+        ],
+        "id": "c04e3e9a-c070-45f7-8506-a49104716935"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Kein Befund – einfach weiterleiten\nconst inp = $input.first().json;\nreturn [{ json: { system_name: inp.system_name, action: 'no_findings', has_findings: false } }];"
+        },
+        "name": "📝 P1: Kein Befund",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2200,
+          420
+        ],
+        "id": "6cada372-ac90-4005-aeb4-96a2468e1cd4"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "Sp6DiNXwi5pfRjA7"
+          },
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "filter_by_type",
+                "value": ""
+              }
+            ]
+          }
+        },
+        "name": "🌐 P2: NetBox LXC+VM laden",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          660,
+          720
+        ],
+        "id": "a5d78390-f33a-4072-9246-0e5984084ef8"
+      },
+      {
+        "parameters": {
+          "jsCode": "// executeWorkflow gibt jedes System als separates Item zurück (NICHT als systems-Array).\n// Filter: VMs und LXCs, mit IP, Status aktiv, exclude_names beachten.\nconst systems = $input.all().map(i => i.json);\nconst config  = $('📋 Set Config').first().json;\nconst exclude_names = (config.exclude_names || []).map(n => n.toLowerCase());\n\nconst filtered = systems.filter(s =>\n  s.ip &&\n  (s.type === 'lxc' || s.type === 'vm') &&\n  s.status !== 'offline' &&\n  !exclude_names.includes((s.name || '').toLowerCase())\n);\n\nif (filtered.length === 0) {\n  return [{ json: { _skip: true, name: '__no_lxcvm__', ip: null } }];\n}\nreturn filtered.map(s => ({ json: s }));"
+        },
+        "name": "🔧 P2: Filter LXC+VM",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          880,
+          720
+        ],
+        "id": "4be55101-702d-477d-bef8-721c9509a203"
+      },
+      {
+        "parameters": {
+          "batchSize": 1,
+          "options": {}
+        },
+        "name": "🔄 P2: Loop LXC+VM",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          1100,
+          720
+        ],
+        "id": "2a4463ad-9548-4a55-a758-8084eaaaad53"
+      },
+      {
+        "parameters": {
+          "jsCode": "const sys    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nif (sys._skip) return [{ json: { _skip: true, system_name: sys.name } }];\n\nconst ssh_user   = sys.ssh_user   || 'root';\nconst ssh_pass   = sys.ssh_password || '';\nconst ssh_prefix = ssh_pass\n  ? `sshpass -p '${ssh_pass}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=no ${ssh_user}@${sys.ip}`\n  : `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${ssh_user}@${sys.ip}`;\n\nconst sysLabel = sys.type === 'lxc' ? 'Linux Container auf Proxmox' : 'Virtuelle Maschine';\n\nconst cmds = [\n  // --- System Logs ---\n  `echo \"=== JOURNALCTL SYSTEM (seit ${config.last_run_display}, prio>=warning) ===\"`,\n  `journalctl --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | tail -500`,\n  `echo \"=== JOURNALCTL BOOT (prio>=warning) ===\"`,\n  `journalctl -b --no-pager -p warning 2>/dev/null | tail -300`,\n  `echo \"=== DMESG (warn/err/crit) ===\"`,\n  `dmesg --level=warn,err,crit 2>/dev/null | tail -200`,\n  `for log in /var/log/syslog /var/log/messages /var/log/kern.log /var/log/auth.log; do [ -f \"$log\" ] && echo \"=== $log ===\" && grep -iE 'warn|error|crit|fail|fatal' \"$log\" 2>/dev/null | tail -100; done`,\n  // --- Failed/Degraded Services ---\n  `echo \"=== FAILED/DEGRADED SERVICES ===\"`,\n  `systemctl list-units --state=failed,degraded --no-legend 2>/dev/null`,\n  // --- Per-Service Logs (alle aktiven Services mit Warnings) ---\n  `echo \"=== SERVICE WARNINGS (seit ${config.last_run_display}) ===\"`,\n  `for svc in $(systemctl list-units --type=service --state=active --no-legend 2>/dev/null | awk '{print $1}' | grep -v '@' | head -50); do out=$(journalctl -u $svc --no-pager -p warning --since '${config.last_run_since}' 2>/dev/null | tail -15); [ -n \"$out\" ] && echo \"--- SERVICE: $svc ---\" && echo \"$out\"; done`,\n  // --- Application Logs: nginx ---\n  `[ -d /var/log/nginx ] && echo \"=== APP: nginx ===\" && find /var/log/nginx -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -50' || true`,\n  // --- Application Logs: Apache2 ---\n  `[ -d /var/log/apache2 ] && echo \"=== APP: apache2 ===\" && find /var/log/apache2 -name '*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt) ---\" && grep -iE \"warn|error|crit|emerg\" \"{}\" 2>/dev/null | tail -50' || true`,\n  // --- Application Logs: MySQL/MariaDB ---\n  `for log in /var/log/mysql/error.log /var/log/mariadb/mariadb.log /var/log/mysql.err; do [ -f \"$log\" ] && echo \"=== APP: MySQL/MariaDB ($log) ===\" && grep -iE 'warn|error|fail' \"$log\" 2>/dev/null | tail -50; done`,\n  // --- Application Logs: PostgreSQL ---\n  `[ -d /var/log/postgresql ] && echo \"=== APP: PostgreSQL ===\" && find /var/log/postgresql -name '*.log' 2>/dev/null | xargs -I{} sh -c 'grep -iE \"warn|error|fatal|panic\" \"{}\" 2>/dev/null | tail -50' || true`,\n  // --- Application Logs: Redis ---\n  `for log in /var/log/redis/redis-server.log /var/log/redis.log; do [ -f \"$log\" ] && echo \"=== APP: Redis ===\" && grep -iE 'warn|error|fail|critical' \"$log\" 2>/dev/null | tail -30; done`,\n  // --- Application Logs: PHP/FPM ---\n  `find /var/log -maxdepth 2 -name 'php*.log' -o -name 'fpm*.log' 2>/dev/null | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|fatal|exception\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"=== APP: PHP ({}) ===\" && grep -iE \"warn|error|fatal|exception\" \"{}\" 2>/dev/null | tail -30' 2>/dev/null || true`,\n  // --- Generic App Log Scan: /var/log (alle .log außer Standardlogs) ---\n  `echo \"=== APP LOGS SCAN (/var/log) ===\"`,\n  `find /var/log -maxdepth 3 -name '*.log' -not -empty 2>/dev/null | grep -vE '/(syslog|messages|kern\\\\.log|auth\\\\.log|dpkg\\\\.log|apt/|btmp|wtmp|lastlog|faillog|journal)' | head -30 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception\" \"{}\" 2>/dev/null | tail -30'`,\n  // --- Generic App Log Scan: /opt ---\n  `echo \"=== APP LOGS SCAN (/opt) ===\"`,\n  `find /opt -maxdepth 4 -name '*.log' -not -empty 2>/dev/null | head -20 | xargs -I{} sh -c 'cnt=$(grep -ciE \"warn|error|crit|fail|fatal|exception|traceback\" \"{}\" 2>/dev/null); [ \"$cnt\" -gt 0 ] && echo \"--- {} ($cnt hits) ---\" && grep -iE \"warn|error|crit|fail|fatal|exception|traceback\" \"{}\" 2>/dev/null | tail -30'`,\n].join('\\n');\n\nconst prompt = `Du bist ein erfahrener Systemadministrator. Analysiere ALLE Logquellen des folgenden Systems vollständig.\n\n=== SYSTEM ===\nName: ${sys.name}\nIP: ${sys.ip}\nTyp: ${sys.type.toUpperCase()} (${sysLabel})\nSSH: ${ssh_prefix}\n\n=== AUFGABE ===\n1. Verbinde dich per SSH mit dem System\n2. Führe folgende Befehle zur Log-Sammlung aus:\n\n${cmds}\n\n3. Analysiere ALLE gesammelten Ausgaben auf Probleme – egal ob System-Logs, Application-Logs oder Service-Logs\n4. Berücksichtige JEDE Warnung und jeden Fehler, unabhängig von der Quelle\n5. Gruppiere ähnliche Fehler desselben Service/Komponente (Deduplizierung)\n6. KEINE Behebungsmaßnahmen – nur Analyse und Dokumentation!\n\n=== ANTWORTFORMAT (NUR JSON, kein Markdown, kein erklärender Text) ===\n{\n  \"hostname\": \"${sys.name}\",\n  \"ip\": \"${sys.ip}\",\n  \"type\": \"${sys.type}\",\n  \"ssh_success\": true,\n  \"has_findings\": false,\n  \"findings\": [\n    {\n      \"severity\": \"WARNING|ERROR|CRITICAL\",\n      \"source\": \"system|application|service\",\n      \"component\": \"z.B. kernel, systemd, nginx, postgresql, sshd\",\n      \"summary\": \"Einzeilige Beschreibung des Problems\",\n      \"details\": \"Relevante Log-Zeilen (max. 5 Zeilen)\",\n      \"count\": 1,\n      \"first_seen\": \"2026-03-23T01:00:00Z\"\n    }\n  ],\n  \"error\": null\n}\n\nWICHTIG:\n- Antworte NUR mit dem JSON-Objekt\n- Wenn SSH fehlschlägt: ssh_success=false, has_findings=false, error=<Fehlermeldung>\n- Ignoriere rein informative Meldungen (INFO/DEBUG/NOTICE)\n- source=\"system\" für Kernel/dmesg/journalctl-System-Einträge\n- source=\"application\" für App-spezifische Logfiles (nginx, postgresql, mysql, php etc.)\n- source=\"service\" für systemd-Unit-Logs (journalctl -u <service>)\n- Alle Schweregrade WARNING und höher erfassen – egal welche Quelle`;\n\nreturn [{ json: {\n  system_name: sys.name,\n  system_ip:   sys.ip,\n  system_type: sys.type,\n  prompt\n} }];"
+        },
+        "name": "🔧 P2: Build LXC/VM Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1320,
+          720
+        ],
+        "id": "cadf689d-2e6b-4795-8a99-52216adee615"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "l4ee6BahShsiEXjI"
+          }
+        },
+        "name": "🤖 P2: Claude Log Analysis",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          1540,
+          720
+        ],
+        "id": "13f8579f-0817-45be-8380-48da773c7243"
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp    = $('🔧 P2: Build LXC/VM Prompt').first().json;\nconst claude = $input.first().json;\n\nif (inp._skip) return [{ json: { _skip: true, has_findings: false } }];\n\nlet data = { ssh_success: false, has_findings: false, findings: [], error: 'Keine Antwort' };\ntry {\n  const text    = claude.response_text || '';\n  const cleaned = text.replace(/```json\\n?/g,'').replace(/```\\n?/g,'').trim();\n  const match   = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) data = { ...data, ...JSON.parse(match[0]) };\n} catch(e) {\n  data.error = 'JSON Parse-Fehler: ' + e.message;\n}\n\nconst findings = (data.findings || []).filter(f =>\n  ['WARNING','ERROR','CRITICAL'].includes((f.severity||'').toUpperCase())\n);\n\nreturn [{ json: {\n  system_name:    inp.system_name,\n  system_ip:      inp.system_ip,\n  system_type:    inp.system_type,\n  ssh_success:    data.ssh_success,\n  has_findings:   data.ssh_success && findings.length > 0,\n  findings_count: findings.length,\n  findings,\n  error:          data.error\n} }];"
+        },
+        "name": "🔧 P2: Parse Findings",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          720
+        ],
+        "id": "df312c9b-7c13-4e61-8200-549282ec1ea7"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "p2-has-findings",
+                "leftValue": "={{ $json.has_findings }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "name": "✅ P2: Findings vorhanden?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1980,
+          720
+        ],
+        "id": "5a1f0d6c-e6e2-475f-8a07-ddfd583664d8"
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp    = $input.first().json;\nconst config = $('📋 Set Config').first().json;\n\nconst sev_icon = { CRITICAL: '🚨', ERROR: '🔴', WARNING: '⚠️' };\nconst src_icon = { system: '🖥️', application: '📦', service: '⚙️', hardware: '🔩' };\n\n// Ein Ticket pro Befund — N findings → N Items\nreturn inp.findings.map(f => {\n  const icon    = sev_icon[f.severity]             || '⚠️';\n  const srcIcon = src_icon[f.source || 'system']   || '📋';\n  const sevUC   = (f.severity || 'WARNING').toUpperCase();\n\n  const title = `[Log] ${inp.system_name} – ${sevUC}: ${f.summary}`;\n\n  let body = `## ${icon} ${sevUC}: ${f.summary}\\n\\n`;\n  body += `**System:** ${inp.system_name} (${inp.system_ip})\\n`;\n  body += `**Typ:** ${inp.system_type}\\n`;\n  body += `**Komponente:** ${f.component || '–'}\\n`;\n  body += `**Quelle:** ${srcIcon} ${f.source || 'system'}\\n`;\n  body += `**Anzahl:** ${f.count || 1}\\n`;\n  if (f.first_seen) body += `**Erstes Auftreten:** ${f.first_seen}\\n`;\n  body += `**Analyse:** ${new Date().toISOString().slice(0,19).replace('T',' ')} UTC\\n`;\n  body += `**Run-ID:** ${config.run_id}\\n`;\n  body += `\\n---\\n\\n`;\n  body += `**Log-Auszug:**\\n\\`\\`\\`\\n${f.details || '(keine Details)'}\\n\\`\\`\\`\\n\\n`;\n  body += `---\\n*Automatisch erstellt – Log-Analyse ohne Behebungsmaßnahmen.*`;\n\n  const priority = sevUC === 'CRITICAL' ? '5 very high'\n                 : sevUC === 'ERROR'    ? '4 high'\n                 :                        '3 normal';\n\n  return { json: { title, body, queue: 'Raw', state: 'new', priority } };\n});\n"
+        },
+        "name": "🔧 P2: Build Ticket",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2200,
+          600
+        ],
+        "id": "3f9cef6d-4c1d-4212-8217-074f79affefe"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "NMxFaLwPpq39MSCF"
+          }
+        },
+        "name": "🎫 P2: Create Ticket",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          2420,
+          600
+        ],
+        "id": "267da276-b4b3-46c0-b319-59ba7b8044f0"
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp = $input.first().json;\nreturn [{ json: { system_name: inp.system_name, action: 'no_findings', has_findings: false } }];"
+        },
+        "name": "📝 P2: Kein Befund",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2200,
+          840
+        ],
+        "id": "6ceb4e7e-6be4-41fc-9475-b04ed2c4079c"
+      },
+      {
+        "parameters": {
+          "jsCode": "const config = $('📋 Set Config').first().json;\nconst items  = $input.all();\n\n// Kein Output wenn keine Items (z.B. Done-Port feuert leer am Anfang)\nif (items.length === 0) return [];\n\nconst tickets_created = items.filter(i => i.json.ticket_id || i.json.ticket_number).length;\nconst no_findings     = items.filter(i => i.json.action === 'no_findings').length;\n\nreturn [{ json: {\n  run_id:          config.run_id,\n  run_date:        config.run_date,\n  tickets_created,\n  no_findings,\n  summary: `Log-Analyse abgeschlossen. ${tickets_created} Ticket(s) erstellt, ${no_findings} System(e) ohne Befund.`\n} }];"
+        },
+        "name": "🔧 Aggregate Ergebnisse",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          720
+        ],
+        "id": "fa6fe623-6b23-4c0f-bc57-486e3295001b"
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "TmyAkITcb41Ti3Ev"
+          },
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "message",
+                "value": "={{ $json.summary }}"
+              },
+              {
+                "name": "channels",
+                "value": "[\"matrix\"]"
+              },
+              {
+                "name": "level",
+                "value": "info"
+              }
+            ]
+          }
+        },
+        "name": "🔔 SUB: Notification",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.1,
+        "position": [
+          2860,
+          720
+        ],
+        "id": "5872ac44-3881-4de4-b7d9-753610e0afc7"
+      },
+      {
+        "id": "p1-skip-if",
+        "name": "✅ P1: Skip?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1430,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "p1-skip-if-cond",
+                "leftValue": "={{ $json._skip }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "p2-skip-if",
+        "name": "✅ P2: Skip?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1430,
+          720
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true
+            },
+            "conditions": [
+              {
+                "id": "p2-skip-if-cond",
+                "leftValue": "={{ $json._skip }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "p1-collapse-001",
+        "name": "🔧 P1: Collapse Tickets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          180
+        ],
+        "parameters": {
+          "jsCode": "// N Ticket-Ergebnisse → 1 Item (Loop-Stabilität)\nconst items   = $input.all();\nconst created = items.filter(i => i.json.ticket_id || i.json.ticket_number).length;\nreturn [{ json: { tickets_done: created } }];\n"
+        }
+      },
+      {
+        "id": "p2-collapse-001",
+        "name": "🔧 P2: Collapse Tickets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          600
+        ],
+        "parameters": {
+          "jsCode": "// N Ticket-Ergebnisse → 1 Item (Loop-Stabilität)\nconst items   = $input.all();\nconst created = items.filter(i => i.json.ticket_id || i.json.ticket_number).length;\nreturn [{ json: { tickets_done: created } }];\n"
+        }
+      },
+      {
+        "id": "save-last-run-001",
+        "name": "💾 Save Last Run",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3080,
+          720
+        ],
+        "parameters": {
+          "jsCode": "// Speichere Zeitstempel des erfolgreichen Laufs für nächste Ausführung\nconst staticData = $getWorkflowStaticData('global');\nstaticData.last_successful_run = staticData.current_run || new Date().toISOString();\nreturn $input.all();\n"
+        }
+      }
+    ],
+    "connections": {
+      "⏰ Schedule: Wöchentlich So 02:00": {
+        "main": [
+          [
+            {
+              "node": "📋 Set Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "▶️ Manual Trigger": {
+        "main": [
+          [
+            {
+              "node": "📋 Set Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📋 Set Config": {
+        "main": [
+          [
+            {
+              "node": "🌐 P1: NetBox Devices laden",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🌐 P1: NetBox Devices laden": {
+        "main": [
+          [
+            {
+              "node": "🔧 P1: Filter Devices",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P1: Filter Devices": {
+        "main": [
+          [
+            {
+              "node": "🔄 P1: Loop Devices",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔄 P1: Loop Devices": {
+        "main": [
+          [
+            {
+              "node": "🌐 P2: NetBox LXC+VM laden",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔧 P1: Build Device Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P1: Build Device Prompt": {
+        "main": [
+          [
+            {
+              "node": "✅ P1: Skip?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 P1: Claude Log Analysis": {
+        "main": [
+          [
+            {
+              "node": "🔧 P1: Parse Findings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P1: Parse Findings": {
+        "main": [
+          [
+            {
+              "node": "✅ P1: Findings vorhanden?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ P1: Findings vorhanden?": {
+        "main": [
+          [
+            {
+              "node": "🔧 P1: Build Ticket",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📝 P1: Kein Befund",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P1: Build Ticket": {
+        "main": [
+          [
+            {
+              "node": "🎫 P1: Create Ticket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎫 P1: Create Ticket": {
+        "main": [
+          [
+            {
+              "node": "🔧 P1: Collapse Tickets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 P1: Kein Befund": {
+        "main": [
+          [
+            {
+              "node": "🔄 P1: Loop Devices",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🌐 P2: NetBox LXC+VM laden": {
+        "main": [
+          [
+            {
+              "node": "🔧 P2: Filter LXC+VM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P2: Filter LXC+VM": {
+        "main": [
+          [
+            {
+              "node": "🔄 P2: Loop LXC+VM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔄 P2: Loop LXC+VM": {
+        "main": [
+          [
+            {
+              "node": "🔧 Aggregate Ergebnisse",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔧 P2: Build LXC/VM Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P2: Build LXC/VM Prompt": {
+        "main": [
+          [
+            {
+              "node": "✅ P2: Skip?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🤖 P2: Claude Log Analysis": {
+        "main": [
+          [
+            {
+              "node": "🔧 P2: Parse Findings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P2: Parse Findings": {
+        "main": [
+          [
+            {
+              "node": "✅ P2: Findings vorhanden?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ P2: Findings vorhanden?": {
+        "main": [
+          [
+            {
+              "node": "🔧 P2: Build Ticket",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📝 P2: Kein Befund",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P2: Build Ticket": {
+        "main": [
+          [
+            {
+              "node": "🎫 P2: Create Ticket",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🎫 P2: Create Ticket": {
+        "main": [
+          [
+            {
+              "node": "🔧 P2: Collapse Tickets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 P2: Kein Befund": {
+        "main": [
+          [
+            {
+              "node": "🔄 P2: Loop LXC+VM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Aggregate Ergebnisse": {
+        "main": [
+          [
+            {
+              "node": "🔔 SUB: Notification",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ P1: Skip?": {
+        "main": [
+          [
+            {
+              "node": "📝 P1: Kein Befund",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 P1: Claude Log Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "✅ P2: Skip?": {
+        "main": [
+          [
+            {
+              "node": "📝 P2: Kein Befund",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🤖 P2: Claude Log Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P1: Collapse Tickets": {
+        "main": [
+          [
+            {
+              "node": "🔄 P1: Loop Devices",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 P2: Collapse Tickets": {
+        "main": [
+          [
+            {
+              "node": "🔄 P2: Loop LXC+VM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 SUB: Notification": {
+        "main": [
+          [
+            {
+              "node": "💾 Save Last Run",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Marco Doehler",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-03-29T14:06:02.288Z",
+        "id": 380,
+        "workflowId": "pPJ4lVht3s3I0816",
+        "versionId": "66ca2603-b0c5-4aa1-b399-fd511af4ec2a",
+        "event": "activated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      },
+      {
+        "createdAt": "2026-03-29T14:06:02.263Z",
+        "id": 379,
+        "workflowId": "pPJ4lVht3s3I0816",
+        "versionId": "66ca2603-b0c5-4aa1-b399-fd511af4ec2a",
+        "event": "deactivated",
+        "userId": "9d94d1ac-c2ff-49a2-91e0-a14f8e4d7626"
+      }
+    ]
+  }
+}

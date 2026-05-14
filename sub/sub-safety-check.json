@@ -1,0 +1,59 @@
+{
+  "name": "SUB: Safety Check",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "commands",
+              "type": "string"
+            },
+            {
+              "name": "risk_threshold",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Safety validation for commands before execution\nconst input = $input.first().json;\n\nlet commands = [];\ntry {\n  commands = typeof input.commands === 'string' ? JSON.parse(input.commands) : (input.commands || []);\n} catch (e) {\n  // If not JSON, treat as single command string\n  commands = [input.commands || ''];\n}\n\nconst riskThreshold = input.risk_threshold || 'medium';\n\n// Risk level hierarchy\nconst RISK_LEVELS = { low: 1, medium: 2, high: 3, critical: 4 };\nconst thresholdLevel = RISK_LEVELS[riskThreshold] || 2;\n\n// Blacklist patterns with risk assessment\nconst BLACKLIST = [\n  // CRITICAL: Data destruction\n  { pattern: /rm\\s+-rf\\s+\\/(?!tmp|var\\/tmp)/, risk: 'critical', reason: 'Recursive root deletion detected' },\n  { pattern: /dd\\s+if=\\/dev\\/zero/, risk: 'critical', reason: 'Disk wipe with /dev/zero detected' },\n  { pattern: /dd\\s+if=\\/dev\\/random/, risk: 'critical', reason: 'Disk wipe with /dev/random detected' },\n  { pattern: /mkfs\\b/, risk: 'critical', reason: 'Filesystem format command detected' },\n  { pattern: /fdisk\\s+-l|fdisk\\s+\\/dev/, risk: 'critical', reason: 'Direct disk manipulation detected' },\n  { pattern: />\\s*\\/dev\\/[sh]d[a-z]\\b/, risk: 'critical', reason: 'Direct write to block device detected' },\n  // CRITICAL: System shutdown/halt\n  { pattern: /\\bshutdown\\b(?!\\s+-c)/, risk: 'critical', reason: 'System shutdown command detected' },\n  { pattern: /\\bhalt\\b/, risk: 'critical', reason: 'System halt command detected' },\n  { pattern: /\\bpoweroff\\b/, risk: 'critical', reason: 'System poweroff command detected' },\n  { pattern: /\\breboot\\s+-f/, risk: 'critical', reason: 'Forced reboot detected' },\n  // HIGH: Process/user manipulation\n  { pattern: /kill\\s+-9\\s+-1/, risk: 'high', reason: 'Kill all processes detected' },\n  { pattern: /userdel\\s+root/, risk: 'critical', reason: 'Root user deletion detected' },\n  { pattern: /passwd\\s+root\\s+--delete/, risk: 'high', reason: 'Root password deletion detected' },\n  // HIGH: Network/firewall dangerous operations\n  { pattern: /iptables\\s+-F\\s*$/, risk: 'high', reason: 'Full firewall flush without replacement' },\n  { pattern: /ufw\\s+disable/, risk: 'high', reason: 'Firewall disable detected' },\n  // MEDIUM: Package/config risky ops\n  { pattern: /apt-get\\s+remove\\s+.*--purge.*kernel/, risk: 'medium', reason: 'Kernel package purge detected' },\n  { pattern: /dpkg\\s+--remove\\s+.*base/, risk: 'medium', reason: 'Base system package removal detected' },\n];\n\nconst violations = [];\nlet highest_risk = 'low';\n\nconst RISK_ORDER = ['low', 'medium', 'high', 'critical'];\n\nfor (const cmd of commands) {\n  const cmdStr = String(cmd);\n  for (const check of BLACKLIST) {\n    if (check.pattern.test(cmdStr)) {\n      const violation = {\n        command: cmdStr,\n        risk: check.risk,\n        reason: check.reason\n      };\n      violations.push(violation);\n      // Track highest risk\n      if (RISK_ORDER.indexOf(check.risk) > RISK_ORDER.indexOf(highest_risk)) {\n        highest_risk = check.risk;\n      }\n    }\n  }\n}\n\n// Determine if safe based on threshold\nconst highestRiskLevel = RISK_LEVELS[highest_risk] || 1;\nconst safe = violations.length === 0 || highestRiskLevel < thresholdLevel;\n\nconst blocked = violations.filter(v => RISK_LEVELS[v.risk] >= thresholdLevel);\n\nreturn [{\n  json: {\n    safe,\n    violations,\n    summary: {\n      total: commands.length,\n      checked: commands.length,\n      blocked: blocked.length,\n      highest_risk,\n      risk_threshold: riskThreshold\n    }\n  }\n}];"
+      },
+      "name": "🛡️ Validate Commands",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🛡️ Validate Commands",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "_n8n_id": "A4C9uBifmH1TUS6J"
+}

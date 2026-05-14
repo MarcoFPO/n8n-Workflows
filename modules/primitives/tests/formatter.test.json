@@ -1,0 +1,46 @@
+{
+  "name": "Test: Result Formatter",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const testResult = { data: { value: 42 }, context: { source: 'test' } };\nif (!testResult.data) throw new Error('FAIL: data fehlt');\nreturn [{ json: { test: 'Result Formatter', status: 'PASS' } }];"
+      },
+      "name": "🧪 Run Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🧪 Run Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

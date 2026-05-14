@@ -1,0 +1,280 @@
+{
+  "name": "SUB: Notification Dispatcher",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "message",
+              "type": "string"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "severity",
+              "type": "string"
+            },
+            {
+              "name": "channels",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input from Master",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format message with severity icons and structure\nconst input = $input.first().json;\n\nconst title = input.title || 'System Notification';\nconst message = input.message || '';\nconst severity = (input.severity || 'info').toLowerCase();\nlet channels = [];\ntry {\n  channels = typeof input.channels === 'string' ? JSON.parse(input.channels) : (input.channels || ['matrix']);\n} catch (e) {\n  channels = ['matrix'];\n}\n\nconst SEVERITY_ICONS = {\n  info: 'ℹ️',\n  warning: '⚠️',\n  critical: '🚨',\n  error: '❌',\n  success: '✅'\n};\n\nconst icon = SEVERITY_ICONS[severity] || 'ℹ️';\nconst timestamp = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });\n\n// Matrix-formatted message (supports markdown)\nconst matrixBody = `${icon} **${title}**\\n\\n${message}\\n\\n_${timestamp}_`;\nconst matrixFormattedBody = `<strong>${icon} ${title}</strong><br><br>${message.replace(/\\n/g, '<br>')}<br><br><em>${timestamp}</em>`;\n\n// Telegram message (simpler formatting)\nconst telegramText = `${icon} *${title}*\\n\\n${message}\\n\\n_${timestamp}_`;\n\nreturn [{\n  json: {\n    title,\n    message,\n    severity,\n    channels,\n    icon,\n    timestamp,\n    matrix_body: matrixBody,\n    matrix_formatted_body: matrixFormattedBody,\n    telegram_text: telegramText,\n    send_to_matrix: channels.includes('matrix'),\n    send_to_telegram: channels.includes('telegram'),\n    notification_id: `notif_${Date.now()}`\n  }\n}];"
+      },
+      "name": "🔧 Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "matrix-check",
+              "leftValue": "={{ $json.send_to_matrix }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "✅ Route: Matrix?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://matrix.doehlercomputing.de/_matrix/client/v3/rooms/!rNuYEsjl0UEQrtLHFS:doehlercomputing.de/send/m.room.message/{{ $now.toMillis() }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer inayCKjbepNL2D9qPeP8Ve9TYEC6PuqI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"msgtype\": \"m.text\", \"body\": {{ JSON.stringify($json.matrix_body) }}, \"format\": \"org.matrix.custom.html\", \"formatted_body\": {{ JSON.stringify($json.matrix_formatted_body) }}}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "📨 Matrix: Send Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        100
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "telegram-check",
+              "leftValue": "={{ $json.send_to_telegram }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "✅ Route: Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        600,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botPLACEHOLDER_BOT_TOKEN/sendMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_id\": \"PLACEHOLDER_CHAT_ID\", \"text\": {{ JSON.stringify($json.telegram_text) }}, \"parse_mode\": \"Markdown\"}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "📨 Telegram: Send Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect notification results from all channels\nconst allItems = $input.all();\nconst formatData = $('🔧 Format Message').first().json;\n\nconst sentChannels = [];\nconst failedChannels = [];\n\n// Check Matrix result\nif (formatData.send_to_matrix) {\n  try {\n    const matrixResult = $('📨 Matrix: Send Message').first().json;\n    if (matrixResult.event_id || !matrixResult.error) {\n      sentChannels.push('matrix');\n    } else {\n      failedChannels.push('matrix');\n    }\n  } catch (e) {\n    // Node may not have run if routing skipped it\n    if (formatData.send_to_matrix) failedChannels.push('matrix');\n  }\n}\n\n// Check Telegram result\nif (formatData.send_to_telegram) {\n  try {\n    const telegramResult = $('📨 Telegram: Send Message').first().json;\n    if (telegramResult.ok === true) {\n      sentChannels.push('telegram');\n    } else {\n      failedChannels.push('telegram');\n    }\n  } catch (e) {\n    if (formatData.send_to_telegram) failedChannels.push('telegram');\n  }\n}\n\nconst status = failedChannels.length === 0 ? 'sent' : (sentChannels.length > 0 ? 'partial' : 'failed');\n\nreturn [{\n  json: {\n    notification_id: formatData.notification_id,\n    sent_channels: sentChannels,\n    failed_channels: failedChannels,\n    status,\n    title: formatData.title,\n    severity: formatData.severity,\n    sent_at: formatData.timestamp\n  }\n}];"
+      },
+      "name": "🔧 Collect Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input from Master": {
+      "main": [
+        [
+          {
+            "node": "🔧 Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Format Message": {
+      "main": [
+        [
+          {
+            "node": "✅ Route: Matrix?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Route: Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Route: Matrix?": {
+      "main": [
+        [
+          {
+            "node": "📨 Matrix: Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Matrix: Send Message": {
+      "main": [
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Route: Telegram?": {
+      "main": [
+        [
+          {
+            "node": "📨 Telegram: Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📨 Telegram: Send Message": {
+      "main": [
+        [
+          {
+            "node": "🔧 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "id": "TmyAkITcb41Ti3Ev",
+  "_n8n_id": "TmyAkITcb41Ti3Ev"
+}

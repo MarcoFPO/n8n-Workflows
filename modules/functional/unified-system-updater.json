@@ -1,0 +1,213 @@
+{
+  "name": "Functional: Unified System Updater",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "target_host",
+              "type": "string"
+            },
+            {
+              "name": "lxc_id",
+              "type": "number"
+            },
+            {
+              "name": "proxmox_host",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { target_host, lxc_id, vm_id, proxmox_host, session_id } = $('📥 Input').first().json;\nif (!target_host) throw new Error('target_host erforderlich');\nconst check_cmd = 'apt list --upgradable 2>/dev/null | grep -v \"^Listing\" | head -50';\nreturn { target_host, lxc_id: lxc_id || null, vm_id: vm_id || null,\n  proxmox_host: proxmox_host || '10.1.1.100', command: check_cmd,\n  session_id: session_id || require('crypto').randomUUID() };"
+      },
+      "name": "🔧 Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: SSH Command Executor"
+        }
+      },
+      "name": "💻 SUB: Check Updates",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst ssh = $('💻 SUB: Check Updates').first().json;\nconst packages = ssh?.data?.stdout || '(keine Updates)';\nreturn { prompt: `System ${input.target_host} – verfügbare Updates:\\n\\n${packages}\\n\\nBewerte: Sicherheits-Updates, kritische Pakete, Risiken. Soll das Update durchgeführt werden? Antworte als JSON: {should_update(bool), risk_level(low/medium/high), critical_packages:[], reason, update_command}`,\n  model: 'claude-sonnet-4-6', max_tokens: 800, session_id: input.session_id };"
+      },
+      "name": "🔧 Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: Claude AI Executor"
+        }
+      },
+      "name": "🤖 SUB: Claude Plan",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('📥 Input').first().json;\nconst plan = $('🤖 SUB: Claude Plan').first().json;\nconst r = typeof plan.response === 'string' ? JSON.parse(plan.response) : plan.response || {};\nif (!r.should_update) return { exit_code: 'success', session_id: input.session_id,\n  data: { target_host: input.target_host, updated: false, reason: r.reason }, timestamp: new Date().toISOString() };\nreturn { target_host: input.target_host, command: r.update_command || 'apt-get upgrade -y',\n  session_id: input.session_id, plan: r };"
+      },
+      "name": "🔧 Execute or Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: SSH Command Executor"
+        }
+      },
+      "name": "💻 SUB: Run Update",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('🔧 Execute or Skip').first().json;\nconst ssh = $input.first().json;\nreturn { exit_code: 'success', session_id: input.session_id,\n  data: { target_host: input.target_host, updated: !!input.plan,\n    result: ssh?.data?.stdout || '(übersprungen)', plan: input.plan || null },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Prepare": {
+      "main": [
+        [
+          {
+            "node": "💻 SUB: Check Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 SUB: Check Updates": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 SUB: Claude Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 SUB: Claude Plan": {
+      "main": [
+        [
+          {
+            "node": "🔧 Execute or Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Execute or Skip": {
+      "main": [
+        [
+          {
+            "node": "💻 SUB: Run Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 SUB: Run Update": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}

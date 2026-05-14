@@ -1,0 +1,144 @@
+{
+  "name": "Module: Master Incident Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "ticket_id",
+              "type": "number"
+            },
+            {
+              "name": "wer",
+              "type": "string"
+            },
+            {
+              "name": "was",
+              "type": "string"
+            },
+            {
+              "name": "severity",
+              "type": "string"
+            },
+            {
+              "name": "system_ip",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "name": "📥 Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { ticket_id, wer, was, severity, system_ip, session_id } = $('📥 Input').first().json;\nif (!ticket_id) throw new Error('ticket_id erforderlich');\nreturn { ticket_id, wer: wer || 'unknown', was: was || 'unknown', severity: severity || 'normal',\n  system_ip: system_ip || null, session_id: session_id || require('crypto').randomUUID(),\n  cycle: 1, context: [] };"
+      },
+      "name": "🔧 Init Incident",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { ticket_id, wer, was, severity, system_ip, cycle, context, session_id } = $input.first().json;\nconst ctx = context.length > 0 ? `\\n\\nKontext aus Zyklus ${cycle-1}:\\n${context.join('\\n')}` : '';\nreturn { prompt: `Incident Ticket #${ticket_id}: System=${wer}, Problem=${was}, Severity=${severity}, IP=${system_ip}${ctx}\\n\\nFühre Root Cause Analysis durch. Antworte als JSON: {root_cause, affected_component, confidence(0-100), solution_approach, required_commands:[]}`,\n  model: 'claude-sonnet-4-6', max_tokens: 1500, session_id };"
+      },
+      "name": "🔧 Build RCA Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SUB: Claude AI Executor"
+        }
+      },
+      "name": "🤖 SUB: Claude RCA",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { ticket_id, cycle, session_id } = $('🔧 Init Incident').first().json;\nconst rca = $('🤖 SUB: Claude RCA').first().json;\nconst r = typeof rca.response === 'string' ? JSON.parse(rca.response) : rca.response || {};\nconst resolved = r.confidence >= 80;\nreturn { exit_code: 'success', session_id, data: { ticket_id, cycle, resolved,\n  root_cause: r.root_cause, confidence: r.confidence, solution: r.solution_approach },\n  timestamp: new Date().toISOString() };"
+      },
+      "name": "🔧 Evaluate & Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "📥 Input": {
+      "main": [
+        [
+          {
+            "node": "🔧 Init Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Init Incident": {
+      "main": [
+        [
+          {
+            "node": "🔧 Build RCA Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Build RCA Prompt": {
+      "main": [
+        [
+          {
+            "node": "🤖 SUB: Claude RCA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 SUB: Claude RCA": {
+      "main": [
+        [
+          {
+            "node": "🔧 Evaluate & Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}
